@@ -1,9 +1,8 @@
 import QtQuick
-import Quickshell
 import Quickshell.Io
-import qs.modules.services
 import qs.config
 import qs.modules.globals
+import "../../config/KeybindActions.js" as KeybindActions
 
 QtObject {
     id: root
@@ -106,25 +105,39 @@ QtObject {
     }
 
     // Build a structured bind object from a core keybind (has all fields inline).
+    function resolveBindAction(action, fallback) {
+        const resolved = KeybindActions.resolveAction(action || fallback);
+        if (!resolved) return null;
+        return {
+            dispatcher: resolved.dispatcher || "",
+            argument: resolved.argument || "",
+            flags: resolved.flags || ""
+        };
+    }
+
     function makeBindFromCore(keybind) {
+        const resolved = resolveBindAction(keybind.action, keybind);
+        if (!resolved) return null;
         return {
             modifiers: keybind.modifiers || [],
             key: keybind.key || "",
-            dispatcher: keybind.dispatcher || "",
-            argument: keybind.argument || "",
-            flags: keybind.flags || "",
+            dispatcher: resolved.dispatcher,
+            argument: resolved.argument,
+            flags: resolved.flags,
             enabled: true
         };
     }
 
     // Build a structured bind object from a key + action pair (custom keybinds).
     function makeBindFromKeyAction(keyObj, action) {
+        const resolved = resolveBindAction(action, action);
+        if (!resolved) return null;
         return {
             modifiers: keyObj.modifiers || [],
             key: keyObj.key || "",
-            dispatcher: action.dispatcher || "",
-            argument: action.argument || "",
-            flags: action.flags || "",
+            dispatcher: resolved.dispatcher,
+            argument: resolved.argument,
+            flags: resolved.flags,
             enabled: true
         };
     }
@@ -202,14 +215,10 @@ QtObject {
         payload.unbinds.push(makeUnbindTarget(ambxst.wallpapers));
 
         // Bind current core keybinds
-        payload.binds.push(makeBindFromCore(ambxst.launcher));
-        payload.binds.push(makeBindFromCore(ambxst.dashboard));
-        payload.binds.push(makeBindFromCore(ambxst.assistant));
-        payload.binds.push(makeBindFromCore(ambxst.clipboard));
-        payload.binds.push(makeBindFromCore(ambxst.emoji));
-        payload.binds.push(makeBindFromCore(ambxst.notes));
-        payload.binds.push(makeBindFromCore(ambxst.tmux));
-        payload.binds.push(makeBindFromCore(ambxst.wallpapers));
+        [ambxst.launcher, ambxst.dashboard, ambxst.assistant, ambxst.clipboard, ambxst.emoji, ambxst.notes, ambxst.tmux, ambxst.wallpapers].forEach(bind => {
+            const resolved = makeBindFromCore(bind);
+            if (resolved) payload.binds.push(resolved);
+        });
 
         // System keybinds
         const system = ambxst.system;
@@ -227,16 +236,11 @@ QtObject {
         if (system.quit) payload.unbinds.push(makeUnbindTarget(system.quit));
 
         // Bind current system keybinds
-        payload.binds.push(makeBindFromCore(system.overview));
-        payload.binds.push(makeBindFromCore(system.powermenu));
-        payload.binds.push(makeBindFromCore(system.config));
-        payload.binds.push(makeBindFromCore(system.lockscreen));
-        payload.binds.push(makeBindFromCore(system.tools));
-        payload.binds.push(makeBindFromCore(system.screenshot));
-        payload.binds.push(makeBindFromCore(system.screenrecord));
-        payload.binds.push(makeBindFromCore(system.lens));
-        if (system.reload) payload.binds.push(makeBindFromCore(system.reload));
-        if (system.quit) payload.binds.push(makeBindFromCore(system.quit));
+        [system.overview, system.powermenu, system.config, system.lockscreen, system.tools, system.screenshot, system.screenrecord, system.lens, system.reload, system.quit].forEach(bind => {
+            if (!bind) return;
+            const resolved = makeBindFromCore(bind);
+            if (resolved) payload.binds.push(resolved);
+        });
 
         // Process custom keybinds (keys[] and actions[] format).
         const customBinds = Config.keybindsLoader.adapter.custom;
@@ -259,7 +263,8 @@ QtObject {
                                 const action = bind.actions[a];
                                 // Check if this action is compatible with the current layout
                                 if (isActionCompatibleWithLayout(action)) {
-                                    payload.binds.push(makeBindFromKeyAction(bind.keys[k], action));
+                                    const resolved = makeBindFromKeyAction(bind.keys[k], action);
+                                    if (resolved) payload.binds.push(resolved);
                                 }
                             }
                         }
@@ -268,7 +273,8 @@ QtObject {
                     // Fallback for old format (shouldn't happen after normalization)
                     payload.unbinds.push(makeUnbindTarget(bind));
                     if (bind.enabled !== false) {
-                        payload.binds.push(makeBindFromCore(bind));
+                        const resolved = makeBindFromCore(bind);
+                        if (resolved) payload.binds.push(resolved);
                     }
                 }
             }
@@ -309,15 +315,15 @@ QtObject {
         }
     }
 
-    property Connections compositorConnections: Connections {
-        target: AxctlService
-        function onRawEvent(event) {
-            if (event.name === "configreloaded") {
-                console.log("CompositorKeybinds: Detectado configreloaded, reaplicando keybindings...");
-                applyKeybinds();
-            }
-        }
-    }
+    // property Connections compositorConnections: Connections {
+    //     target: AxctlService
+    //     function onRawEvent(event) {
+    //         if (event.name === "configreloaded") {
+    //             console.log("CompositorKeybinds: Detectado configreloaded, reaplicando keybindings...");
+    //             applyKeybinds();
+    //         }
+    //     }
+    // }
 
     Component.onCompleted: {
         // Apply immediately if loader is ready.

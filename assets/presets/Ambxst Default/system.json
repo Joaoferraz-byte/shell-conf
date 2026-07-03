@@ -1,6 +1,4 @@
-.pragma library
-
-var data = {
+{
     "disks": ["/"],
     "updateServiceEnabled": true,
     "idle": {

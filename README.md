@@ -22,6 +22,36 @@ An <i><b>Ax</b>tremely</i> customizable shell.
 curl -L get.axeni.de/ambxst | sh
 ```
 
+This will install Ambxst and its dependencies. You will have the `ambxst` command available in your terminal, which you can use to start the shell.
+
+### Hyprland (more compositors coming soon!)
+
+1. Run the installation command above.
+
+2. Run `ambxst install hyprland` to add Ambxst's configuration to Hyprland. This will source a config file that applies Ambxst's settings. If you use `hyprland.lua`, or if no Hyprland config exists yet, it will look like this:
+
+```lua
+-- Ambxst
+loadfile(os.getenv("HOME") .. "/.local/share/ambxst/hyprland.lua")()
+
+-- OVERRIDES
+-- Down here you can write or source anything that you want to override from Ambxst's settings.
+```
+
+If you only have `hyprland.conf`, Ambxst will keep using the legacy import there for compatibility:
+
+```bash
+# Ambxst
+source = ~/.local/share/ambxst/hyprland.conf
+
+# OVERRIDES
+# Down here you can write or source anything that you want to override from Ambxst's settings.
+```
+
+As stated, anything you want to override from Ambxst's settings should be written under the "OVERRIDES" section.
+
+3. Start Ambxst by running `ambxst` in your terminal. If you want to keep it running without having the terminal window open, you can run `ambxst & disown`. This will be only necessary for your first test run, as Ambxst will start automatically on login after step 2.
+
 Ambxst is currently supported on **Arch**, **Fedora**, and **NixOS**. This means both based and derivative distributions.
 
 > [!IMPORTANT]
@@ -34,9 +64,7 @@ Ambxst is currently supported on **Arch**, **Fedora**, and **NixOS**. This means
 
 ## Will this change my config?
 
-Nope! Ambxst is designed to be non-intrusive. It won't modify any of your existing configurations.
-
-It applies its own settings only when it runs, via IPC communication. This means you can safely switch back to your previous setup by simply exiting Ambxst.
+Nope! Besides the Ambxst import block in your `hyprland.conf` or `hyprland.lua`, Ambxst is designed to be non-intrusive. It won't modify any of your existing configurations.
 
 ---
 
@@ -83,7 +111,7 @@ It applies its own settings only when it runs, via IPC communication. This means
 If you are having trouble or have any questions:
 - You can ask anything on [Discord](https://discord.com/invite/gHG9WHyNvH) or in the [GitHub discussions](https://github.com/Axenide/Ambxst/discussions).
 - You can open an issue on the [GitHub repository](https://github.com/Axenide/Ambxst/issues).
-- The main configuration is located at `~/.config/Ambxst`.
+- The main configuration is located at `~/.config/ambxst`.
 
 ---
 
