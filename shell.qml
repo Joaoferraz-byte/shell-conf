@@ -2,7 +2,6 @@
 //@ pragma ShellId ambxst
 //@ pragma DataDir $BASE/ambxst
 //@ pragma StateDir $BASE/ambxst
-//@ pragma CacheDir $BASE/ambxst
 
 import QtQuick
 import Quickshell
@@ -176,10 +175,6 @@ ShellRoot {
 
     CompositorConfig {
         id: compositorConfig
-    }
-
-    CompositorKeybinds {
-        id: compositorKeybinds
     }
 
     // Screenshot tool

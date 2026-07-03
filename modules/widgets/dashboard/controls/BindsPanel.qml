@@ -7,6 +7,7 @@ import Quickshell.Io
 import qs.modules.theme
 import qs.modules.components
 import qs.config
+import "../../../../config/KeybindActions.js" as KeybindActions
 
 Item {
     id: root
@@ -60,7 +61,7 @@ Item {
     // Edit form state - new format with keys[] and actions[]
     property string editName: ""
     property var editKeys: []  // Array of { modifiers: [], key: "" }
-    property var editActions: []  // Array of { dispatcher: "", argument: "", flags: "", layouts: [] }
+    property var editActions: []  // Array of { id: "", args: {}, layouts: [] }
     property int currentKeyPage: 0  // Current key page index
     property int currentActionPage: 0  // Current action page index
 
@@ -69,10 +70,17 @@ Item {
     property string editKey: editKeys.length > currentKeyPage ? (editKeys[currentKeyPage].key || "") : ""
 
     // Current action being edited (derived from editActions[currentActionPage])
-    property string editDispatcher: editActions.length > currentActionPage ? (editActions[currentActionPage].dispatcher || "") : ""
-    property string editArgument: editActions.length > currentActionPage ? (editActions[currentActionPage].argument || "") : ""
-    property string editFlags: editActions.length > currentActionPage ? (editActions[currentActionPage].flags || "") : ""
+    property string editActionId: editActions.length > currentActionPage ? (editActions[currentActionPage].id || "") : ""
+    property var editActionArgs: editActions.length > currentActionPage ? (editActions[currentActionPage].args || {}) : ({})
     property var editLayouts: editActions.length > currentActionPage ? (editActions[currentActionPage].layouts || []) : []
+    readonly property var actionOptions: {
+        const options = KeybindActions.getActionOptions();
+        if (editActionId === "legacy.dispatcher") {
+            return options.concat([{ id: "legacy.dispatcher", label: "Legacy Dispatcher", category: "Advanced" }]);
+        }
+        return options;
+    }
+    readonly property var editActionFields: KeybindActions.getActionFields(editActionId)
 
     readonly property var availableModifiers: ["SUPER", "SHIFT", "CTRL", "ALT"]
     readonly property var availableLayouts: ["dwindle", "master", "scrolling"]
@@ -96,16 +104,15 @@ Item {
     }
 
     // Helper to update current action in editActions array
-    function updateCurrentAction(dispatcher, argument, flags, layouts) {
+    function updateCurrentAction(actionId, args, layouts) {
         if (editActions.length <= currentActionPage)
             return;
         let newActions = [];
         for (let i = 0; i < editActions.length; i++) {
             if (i === currentActionPage) {
                 newActions.push({
-                    "dispatcher": dispatcher,
-                    "argument": argument,
-                    "flags": flags,
+                    "id": actionId,
+                    "args": args,
                     "layouts": layouts
                 });
             } else {
@@ -113,6 +120,40 @@ Item {
             }
         }
         editActions = newActions;
+    }
+
+    function updateCurrentActionArg(key, value) {
+        if (editActions.length <= currentActionPage)
+            return;
+        const current = editActions[currentActionPage] || {};
+        let nextArgs = {};
+        const currentArgs = current.args || {};
+        for (const k in currentArgs) {
+            nextArgs[k] = currentArgs[k];
+        }
+        nextArgs[key] = value;
+        updateCurrentAction(current.id || "", nextArgs, current.layouts || []);
+    }
+
+    function setCurrentAction(actionId) {
+        const current = editActions.length > currentActionPage ? editActions[currentActionPage] : {};
+        updateCurrentAction(actionId, KeybindActions.defaultArgs(actionId), current.layouts || []);
+    }
+
+    function getActionIndex(actionId) {
+        for (let i = 0; i < actionOptions.length; i++) {
+            if (actionOptions[i].id === actionId)
+                return i;
+        }
+        return -1;
+    }
+
+    function getActionLabel(actionId) {
+        for (let i = 0; i < actionOptions.length; i++) {
+            if (actionOptions[i].id === actionId)
+                return actionOptions[i].label;
+        }
+        return "";
     }
 
     // Helper to check if a layout is selected for current action
@@ -138,7 +179,7 @@ Item {
             layouts.push(layout);
         }
 
-        updateCurrentAction(currentAction.dispatcher || "", currentAction.argument || "", currentAction.flags || "", layouts);
+        updateCurrentAction(currentAction.id || "", currentAction.args || {}, layouts);
     }
 
     // Add a new key page
@@ -172,9 +213,8 @@ Item {
     function addActionPage() {
         let newActions = editActions.slice();
         newActions.push({
-            "dispatcher": "",
-            "argument": "",
-            "flags": "",
+            "id": "command.run",
+            "args": KeybindActions.defaultArgs("command.run"),
             "layouts": []
         });
         editActions = newActions;
@@ -213,12 +253,9 @@ Item {
                     "key": bindData.key || ""
                 }
             ];
+            const action = KeybindActions.ensureAction(bindData.action || bindData);
             root.editActions = [
-                {
-                    "dispatcher": bindData.dispatcher || "",
-                    "argument": bindData.argument || "",
-                    "flags": bindData.flags || ""
-                }
+                Object.assign({ layouts: [] }, action)
             ];
         } else {
             // Custom binds use new format
@@ -227,7 +264,11 @@ Item {
             if (bind.keys && bind.actions) {
                 // New format
                 root.editKeys = JSON.parse(JSON.stringify(bind.keys));
-                root.editActions = JSON.parse(JSON.stringify(bind.actions));
+                root.editActions = bind.actions.map(action => {
+                    const fixed = KeybindActions.ensureAction(action);
+                    fixed.layouts = action.layouts || [];
+                    return fixed;
+                });
             } else {
                 // Old format fallback
                 root.editKeys = [
@@ -236,12 +277,9 @@ Item {
                         "key": bind.key || ""
                     }
                 ];
+                const action = KeybindActions.ensureAction(bind);
                 root.editActions = [
-                    {
-                        "dispatcher": bind.dispatcher || "",
-                        "argument": bind.argument || "",
-                        "flags": bind.flags || ""
-                    }
+                    Object.assign({ layouts: [] }, action)
                 ];
             }
         }
@@ -312,9 +350,7 @@ Item {
                     };
                     bindObj.modifiers = firstKey.modifiers || [];
                     bindObj.key = firstKey.key || "";
-                    bindObj.dispatcher = root.editActions[0].dispatcher || "";
-                    bindObj.argument = root.editActions[0].argument || "";
-                    bindObj.flags = root.editActions[0].flags || "";
+                    bindObj.action = root.editActions[0];
                 }
             }
         } else if (root.isCreatingNew) {
@@ -445,24 +481,23 @@ Item {
 
     // Add a new custom bind
     function addNewBind() {
-        const newBind = {
-            "name": "",
-            "keys": [
-                {
-                    "modifiers": ["SUPER"],
-                    "key": ""
-                }
-            ],
-            "actions": [
-                {
-                    "dispatcher": "",
-                    "argument": "",
-                    "flags": "",
-                    "layouts": []
-                }
-            ],
-            "enabled": true
-        };
+            const newBind = {
+                "name": "",
+                "keys": [
+                    {
+                        "modifiers": ["SUPER"],
+                        "key": ""
+                    }
+                ],
+                "actions": [
+                    {
+                        "id": "command.run",
+                        "args": KeybindActions.defaultArgs("command.run"),
+                        "layouts": []
+                    }
+                ],
+                "enabled": true
+            };
 
         // Switch to custom category
         root.currentCategory = "custom";
@@ -684,8 +719,8 @@ Item {
                     Layout.fillWidth: true
                     bindName: modelData.name
                     keybindText: root.formatKeybind(modelData.bind)
-                    dispatcher: modelData.bind.dispatcher
-                    argument: modelData.bind.argument || ""
+                    dispatcher: KeybindActions.describeAction(modelData.bind.action || modelData.bind)
+                    argument: ""
                     isAmbxst: true
 
                     onEditRequested: {
@@ -704,8 +739,8 @@ Item {
                     required property int index
 
                     // Helper to get first action's dispatcher/argument
-                    readonly property string firstDispatcher: modelData.actions && modelData.actions.length > 0 ? (modelData.actions[0].dispatcher || "") : (modelData.dispatcher || "")
-                    readonly property string firstArgument: modelData.actions && modelData.actions.length > 0 ? (modelData.actions[0].argument || "") : (modelData.argument || "")
+                    readonly property string firstDispatcher: modelData.actions && modelData.actions.length > 0 ? KeybindActions.describeAction(modelData.actions[0]) : KeybindActions.describeAction(modelData)
+                    readonly property string firstArgument: ""
 
                     // Helper to get unique layouts from all actions
                     function getUniqueLayouts() {
@@ -1503,141 +1538,152 @@ Item {
                                 }
                             }
 
-                            // Dispatcher input
-                            StyledRect {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 44
-                                variant: dispatcherInput.activeFocus ? "focus" : "common"
-                                radius: Styling.radius(-2)
-                                opacity: root.isEditingAmbxst ? 0.6 : 1.0
-
-                                TextInput {
-                                    id: dispatcherInput
-                                    anchors.fill: parent
-                                    anchors.margins: 12
-                                    text: root.editDispatcher
-                                    font.family: Config.theme.font
-                                    font.pixelSize: Styling.fontSize(0)
-                                    color: Colors.overBackground
-                                    verticalAlignment: Text.AlignVCenter
-                                    selectByMouse: true
-                                    readOnly: root.isEditingAmbxst
-                                    onTextChanged: {
-                                        if (root.editActions.length > root.currentActionPage) {
-                                            const currentAction = root.editActions[root.currentActionPage];
-                                            if (currentAction.dispatcher !== text) {
-                                                root.updateCurrentAction(text, currentAction.argument || "", currentAction.flags || "", currentAction.layouts || []);
-                                            }
-                                        }
-                                    }
-
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: !dispatcherInput.text && !dispatcherInput.activeFocus
-                                        text: "e.g. exec, workspace, killactive..."
-                                        font: dispatcherInput.font
-                                        color: Colors.overSurfaceVariant
-                                    }
-                                }
-                            }
-
-                            // Argument input
                             Text {
-                                text: "Argument"
+                                text: "Action"
                                 font.family: Config.theme.font
                                 font.pixelSize: Styling.fontSize(-1)
                                 font.weight: Font.Medium
                                 color: Colors.overSurfaceVariant
-                                Layout.topMargin: 4
                             }
 
                             StyledRect {
+                                id: actionDropdown
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: 44
-                                variant: argumentInput.activeFocus ? "focus" : "common"
+                                variant: actionDropdownArea.containsMouse ? "focus" : "common"
                                 radius: Styling.radius(-2)
-                                opacity: root.isEditingAmbxst ? 0.6 : 1.0
 
-                                TextInput {
-                                    id: argumentInput
+                                RowLayout {
                                     anchors.fill: parent
                                     anchors.margins: 12
-                                    text: root.editArgument
-                                    font.family: Config.theme.font
-                                    font.pixelSize: Styling.fontSize(0)
-                                    color: Colors.overBackground
-                                    verticalAlignment: Text.AlignVCenter
-                                    selectByMouse: true
-                                    readOnly: root.isEditingAmbxst
-                                    onTextChanged: {
-                                        if (root.editActions.length > root.currentActionPage) {
-                                            const currentAction = root.editActions[root.currentActionPage];
-                                            if (currentAction.argument !== text) {
-                                                root.updateCurrentAction(currentAction.dispatcher || "", text, currentAction.flags || "", currentAction.layouts || []);
-                                            }
-                                        }
+                                    spacing: 8
+
+                                    Text {
+                                        text: root.getActionLabel(root.editActionId)
+                                        font.family: Config.theme.font
+                                        font.pixelSize: Styling.fontSize(0)
+                                        color: Colors.overBackground
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                        verticalAlignment: Text.AlignVCenter
                                     }
 
                                     Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: !argumentInput.text && !argumentInput.activeFocus
-                                        text: "e.g. kitty, 1, playerctl play-pause..."
-                                        font: argumentInput.font
+                                        text: Icons.caretDown
+                                        font.family: Icons.font
+                                        font.pixelSize: 14
                                         color: Colors.overSurfaceVariant
+                                        verticalAlignment: Text.AlignVCenter
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: actionDropdownArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        const pos = actionDropdown.mapToItem(root, 0, actionDropdown.height);
+                                        actionPopup.x = Math.max(0, Math.min(pos.x, root.width - actionPopup.implicitWidth - 16));
+                                        actionPopup.y = Math.max(0, Math.min(pos.y, root.height - actionPopup.implicitHeight - 16));
+                                        actionPopup.open();
                                     }
                                 }
                             }
 
-                            // Flags input
-                            Text {
-                                text: "Flags (optional)"
-                                font.family: Config.theme.font
-                                font.pixelSize: Styling.fontSize(-1)
-                                font.weight: Font.Medium
-                                color: Colors.overSurfaceVariant
-                                Layout.topMargin: 4
-                            }
+                            Popup {
+                                id: actionPopup
+                                parent: root
+                                modal: false
+                                focus: true
+                                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+                                implicitWidth: actionDropdown.width
+                                padding: 8
+                                implicitHeight: Math.min(actionList.implicitHeight + padding * 2, 280)
 
-                            StyledRect {
-                                Layout.fillWidth: true
-                                Layout.preferredHeight: 44
-                                variant: flagsInput.activeFocus ? "focus" : "common"
-                                radius: Styling.radius(-2)
+                                background: StyledRect {
+                                    variant: "popup"
+                                    radius: Styling.radius(-2)
+                                }
 
-                                TextInput {
-                                    id: flagsInput
+                                ScrollView {
                                     anchors.fill: parent
-                                    anchors.margins: 12
-                                    text: root.editFlags
-                                    font.family: Config.theme.font
-                                    font.pixelSize: Styling.fontSize(0)
-                                    color: Colors.overBackground
-                                    verticalAlignment: Text.AlignVCenter
-                                    selectByMouse: true
-                                    onTextChanged: {
-                                        if (root.editActions.length > root.currentActionPage) {
-                                            const currentAction = root.editActions[root.currentActionPage];
-                                            if (currentAction.flags !== text) {
-                                                root.updateCurrentAction(currentAction.dispatcher || "", currentAction.argument || "", text, currentAction.layouts || []);
+                                    contentWidth: availableWidth
+                                    clip: true
+
+                                    ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+
+                                    ColumnLayout {
+                                        id: actionList
+                                        width: parent.width
+                                        spacing: 4
+
+                                        Repeater {
+                                            model: root.actionOptions
+
+                                            delegate: ActionMenuItem {
+                                                required property string id
+                                                required property string label
+                                                required property string category
+
+                                                actionLabel: label
+                                                actionCategory: category
+                                                onSelected: {
+                                                    root.setCurrentAction(id);
+                                                    actionPopup.close();
+                                                }
                                             }
                                         }
-                                    }
-
-                                    Text {
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: !flagsInput.text && !flagsInput.activeFocus
-                                        text: "e.g. m, l, e, le..."
-                                        font: flagsInput.font
-                                        color: Colors.overSurfaceVariant
                                     }
                                 }
                             }
 
-                            Text {
-                                text: "l=locked, e=repeat, m=mouse, r=release"
-                                font.family: Config.theme.font
-                                font.pixelSize: Styling.fontSize(-2)
-                                color: Colors.overSurfaceVariant
+                            Repeater {
+                                model: root.editActionFields
+
+                                delegate: ColumnLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    Text {
+                                        text: modelData.label
+                                        font.family: Config.theme.font
+                                        font.pixelSize: Styling.fontSize(-1)
+                                        font.weight: Font.Medium
+                                        color: Colors.overSurfaceVariant
+                                    }
+
+                                    StyledRect {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 44
+                                        variant: fieldInput.activeFocus ? "focus" : "common"
+                                        radius: Styling.radius(-2)
+
+                                        TextInput {
+                                            id: fieldInput
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            text: root.editActionArgs[modelData.key] !== undefined ? root.editActionArgs[modelData.key].toString() : ""
+                                            font.family: Config.theme.font
+                                            font.pixelSize: Styling.fontSize(0)
+                                            color: Colors.overBackground
+                                            verticalAlignment: Text.AlignVCenter
+                                            selectByMouse: true
+                                            onTextChanged: {
+                                                root.updateCurrentActionArg(modelData.key, text);
+                                            }
+
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                visible: !fieldInput.text && !fieldInput.activeFocus
+                                                text: modelData.placeholder
+                                                font: fieldInput.font
+                                                color: Colors.overSurfaceVariant
+                                            }
+                                        }
+                                    }
+                                }
                             }
 
                             // =====================
@@ -1749,6 +1795,53 @@ Item {
                     }
                 }
             }
+        }
+    }
+
+    component ActionMenuItem: StyledRect {
+        id: actionItem
+        required property string actionLabel
+        required property string actionCategory
+        signal selected
+
+        property bool isHovered: false
+
+        Layout.fillWidth: true
+        Layout.preferredHeight: 36
+        radius: Styling.radius(-4)
+        variant: isHovered ? "focus" : "common"
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 8
+
+            Text {
+                text: actionItem.actionLabel
+                font.family: Config.theme.font
+                font.pixelSize: Styling.fontSize(0)
+                color: Colors.overBackground
+                Layout.fillWidth: true
+                elide: Text.ElideRight
+                verticalAlignment: Text.AlignVCenter
+            }
+
+            Text {
+                text: actionItem.actionCategory
+                font.family: Config.theme.font
+                font.pixelSize: Styling.fontSize(-2)
+                color: Colors.overSurfaceVariant
+                verticalAlignment: Text.AlignVCenter
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: actionItem.isHovered = true
+            onExited: actionItem.isHovered = false
+            onClicked: actionItem.selected()
         }
     }
 

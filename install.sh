@@ -39,7 +39,7 @@ log_info "Detected: $DISTRO"
 # Maps packages to their binary/check - only for conflict-prone packages
 declare -A BINARY_CHECK=(
   ["matugen"]="matugen"
-  ["quickshell-git"]="qs"
+  ["quickshell"]="qs"
   ["kitty"]="kitty"
   ["tmux"]="tmux"
   ["fuzzel"]="fuzzel"
@@ -110,7 +110,7 @@ install_dependencies() {
   fedora)
     log_info "Enabling COPR repositories..."
     sudo dnf install -y --best --allowerasing --setopt=install_weak_deps=False dnf-plugins-core
-    yes | sudo dnf copr enable errornointernet/quickshell-git
+    yes | sudo dnf copr enable errornointernet/quickshell
     yes | sudo dnf copr enable solopasha/hyprland
     yes | sudo dnf copr enable zirconium/packages
     yes | sudo dnf copr enable iucar/cran
@@ -128,7 +128,7 @@ install_dependencies() {
       tesseract-langpack-chi_sim tesseract-langpack-chi_tra tesseract-langpack-kor tesseract-langpack-lat
       google-roboto-fonts google-roboto-mono-fonts dejavu-sans-fonts liberation-fonts
       google-noto-fonts-common google-noto-cjk-fonts google-noto-emoji-fonts
-      mpvpaper matugen R-CRAN-phosphoricons adw-gtk3-theme quickshell-git unzip curl
+      mpvpaper matugen R-CRAN-phosphoricons adw-gtk3-theme quickshell unzip curl
     )
 
     log_info "Installing dependencies..."
@@ -176,7 +176,7 @@ install_dependencies() {
       ttf-roboto ttf-roboto-mono ttf-dejavu ttf-liberation noto-fonts noto-fonts-cjk noto-fonts-emoji
       ttf-nerd-fonts-symbols
       matugen gpu-screen-recorder wl-clip-persist mpvpaper gradia
-      quickshell-git ttf-phosphor-icons ttf-league-gothic adw-gtk-theme
+      quickshell ttf-phosphor-icons ttf-league-gothic adw-gtk-theme
     )
 
     log_info "Installing dependencies with $AUR_HELPER..."
@@ -341,7 +341,7 @@ setup_repo() {
 
 # === Quickshell Build ===
 install_quickshell() {
-  [[ "$DISTRO" == "nixos" || "$DISTRO" == "fedora" ]] && return
+  [[ "$DISTRO" == "nixos" || "$DISTRO" == "fedora" || "$DISTRO" == "arch" ]] && return
   has_cmd qs && {
     log_info "Quickshell already installed"
     return
@@ -366,8 +366,6 @@ install_axctl() {
     log_info "Skipping axctl install on NixOS (managed by flake)"
     return
   fi
-
-
 
   log_info "Installing axctl..."
   curl -L get.axeni.de/axctl | sh

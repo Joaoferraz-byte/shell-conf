@@ -10,7 +10,7 @@ var data = {
     "monoFontSize": 14,
     "tintIcons": false,
     "enableCorners": true,
-    "animDuration": 200,
+    "animDuration": 300,
     "shadowOpacity": 0.5,
     "shadowColor": "shadow",
     "shadowXOffset": 0,
