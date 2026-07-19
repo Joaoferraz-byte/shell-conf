@@ -31,7 +31,6 @@ function directionToLetter(direction) {
 var ACTION_CATALOG = [
     { id: "ambxst.launcher", label: "Open Launcher", category: "Ambxst", dispatcher: "exec", argument: "ambxst run launcher", flags: "r" },
     { id: "ambxst.dashboard", label: "Open Dashboard", category: "Ambxst", dispatcher: "exec", argument: "ambxst run dashboard" },
-    { id: "ambxst.assistant", label: "Open Assistant", category: "Ambxst", dispatcher: "exec", argument: "ambxst run assistant" },
     { id: "ambxst.clipboard", label: "Open Clipboard", category: "Ambxst", dispatcher: "exec", argument: "ambxst run clipboard" },
     { id: "ambxst.emoji", label: "Open Emoji", category: "Ambxst", dispatcher: "exec", argument: "ambxst run emoji" },
     { id: "ambxst.notes", label: "Open Notes", category: "Ambxst", dispatcher: "exec", argument: "ambxst run notes" },
