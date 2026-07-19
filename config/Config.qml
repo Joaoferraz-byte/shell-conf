@@ -20,7 +20,6 @@ import "defaults/lockscreen.js" as LockscreenDefaults
 import "defaults/prefix.js" as PrefixDefaults
 import "defaults/system.js" as SystemDefaults
 import "defaults/dock.js" as DockDefaults
-import "defaults/ai.js" as AiDefaults
 import "ConfigValidator.js" as ConfigValidator
 
 Singleton {
@@ -54,10 +53,9 @@ Singleton {
     property bool prefixReady: false
     property bool systemReady: false
     property bool dockReady: false
-    property bool aiReady: false
     property bool keybindsInitialLoadComplete: false
 
-    property bool initialLoadComplete: themeReady && barReady && workspacesReady && overviewReady && notchReady && compositorReady && performanceReady && weatherReady && desktopReady && lockscreenReady && prefixReady && systemReady && dockReady && aiReady
+    property bool initialLoadComplete: themeReady && barReady && workspacesReady && overviewReady && notchReady && compositorReady && performanceReady && weatherReady && desktopReady && lockscreenReady && prefixReady && systemReady && dockReady
 
     // Compatibility aliases
     property alias loader: themeLoader
@@ -83,7 +81,6 @@ Singleton {
             "cp -n '" + root.presetDir + "/desktop.json' '" + root.configDir + "/desktop.json' 2>/dev/null || true; " +
             "cp -n '" + root.presetDir + "/lockscreen.json' '" + root.configDir + "/lockscreen.json' 2>/dev/null || true; " +
             "cp -n '" + root.presetDir + "/dock.json' '" + root.configDir + "/dock.json' 2>/dev/null || true; " +
-            "cp -n '" + root.presetDir + "/ai.json' '" + root.configDir + "/ai.json' 2>/dev/null || true; " +
             "cp -n '" + root.presetDir + "/system.json' '" + root.configDir + "/system.json' 2>/dev/null || true; " +
             "echo 'Preset files copied if missing'"
         ]
@@ -1140,50 +1137,7 @@ Singleton {
         }
     }
 
-    // ============================================
-    // AI MODULE
-    // ============================================
-    FileView {
-        id: aiLoader
-        path: root.configDir + "/ai.json"
-        atomicWrites: true
-        watchChanges: true
-        onLoaded: {
-            if (!root.aiReady) {
-                validateModule("ai", aiLoader, AiDefaults.data, () => {
-                    root.aiReady = true;
-                });
-            }
-        }
-        onLoadFailed: {
-            if (error.toString().includes("FileNotFound") && !root.aiReady) {
-                handleMissingConfig("ai", aiLoader, AiDefaults.data, () => {
-                    root.aiReady = true;
-                });
-            }
-        }
-        onFileChanged: {
-            root.pauseAutoSave = true;
-            reload();
-            root.pauseAutoSave = false;
-        }
-        onPathChanged: reload()
-        onAdapterUpdated: {
-            if (root.aiReady && !root.pauseAutoSave) {
-                aiLoader.writeAdapter();
-            }
-        }
 
-        adapter: JsonAdapter {
-            property string systemPrompt: "You are a helpful assistant running on a Linux system. You have access to some tools to control the system."
-            property string tool: "none"
-            property list<var> extraModels: []
-            property string defaultModel: "gemini-2.0-flash"
-            property int sidebarWidth: 400
-            property string sidebarPosition: "right"
-            property bool sidebarPinnedOnStartup: false
-        }
-    }
 
     // Keybinds (binds.json)
     // Timer to repair keybinds after initial load
@@ -1304,7 +1258,7 @@ Singleton {
             }
 
             // Check ambxst core binds
-            const ambxstKeys = ["launcher", "dashboard", "assistant", "clipboard", "emoji", "notes", "tmux", "wallpapers"];
+            const ambxstKeys = ["launcher", "dashboard", "clipboard", "emoji", "notes", "tmux", "wallpapers"];
             for (const key of ambxstKeys) {
                 if (!current.ambxst[key] && adapter.ambxst[key]) {
                     console.log("Adding missing ambxst bind:", key);
@@ -1416,11 +1370,7 @@ Singleton {
                 property string key: "D"
                 property var action: ({ "id": "ambxst.dashboard", "args": {} })
             }
-            property JsonObject assistant: JsonObject {
-                property list<string> modifiers: ["SUPER"]
-                property string key: "A"
-                property var action: ({ "id": "ambxst.assistant", "args": {} })
-            }
+
             property JsonObject clipboard: JsonObject {
                 property list<string> modifiers: ["SUPER"]
                 property string key: "V"
@@ -1504,7 +1454,6 @@ Singleton {
                 "ambxst": {
                     "launcher": { "modifiers": ["SUPER"], "key": "Super_L", "action": { "id": "ambxst.launcher", "args": {} } },
                     "dashboard": { "modifiers": ["SUPER"], "key": "D", "action": { "id": "ambxst.dashboard", "args": {} } },
-                    "assistant": { "modifiers": ["SUPER"], "key": "A", "action": { "id": "ambxst.assistant", "args": {} } },
                     "clipboard": { "modifiers": ["SUPER"], "key": "V", "action": { "id": "ambxst.clipboard", "args": {} } },
                     "emoji": { "modifiers": ["SUPER"], "key": "PERIOD", "action": { "id": "ambxst.emoji", "args": {} } },
                     "notes": { "modifiers": ["SUPER"], "key": "N", "action": { "id": "ambxst.notes", "args": {} } },
@@ -3461,8 +3410,7 @@ Singleton {
     // Pinned apps configuration (stored in dataPath)
     property QtObject pinnedApps: pinnedAppsLoader.adapter
 
-    // AI configuration
-    property QtObject ai: aiLoader.adapter
+
 
     // Module save functions
     function saveBar() {
@@ -3504,9 +3452,7 @@ Singleton {
     function savePinnedApps() {
         pinnedAppsLoader.writeAdapter();
     }
-    function saveAi() {
-        aiLoader.writeAdapter();
-    }
+
 
     // Color helpers
     function isHexColor(colorValue) {
