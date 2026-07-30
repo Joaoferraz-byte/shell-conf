@@ -141,7 +141,7 @@ Scope {
                             anchors.fill: parent
                             onClicked: {
                                 // Comando para mudar workspace no Niri
-                                Process.execDetached(["niri", "msg", "action", "focus-workspace", String(modelData.id)]);
+                                Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(modelData.id)]);
                             }
                         }
                     }
