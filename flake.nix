@@ -176,7 +176,7 @@
         in {
           default = ambxstWrapper;
           ambxst = ambxstWrapper;
-          phosphor-icons = ttf-phosphor-icons;
+          ttf-phosphor-icons = ttf-phosphor-icons;
         });
 
       # ─── Módulo Home Manager ──────────────────────────────────────────────
