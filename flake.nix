@@ -1,5 +1,5 @@
 {
-  description = "Ambxst shell configuration for NixOS + Niri";
+  description = "Ambxst-X shell configuration for NixOS + Hyprland";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -18,7 +18,7 @@
       flake = false;
     };
 
-    # axctl: daemon IPC universal que suporta Niri nativamente
+    # axctl: daemon IPC universal que suporta Hyprland nativamente
     axctl = {
       url = "github:Axenide/axctl";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -101,10 +101,10 @@
             </fontconfig>
           '';
 
-          # ── Código-fonte do Ambxst com patches para Niri ──────────────
+          # ── Código-fonte do Ambxst com patches para Hyprland ──────────
           # NOTA: O patch desativa o CompositorConfig.qml (que usa comandos
-          # hardcoded do Hyprland) e deixa apenas o CompositorTomlWriter.qml
-          # ativo, que usa o axctl e funciona corretamente com o Niri.
+          # hardcoded do Hyprland via hyprctl) e deixa apenas o CompositorTomlWriter.qml
+          # ativo, que usa o axctl e funciona corretamente com o Hyprland.
           patchedAmbxstSrc = pkgs.stdenv.mkDerivation {
             pname = "ambxst-src-patched";
             version = "1.0.0";
@@ -112,24 +112,24 @@
             dontBuild = true;
 
             # Patch: Desativa os comandos hyprctl no CompositorConfig.qml
-            # Esses comandos são ignorados pelo Niri e causam spam no log.
-            # O CompositorTomlWriter.qml (via axctl) é a abordagem correta.
+            # Esses comandos são agora tratados pelo axctl (via CompositorTomlWriter.qml)
+            # para manter compatibilidade com o Hyprland.
             patchPhase = ''
               # Comentar o bloco de batchCommand que usa comandos Hyprland
               sed -i \
-                's/batchCommand += `keyword general:/\/\/ [niri-compat] batchCommand += `keyword general:/g' \
+                's/batchCommand += `keyword general:/\/\/ [hyprland-compat] batchCommand += `keyword general:/g' \
                 modules/services/CompositorConfig.qml
               sed -i \
-                's/batchCommand += `keyword decoration:/\/\/ [niri-compat] batchCommand += `keyword decoration:/g' \
+                's/batchCommand += `keyword decoration:/\/\/ [hyprland-compat] batchCommand += `keyword decoration:/g' \
                 modules/services/CompositorConfig.qml
               sed -i \
-                's/batchCommand += `keyword animation/\/\/ [niri-compat] batchCommand += `keyword animation/g' \
+                's/batchCommand += `keyword animation/\/\/ [hyprland-compat] batchCommand += `keyword animation/g' \
                 modules/services/CompositorConfig.qml
               sed -i \
-                's/batchCommand += `keyword bezier/\/\/ [niri-compat] batchCommand += `keyword bezier/g' \
+                's/batchCommand += `keyword bezier/\/\/ [hyprland-compat] batchCommand += `keyword bezier/g' \
                 modules/services/CompositorConfig.qml
               sed -i \
-                's/batchCommand += `keyword layerrule/\/\/ [niri-compat] batchCommand += `keyword layerrule/g' \
+                's/batchCommand += `keyword layerrule/\/\/ [hyprland-compat] batchCommand += `keyword layerrule/g' \
                 modules/services/CompositorConfig.qml
             '';
 
@@ -161,14 +161,14 @@
             export QS_ICON_THEME="''${ICON_THEME:-hicolor}"
 
             # Iniciar o daemon axctl se não estiver rodando
-            # O axctl detecta automaticamente o Niri via NIRI_SOCKET
+            # O axctl detecta automaticamente o Hyprland via HYPRD_SOCKET ou HYPRLAND_INSTANCE_SIGNATURE
             if ! pgrep -x "axctl" > /dev/null 2>&1; then
               axctl daemon &
               # Aguardar o daemon inicializar
               sleep 0.5
             fi
 
-            # Criar o pipe IPC se não existir (usado pelo Niri para enviar comandos)
+            # Criar o pipe IPC se não existir (usado pelo Hyprland para enviar comandos)
             AMBXST_IPC_PIPE="/tmp/ambxst_ipc.pipe"
             if [ ! -p "$AMBXST_IPC_PIPE" ]; then
               mkfifo "$AMBXST_IPC_PIPE"
@@ -238,23 +238,23 @@
 
           # ── Keybinds do Ambxst ─────────────────────────────────────────
           # NOTA: Os keybinds do Ambxst via binds.json NÃO devem duplicar os
-          # keybinds FIFO IPC do Niri (definidos em niri.nix).
+          # keybinds definidos no hyprland.nix do nix-conf.
           #
-          # O Niri envia comandos via pipe FIFO (/tmp/ambxst_ipc.pipe) para
+          # O Hyprland envia comandos via pipe FIFO (/tmp/ambxst_ipc.pipe) para
           # Mod+S, Mod+D, Mod+A, Mod+V, Mod+., Mod+N, Mod+,, Mod+Tab,
           # Mod+Escape, Mod+L, Mod+Shift+S.
           #
           # Os keybinds abaixo são APENAS os que NÃO são cobertos pelo FIFO:
-          #   - Tools (SUPER+T): não tem equivalente FIFO no Niri
-          #   - Reload/Quit: não tem equivalente FIFO no Niri
+          #   - Tools (SUPER+T): não tem equivalente FIFO no Hyprland
+          #   - Reload/Quit: não tem equivalente FIFO no Hyprland
           #
           # Os demais (launcher, dashboard, clipboard, emoji, notes, wallpapers,
           # overview, powermenu, lockscreen, screenshot) são disparados pelo
-          # FIFO IPC do Niri e NÃO precisam estar aqui.
+          # FIFO IPC do Hyprland e NÃO precisam estar aqui.
           home.file.".config/ambxst/binds.json".text = builtins.toJSON {
             system = {
               # Tools: SUPER+T — menu de ferramentas
-              # Não há FIFO equivalente no Niri (não é um dos pipes padrão)
+              # Não há FIFO equivalente no Hyprland (não é um dos pipes padrão)
               tools = {
                 modifiers = [ "SUPER" ];
                 key = "T";
