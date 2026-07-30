@@ -2,10 +2,11 @@ import QtQuick
 import Quickshell
 
 // Barra principal customizada
+// NOTA: Este componente não é importado pelo shell.qml principal.
+// Ele serve como referência/scaffold para futuras customizações.
 Item {
     id: mainBar
     implicitHeight: 36
-    color: "transparent"
 
     // Espaços vazios para empurrar os widgets para o centro
     Item { width: parent.width / 2 - 100; height: 1 }

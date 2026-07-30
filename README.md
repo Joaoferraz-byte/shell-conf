@@ -1,10 +1,10 @@
-# shell-conf — Ambxst para NixOS + Niri
+# shell-conf — Ambxst-X para NixOS + Hyprland
 
-Repositório de configuração do shell [Ambxst](https://github.com/Axenide/Ambxst) para NixOS com o compositor [Niri](https://github.com/YaLTeR/niri).
+Repositório de configuração do shell [Ambxst-X](https://github.com/OrynVail/Ambxst-X) para NixOS com o compositor [Hyprland](https://hyprland.org).
 
 ## Arquitetura
 
-Este flake empacota o Ambxst para NixOS, garantindo compatibilidade com o Niri via [axctl](https://github.com/Axenide/axctl) — o daemon IPC universal que abstrai a comunicação com o compositor.
+Este flake empacota o Ambxst para NixOS, garantindo compatibilidade com o Hyprland via [axctl](https://github.com/Axenide/axctl) — o daemon IPC universal que abstrai a comunicação com o compositor.
 
 ```
 shell-conf/
@@ -18,17 +18,23 @@ shell-conf/
 │   ├── overview.json  # Overview de workspaces
 │   ├── performance.json # Modo de performance
 │   ├── lockscreen.json # Tela de bloqueio
+│   ├── notch.json     # Configuração do notch
+│   ├── system.json    # Configuração do sistema (idle, OCR, pomodoro)
 │   └── workspaces.json # Configuração de workspaces
+├── shell.qml          # Shell QML principal (Quickshell)
+├── modules/           # Componentes QML reutilizáveis
+│   ├── bar/           # Barra principal
+│   └── widgets/       # Widgets reutilizáveis
 └── README.md
 ```
 
 ## Como funciona
 
-### Integração com o Niri
+### Integração com o Hyprland
 
-O Ambxst usa o `axctl` para se comunicar com o Niri. O `axctl` detecta automaticamente o compositor via `NIRI_SOCKET` e expõe uma API JSON-RPC unificada.
+O Ambxst-X usa o `axctl` para se comunicar com o Hyprland. O `axctl` detecta automaticamente o compositor e expõe uma API JSON-RPC unificada.
 
-O Niri envia comandos para o Ambxst via pipe FIFO (`/tmp/ambxst_ipc.pipe`), que é escutado pelo `GlobalShortcuts.qml` do Ambxst.
+O Hyprland envia comandos para o Ambxst-X via pipe FIFO (`/tmp/ambxst_ipc.pipe`), que é escutado pelo `GlobalShortcuts.qml` do Ambxst-X.
 
 ### Configuração declarativa em JSON
 
@@ -36,7 +42,7 @@ As configurações base são gerenciadas pelo Home Manager e copiadas para `~/.c
 
 ### Keybinds
 
-Os keybinds são definidos em `~/.config/ambxst/binds.json` (gerenciado pelo Home Manager). O Niri envia os comandos via pipe IPC, evitando conflitos de keybinds.
+Os keybinds são definidos em `~/.config/ambxst/binds.json` (gerenciado pelo Home Manager). O Hyprland envia os comandos via pipe IPC, evitando conflitos de keybinds.
 
 ## Integração no nix-conf
 
@@ -60,17 +66,17 @@ imports = [
 ];
 ```
 
-No `modules/features/niri.nix`, configure o `spawn-at-startup`:
+No `modules/features/hyprland.nix`, configure o `exec-once`:
 
 ```nix
-spawn-at-startup = [
-  { command = [ "ambxst" ]; }
+exec-once = [
+  "ambxst"
 ];
 ```
 
 ## Referências
 
-- [Ambxst](https://github.com/Axenide/Ambxst) — Shell Quickshell original
+- [Ambxst-X](https://github.com/OrynVail/Ambxst-X) — Shell Quickshell com suporte Hyprland
 - [axctl](https://github.com/Axenide/axctl) — Daemon IPC para Wayland compositors
-- [Niri](https://github.com/YaLTeR/niri) — Compositor Wayland scrolling
+- [Hyprland](https://hyprland.org) — Compositor Wayland dinâmico
 - [Quickshell](https://quickshell.org) — Framework QML para shells Wayland

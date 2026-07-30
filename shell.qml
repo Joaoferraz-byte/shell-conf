@@ -23,13 +23,16 @@ Scope {
         }
     }
 
-    // ── Integração com Niri ─────────────────────────────────────────────
-    property var niriWorkspaces: []
+    // ── Integração com Hyprland via axctl ──────────────────────────────
+    // O axctl detecta automaticamente o Hyprland e fornece uma API JSON-RPC
+    // unificada. Usamos axctl em vez de hyprctl diretamente para manter
+    // compatibilidade com múltiplos compositores.
+    property var hyprlandWorkspaces: []
     property string activeWindow: "No Window"
 
     Process {
-        id: niriWorkspacesProc
-        command: ["niri", "msg", "-j", "workspaces"]
+        id: hyprlandWorkspacesProc
+        command: ["axctl", "workspaces"]
         running: true
         onRunningChanged: if (!running) running = true // Loop contínuo
 
@@ -37,31 +40,29 @@ Scope {
             onStreamFinished: {
                 try {
                     const data = JSON.parse(this.text);
-                    // O Niri retorna um objeto com chaves sendo os IDs
-                    const workspaces = Object.values(data);
-                    root.niriWorkspaces = workspaces.map(ws => ({
-                        id: ws.idx,
-                        name: ws.name ? ws.name : String(ws.idx)
+                    root.hyprlandWorkspaces = (Array.isArray(data) ? data : Object.values(data)).map(ws => ({
+                        id: ws.id !== undefined ? ws.id : (ws.idx !== undefined ? ws.idx : 0),
+                        name: ws.name || String(ws.id !== undefined ? ws.id : (ws.idx !== undefined ? ws.idx : 0))
                     }));
                 } catch (e) {
-                    console.log("Erro ao parsear Niri:", e);
+                    console.log("Erro ao parsear workspaces:", e);
                 }
             }
         }
     }
 
     Process {
-        id: niriWindowProc
-        command: ["niri", "msg", "-j", "active-window"]
+        id: hyprlandWindowProc
+        command: ["axctl", "active-window"]
         running: true
         onRunningChanged: if (!running) running = true
-        
+
         // Atualizar a cada 2 segundos para não sobrecarregar
         Timer {
             interval: 2000
             running: true
             repeat: true
-            onTriggered: niriWindowProc.running = true
+            onTriggered: hyprlandWindowProc.running = true
         }
 
         stdout: StdioCollector {
@@ -82,27 +83,27 @@ Scope {
         FloatingWindow {
             required property var modelData
             screen: modelData
-            
+
             // Posicionamento Flutuante (Top Center)
             anchors {
                 top: parent.top
                 horizontalCenter: parent.horizontalCenter
                 topMargin: 16
             }
-            
+
             implicitWidth: contentRow.width + 40
             implicitHeight: settingsFile.JsonAdapter.barHeight
-            
+
             // Estilo Visual (Glassmorphism / Material)
             Rectangle {
                 anchors.fill: parent
                 color: Qt.rgba(24/255, 24/255, 27/255, settingsFile.JsonAdapter.opacity)
                 radius: settingsFile.JsonAdapter.borderRadius
-                
+
                 // Borda sutil
                 border.color: Qt.rgba(255/255, 255/255, 255/255, 0.05)
                 border.width: 1
-                
+
                 // Sombras (Simulação com drop shadow)
                 layer.enabled: true
                 layer.effect: DropShadow {
@@ -117,18 +118,18 @@ Scope {
                 id: contentRow
                 anchors.centerIn: parent
                 spacing: 16
-                
-                // ── Workspaces (Niri) ─────────────────────────────────
+
+                // ── Workspaces (Hyprland) ────────────────────────────
                 Repeater {
-                    model: root.niriWorkspaces
+                    model: root.hyprlandWorkspaces
                     delegate: Rectangle {
                         width: 32
                         height: 32
                         radius: 10
-                        color: (modelData.id === root.currentWorkspaceId) 
-                               ? settingsFile.JsonAdapter.accentColor 
+                        color: (modelData.id === root.currentWorkspaceId)
+                               ? settingsFile.JsonAdapter.accentColor
                                : "transparent"
-                        
+
                         Text {
                             anchors.centerIn: parent
                             text: modelData.name
@@ -136,17 +137,17 @@ Scope {
                             font.pixelSize: settingsFile.JsonAdapter.fontSize
                             font.bold: true
                         }
-                        
+
                         MouseArea {
                             anchors.fill: parent
                             onClicked: {
-                                // Comando para mudar workspace no Niri
-                                Quickshell.execDetached(["niri", "msg", "action", "focus-workspace", String(modelData.id)]);
+                                // Comando para mudar workspace no Hyprland via axctl
+                                Quickshell.execDetached(["axctl", "focus-workspace", String(modelData.id)]);
                             }
                         }
                     }
                 }
-                
+
                 // ── Título da Janela Ativa ────────────────────────────
                 Text {
                     text: root.activeWindow
@@ -155,7 +156,7 @@ Scope {
                     elide: Text.ElideMiddle
                     Layout.maximumWidth: 300
                 }
-                
+
                 // ── Relógio ───────────────────────────────────────────
                 Text {
                     id: clockText
@@ -163,7 +164,7 @@ Scope {
                     color: settingsFile.JsonAdapter.accentColor
                     font.pixelSize: settingsFile.JsonAdapter.fontSize
                     font.bold: true
-                    
+
                     Timer {
                         interval: 1000
                         running: true
