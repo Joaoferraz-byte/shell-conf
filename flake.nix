@@ -226,81 +226,35 @@
           home.file.".config/ambxst/config/workspaces.json" = {
             source = ./settings/workspaces.json;
           };
+          # Missing settings files required by upstream Ambxst Config.qml.
+          # notch.json: Config.notch adapter (keepHidden, hoverRegionHeight, etc.)
+          # system.json: Config.system adapter (idle, ocr, pomodoro, disks)
+          home.file.".config/ambxst/config/notch.json" = {
+            source = ./settings/notch.json;
+          };
+          home.file.".config/ambxst/config/system.json" = {
+            source = ./settings/system.json;
+          };
 
           # ── Keybinds do Ambxst ─────────────────────────────────────────
-          # NOTA: Os keybinds do Ambxst são gerenciados aqui para garantir
-          # que não conflitem com os keybinds do Niri definidos em niri.nix.
-          # O Niri envia comandos via pipe IPC; o Ambxst não precisa registrar
-          # keybinds globais próprios (evita duplicação).
+          # NOTA: Os keybinds do Ambxst via binds.json NÃO devem duplicar os
+          # keybinds FIFO IPC do Niri (definidos em niri.nix).
+          #
+          # O Niri envia comandos via pipe FIFO (/tmp/ambxst_ipc.pipe) para
+          # Mod+S, Mod+D, Mod+A, Mod+V, Mod+., Mod+N, Mod+,, Mod+Tab,
+          # Mod+Escape, Mod+L, Mod+Shift+S.
+          #
+          # Os keybinds abaixo são APENAS os que NÃO são cobertos pelo FIFO:
+          #   - Tools (SUPER+T): não tem equivalente FIFO no Niri
+          #   - Reload/Quit: não tem equivalente FIFO no Niri
+          #
+          # Os demais (launcher, dashboard, clipboard, emoji, notes, wallpapers,
+          # overview, powermenu, lockscreen, screenshot) são disparados pelo
+          # FIFO IPC do Niri e NÃO precisam estar aqui.
           home.file.".config/ambxst/binds.json".text = builtins.toJSON {
-            ambxst = {
-              # Launcher: SUPER (Super_L) — abre o launcher de apps
-              launcher = {
-                modifiers = [ "SUPER" ];
-                key = "Super_L";
-                action = { id = "ambxst.launcher"; args = {}; };
-              };
-              # Dashboard: SUPER+D — painel principal
-              dashboard = {
-                modifiers = [ "SUPER" ];
-                key = "D";
-                action = { id = "ambxst.dashboard"; args = {}; };
-              };
-              # Clipboard: SUPER+V — histórico de clipboard
-              # NOTA: Conflito com "toggle floating" do Niri.
-              # O Niri será configurado para usar SUPER+Shift+V para floating.
-              clipboard = {
-                modifiers = [ "SUPER" ];
-                key = "V";
-                action = { id = "ambxst.clipboard"; args = {}; };
-              };
-              # Emoji: SUPER+. — seletor de emojis
-              emoji = {
-                modifiers = [ "SUPER" ];
-                key = "PERIOD";
-                action = { id = "ambxst.emoji"; args = {}; };
-              };
-              # Notes: SUPER+N — notas rápidas
-              notes = {
-                modifiers = [ "SUPER" ];
-                key = "N";
-                action = { id = "ambxst.notes"; args = {}; };
-              };
-              # Wallpapers: SUPER+, — seletor de wallpapers
-              wallpapers = {
-                modifiers = [ "SUPER" ];
-                key = "COMMA";
-                action = { id = "ambxst.wallpapers"; args = {}; };
-              };
-            };
             system = {
-              # Overview: SUPER+Tab — visão geral de workspaces
-              overview = {
-                modifiers = [ "SUPER" ];
-                key = "TAB";
-                action = { id = "ambxst.overview"; args = {}; };
-              };
-              # Power menu: SUPER+Escape
-              powermenu = {
-                modifiers = [ "SUPER" ];
-                key = "ESCAPE";
-                action = { id = "ambxst.powermenu"; args = {}; };
-              };
-              # Lock screen: SUPER+L
-              lockscreen = {
-                modifiers = [ "SUPER" ];
-                key = "L";
-                action = { id = "system.lock"; args = {}; };
-              };
-              # Screenshot: SUPER+Shift+S
-              screenshot = {
-                modifiers = [ "SUPER" "SHIFT" ];
-                key = "S";
-                action = { id = "ambxst.screenshot"; args = {}; };
-              };
-              # Tools: SUPER+T — movido de SUPER+S (conflito com launcher via IPC do Niri)
-              # O Niri usa Mod+S para enviar 'launcher' via pipe IPC; SUPER+T é livre.
-              # Referência: BUG-004 no audit report
+              # Tools: SUPER+T — menu de ferramentas
+              # Não há FIFO equivalente no Niri (não é um dos pipes padrão)
               tools = {
                 modifiers = [ "SUPER" ];
                 key = "T";
