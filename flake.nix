@@ -4,6 +4,14 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # ── ARCH-001: Migração para Ambxst-X ──────────────────────────────────
+    # TODO: Avaliar migração de github:Axenide/Ambxst para github:OrynVail/Ambxst-X
+    # Ambxst-X tem melhor suporte a Nix:
+    #   - flake.nix próprio com nixosModules.default
+    #   - diretório nix/ estruturado (lib.nix, modules/)
+    #   - IpcHandler (axctl) como mecanismo IPC secundário (além do FIFO pipe)
+    # A migração eliminaria o patchedAmbxstSrc e simplificaria este flake.
+    # Bloquear: verificar paridade de features e testar IpcHandler antes de migrar.
     # Código-fonte do Ambxst (não é um flake, apenas o código)
     ambxst-src = {
       url = "github:Axenide/Ambxst";
@@ -290,10 +298,12 @@
                 key = "S";
                 action = { id = "ambxst.screenshot"; args = {}; };
               };
-              # Tools: SUPER+S
+              # Tools: SUPER+T — movido de SUPER+S (conflito com launcher via IPC do Niri)
+              # O Niri usa Mod+S para enviar 'launcher' via pipe IPC; SUPER+T é livre.
+              # Referência: BUG-004 no audit report
               tools = {
                 modifiers = [ "SUPER" ];
-                key = "S";
+                key = "T";
                 action = { id = "ambxst.tools"; args = {}; };
               };
             };
