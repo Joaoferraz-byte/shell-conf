@@ -1,24 +1,30 @@
 {
   "nodes": {
-    "ambxst-src": {
-      "flake": false,
+    "ambxst-x": {
+      "inputs": {
+        "axctl": "axctl",
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
       "locked": {
-        "lastModified": 1784822600,
-        "narHash": "sha256-0OVh+Eln1i90fBJH/00p3OvWG7CCIRtcFMIKvQZlGkg=",
-        "owner": "Axenide",
-        "repo": "Ambxst",
-        "rev": "c5c943dd5136b559d6f9deda2031eb88256d4438",
+        "lastModified": 1784989985,
+        "narHash": "sha256-8u0haeiZ3hCDoTiahNEnt+GVwi3+pinEvIBtRJecBMg=",
+        "owner": "OrynVail",
+        "repo": "Ambxst-X",
+        "rev": "ee9fcbd4f8d602bad3bc9ede0f32f20b09989ba3",
         "type": "github"
       },
       "original": {
-        "owner": "Axenide",
-        "repo": "Ambxst",
+        "owner": "OrynVail",
+        "repo": "Ambxst-X",
         "type": "github"
       }
     },
     "axctl": {
       "inputs": {
         "nixpkgs": [
+          "ambxst-x",
           "nixpkgs"
         ]
       },
@@ -54,8 +60,7 @@
     },
     "root": {
       "inputs": {
-        "ambxst-src": "ambxst-src",
-        "axctl": "axctl",
+        "ambxst-x": "ambxst-x",
         "nixpkgs": "nixpkgs"
       }
     }

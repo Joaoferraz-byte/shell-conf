@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    
+
     ambxst-x = {
       url = "github:OrynVail/Ambxst-X";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -16,26 +16,25 @@
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
-      packages = forAllSystems (system:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-        in {
-          default = ambxst-x.packages.${system}.default;
-          ambxst = ambxst-x.packages.${system}.default;
-          ttf-phosphor-icons = ambxst-x.packages.${system}.default;
-        });
+      packages = forAllSystems (system: {
+        default = ambxst-x.packages.${system}.default;
+        ambxst = ambxst-x.packages.${system}.default;
+      });
 
-      homeManagerModules.default = { config, pkgs, lib, ... }:
+      # Reexporta o módulo NixOS mantido pelo upstream. Ele registra as fontes
+      # Phosphor e as dependências de runtime que o Ambxst-X espera.
+      nixosModules.default = ambxst-x.nixosModules.default;
+
+      homeManagerModules.default = { pkgs, lib, ... }:
         let
-          system = pkgs.system;
+          system = pkgs.stdenv.hostPlatform.system;
         in {
+          # Permite usar este módulo também fora do módulo NixOS reexportado.
           home.packages = [ self.packages.${system}.default ];
 
-          # Mapeando para ~/.config/ambxst/config/ para ser compatível com a expectativa do Ambxst-X
-          # O Ambxst-X usa XDG_CONFIG_HOME/ambxst/config/
+          # O Ambxst-X carrega estes adaptadores de XDG_CONFIG_HOME/ambxst/config.
+          # Mantê-los no repositório evita que o primeiro login crie defaults
+          # implícitos e não versionados.
           home.file.".config/ambxst/config/theme.json".source = ./settings/theme.json;
           home.file.".config/ambxst/config/bar.json".source = ./settings/bar.json;
           home.file.".config/ambxst/config/compositor.json".source = ./settings/compositor.json;
@@ -47,33 +46,22 @@
           home.file.".config/ambxst/config/workspaces.json".source = ./settings/workspaces.json;
           home.file.".config/ambxst/config/notch.json".source = ./settings/notch.json;
           home.file.".config/ambxst/config/system.json".source = ./settings/system.json;
+          home.file.".config/ambxst/config/weather.json".source = ./settings/weather.json;
+          home.file.".config/ambxst/config/prefix.json".source = ./settings/prefix.json;
 
-          # ── Keybinds do Ambxst ─────────────────────────────────────────
-          # NOTA: Os keybinds do Ambxst via binds.json NÃO devem duplicar os
-          # keybinds definidos no hyprland.nix do nix-conf.
-          #
-          # O Hyprland envia comandos via pipe FIFO (/tmp/ambxst_ipc.pipe) para
-          # Mod+S, Mod+D, Mod+A, Mod+V, Mod+., Mod+N, Mod+,, Mod+Tab,
-          # Mod+Escape, Mod+L, Mod+Shift+S.
-          #
-          # Os keybinds abaixo são APENAS os que NÃO são cobertos pelo FIFO:
-          #   - Tools (SUPER+T): não tem equivalente FIFO no Hyprland
-          #   - Reload/Quit: não tem equivalente FIFO no Hyprland
-          #
-          # Os demais (launcher, dashboard, clipboard, emoji, notes, wallpapers,
-          # overview, powermenu, lockscreen, screenshot) são disparados pelo
-          # FIFO IPC do Hyprland e NÃO precisam estar aqui.
-          home.file.".config/ambxst/binds.json".text = builtins.toJSON {
-            system = {
-              # Tools: SUPER+T — menu de ferramentas
-              # Não há FIFO equivalente no Hyprland (não é um dos pipes padrão)
-              tools = {
-                modifiers = [ "SUPER" ];
-                key = "T";
-                action = { id = "ambxst.tools"; args = {}; };
-              };
-            };
-          };
+          # Em versões anteriores este flake criava um binds.json mínimo como
+          # link imutável. O Ambxst-X atual administra e migra esse arquivo por
+          # conta própria via axctl; remover somente o link legado deixa o
+          # arquivo mutable para a UI e evita duplicação de binds com Hyprland.
+          home.activation.removeLegacyAmbxstBinds = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
+            target="$HOME/.config/ambxst/binds.json"
+            if [ -L "$target" ]; then
+              resolved="$(readlink -f "$target" || true)"
+              if [[ "$resolved" == /nix/store/* ]]; then
+                rm -f "$target"
+              fi
+            fi
+          '';
         };
     };
 }
