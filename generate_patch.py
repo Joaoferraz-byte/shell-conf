@@ -1,4 +1,4 @@
---- a/config/Config.qml
+patch_content = """--- a/config/Config.qml
 +++ b/config/Config.qml
 @@ -34,6 +34,9 @@
 -    property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/config"
@@ -36,3 +36,7 @@
 +
 +    CompositorKeybinds {
 +        id: compositorKeybinds
+"""
+
+with open('patches/0001-ambxst-runtime-state-bootstrap-and-workspace-icons.patch', 'w') as f:
+    f.write(patch_content)
