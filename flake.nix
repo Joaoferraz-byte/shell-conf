@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
     ambxst-x = {
       url = "github:OrynVail/Ambxst-X";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -21,20 +20,23 @@
           pkgs = nixpkgs.legacyPackages.${system};
           upstreamPackage = ambxst-x.packages.${system}.default;
 
-          # Keep the upstream revision and its axctl input intact. Only the
-          # audited QML/bootstrap behavior is patched in a separate derivation.
+          # Estratégia Robusta: Substituição direta de arquivos QML problemáticos
+          # Isso evita falhas de hunk causadas por mudanças invisíveis no upstream.
           patchedSource = pkgs.runCommand "ambxst-x-patched-source" {
             src = ambxst-x.outPath;
-            nativeBuildInputs = [ pkgs.patch ];
           } ''
             cp -R --no-preserve=mode "$src"/. "$out"
             chmod -R u+w "$out"
-            patch --batch --forward -p1 -d "$out" < ${./patches/0001-ambxst-runtime-state-bootstrap-and-workspace-icons.patch}
+            
+            # Substituir arquivos QML pelos corrigidos
+            cp ${./files/Config.qml} "$out/config/Config.qml"
+            cp ${./files/Workspaces.qml} "$out/modules/bar/workspaces/Workspaces.qml"
+            cp ${./files/AxctlService.qml} "$out/modules/services/AxctlService.qml"
+            cp ${./files/CompositorTomlWriter.qml} "$out/modules/services/CompositorTomlWriter.qml"
+            cp ${./files/PresetsService.qml} "$out/modules/services/PresetsService.qml"
+            cp ${./files/shell.qml} "$out/shell.qml"
           '';
 
-          # The upstream wrapper creates this fontconfig file dynamically in
-          # its own package expression. Recreate the same contract because the
-          # patched launcher must point at the patched QML source tree.
           fontconfigConf = pkgs.writeTextDir "etc/fonts/conf.d/99-ambxst-fonts.conf" ''
             <?xml version="1.0"?>
             <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
@@ -49,9 +51,6 @@
             export QML2_IMPORT_PATH="${upstreamPackage}/lib/qt-6/qml:$QML2_IMPORT_PATH"
             export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
             export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
-
-            # Nix owns the immutable seed while AMBXST owns all runtime state:
-            # JSON edits, binds.json and presets must never target /nix/store.
             export AMBXST_CONFIG_ROOT="''${AMBXST_CONFIG_ROOT:-''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst}"
 
             exec ${patchedSource}/cli.sh "$@"
@@ -74,35 +73,15 @@
           upstream = upstreamPackage;
         });
 
-      # Reexport the upstream NixOS module. nix-conf selects the patched package
-      # explicitly through programs.ambxst.package.
       nixosModules.default = ambxst-x.nixosModules.default;
 
       homeManagerModules.default = { pkgs, lib, ... }:
         let
           system = pkgs.stdenv.hostPlatform.system;
-          settingsNames = [
-            "theme"
-            "bar"
-            "compositor"
-            "desktop"
-            "dock"
-            "overview"
-            "performance"
-            "lockscreen"
-            "workspaces"
-            "notch"
-            "system"
-            "weather"
-            "prefix"
-          ];
+          settingsNames = [ "theme" "bar" "compositor" "desktop" "dock" "overview" "performance" "lockscreen" "workspaces" "notch" "system" "weather" "prefix" ];
         in
         {
           home.packages = [ self.packages.${system}.ambxst ];
-
-          # The repository settings are only a first-run seed. The active files
-          # live under XDG_STATE_HOME so AMBXST can update JSON, binds and presets
-          # without attempting to write through a Nix-store symlink.
           home.activation.prepareAmbxstRuntimeState = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
             runtime_root="''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst"
             config_dir="$runtime_root/config"
@@ -142,9 +121,6 @@
               fi
             fi
 
-            # Preserve presets authored before the runtime-state migration. A
-            # real directory is copied once; a store symlink is discarded so
-            # PresetsService can own the writable destination.
             legacy_presets="$legacy_root/presets"
             if [ -d "$legacy_presets" ] && [ ! -L "$legacy_presets" ] \
               && [ -z "$(find "$runtime_root/presets" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
