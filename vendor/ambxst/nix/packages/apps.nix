@@ -17,6 +17,7 @@ with pkgs; [
   gradia
 
   # Icons
+  kora-icon-theme
   kdePackages.breeze-icons
   hicolor-icon-theme
 ]
