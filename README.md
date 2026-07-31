@@ -1,82 +1,63 @@
-# shell-conf — Ambxst-X para NixOS + Hyprland
+# shell-conf — Ambxst-X para NixOS e Hyprland
 
-Repositório de configuração do shell [Ambxst-X](https://github.com/OrynVail/Ambxst-X) para NixOS com o compositor [Hyprland](https://hyprland.org).
+Este repositório contém a camada declarativa do usuário para o shell [Ambxst-X](https://github.com/OrynVail/Ambxst-X) em NixOS. Ele não é um fork do shell QML: consome o pacote e o módulo NixOS mantidos pelo upstream, enquanto versiona os JSONs de personalização locais e os disponibiliza ao Home Manager.
 
 ## Arquitetura
 
-Este flake empacota o Ambxst para NixOS, garantindo compatibilidade com o Hyprland via [axctl](https://github.com/Axenide/axctl) — o daemon IPC universal que abstrai a comunicação com o compositor.
+| Camada | Responsabilidade | Fonte de verdade |
+|---|---|---|
+| `flake.nix` | Reexporta o pacote e o módulo NixOS oficiais do Ambxst-X; expõe o módulo Home Manager local. | `OrynVail/Ambxst-X` e `flake.lock` |
+| `settings/*.json` | Define tema, barra, compositor, workspaces, dock, notch e demais adaptadores lidos pelo shell. | Este repositório |
+| Ambxst-X | Inicia Quickshell, produz `~/.local/share/ambxst/axctl.toml` e inicializa o daemon `axctl`. | Pacote upstream |
+| `axctl` | Aplica o TOML ao compositor e gera `hyprland.conf` e `hyprland.lua`. | Pacote upstream |
+| `nix-conf` | Gera a configuração principal em Lua e carrega, com proteção, o bloco `hyprland.lua` do Ambxst-X. | Repositório do sistema |
 
-```
-shell-conf/
-├── flake.nix          # Flake principal: empacota o Ambxst + axctl
-├── settings/          # Configurações base em JSON (gerenciadas pelo Nix)
-│   ├── theme.json     # Tema visual (cores, fontes, arredondamento)
-│   ├── bar.json       # Configuração da barra
-│   ├── compositor.json # Aparência do compositor (gaps, bordas, blur)
-│   ├── desktop.json   # Widgets de desktop
-│   ├── dock.json      # Dock de aplicativos
-│   ├── overview.json  # Overview de workspaces
-│   ├── performance.json # Modo de performance
-│   ├── lockscreen.json # Tela de bloqueio
-│   ├── notch.json     # Configuração do notch
-│   ├── system.json    # Configuração do sistema (idle, OCR, pomodoro)
-│   └── workspaces.json # Configuração de workspaces
-├── shell.qml          # Shell QML principal (Quickshell)
-├── modules/           # Componentes QML reutilizáveis
-│   ├── bar/           # Barra principal
-│   └── widgets/       # Widgets reutilizáveis
-└── README.md
-```
+> O Hyprland 0.55 passou a preferir Lua, e o Home Manager 26.05 também gera `hyprland.lua` por padrão. Logo, a integração correta é `loadfile(.../ambxst/hyprland.lua)()` protegida contra arquivo ausente — não uma linha `source = ...hyprland.conf` dentro de Lua. Consulte a [documentação de binds](https://wiki.hypr.land/Configuring/Basics/Binds/) e a [migração oficial de configuração](https://wiki.hypr.land/Configuring/Start/).
 
-## Como funciona
+## Configurações versionadas
 
-### Integração com o Hyprland
+| Arquivo | Função |
+|---|---|
+| `theme.json` | Paleta, fontes, arredondamento e componentes visuais. |
+| `bar.json`, `workspaces.json`, `overview.json`, `notch.json` | Barra, navegação e superfícies de produtividade. |
+| `compositor.json` | Valores dinâmicos de gaps, bordas, sombra, blur e animações enviados ao axctl. |
+| `desktop.json`, `dock.json`, `lockscreen.json` | Desktop, dock e lockscreen do shell. |
+| `performance.json`, `system.json` | Perfil de desempenho, idle, OCR e recursos de sistema. |
+| `weather.json`, `prefix.json` | Defaults explícitos para todos os adaptadores que o Ambxst-X atual carrega. |
 
-O Ambxst-X usa o `axctl` para se comunicar com o Hyprland. O `axctl` detecta automaticamente o compositor e expõe uma API JSON-RPC unificada.
+Os arquivos são vinculados para `~/.config/ambxst/config/` pelo Home Manager. Para alterar comportamento persistente, edite o JSON correspondente neste repositório e aplique o rebuild da configuração Nix.
 
-O Hyprland envia comandos para o Ambxst-X via pipe FIFO (`/tmp/ambxst_ipc.pipe`), que é escutado pelo `GlobalShortcuts.qml` do Ambxst-X.
+## Binds e inicialização
 
-### Configuração declarativa em JSON
+O `binds.json` fica em `~/.config/ambxst/binds.json`, mas **não** é gerenciado como link imutável pelo Home Manager. O Ambxst-X atual cria, migra e atualiza esse arquivo com seus próprios atalhos por meio do `axctl`; essa decisão evita conflito entre a UI do shell e o gerenciador declarativo de arquivos.
 
-As configurações base são gerenciadas pelo Home Manager e copiadas para `~/.config/ambxst/config/`. Para customizar, edite os arquivos em `settings/` e faça `nixos-rebuild switch`.
+Os atalhos básicos e de recuperação pertencem ao `nix-conf/modules/features/hyprland.nix`. Os atalhos específicos do shell são gerados pelo Ambxst-X. No primeiro login, antes de `hyprland.lua` existir, a configuração principal inicia o Ambxst-X de forma segura; nas sessões seguintes, o arquivo gerado pelo axctl contém o startup normal do shell. Esse desenho evita tanto uma dependência circular no primeiro boot quanto registros duplicados de atalhos.
 
-### Keybinds
+## Uso no `nix-conf`
 
-Os keybinds são definidos em `~/.config/ambxst/binds.json` (gerenciado pelo Home Manager). O Hyprland envia os comandos via pipe IPC, evitando conflitos de keybinds.
-
-## Integração no nix-conf
-
-No `nix-conf`, adicione ao `flake.nix`:
+O flake do sistema deve seguir o mesmo `nixpkgs`:
 
 ```nix
-inputs = {
-  shell-conf = {
-    url = "github:Joaoferraz-byte/shell-conf";
-    inputs.nixpkgs.follows = "nixpkgs";
-  };
+inputs.shell-conf = {
+  url = "github:Joaoferraz-byte/shell-conf";
+  inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
 
-No `modules/hosts/my-machine/configuration.nix`:
+O módulo local do sistema importa o módulo reexportado e adiciona o módulo Home Manager:
 
 ```nix
 imports = [
-  # ...
-  self.nixosModules.ambxst
+  inputs.shell-conf.nixosModules.default
+];
+
+home-manager.sharedModules = [
+  inputs.shell-conf.homeManagerModules.default
 ];
 ```
 
-No `modules/features/hyprland.nix`, configure o `exec-once`:
-
-```nix
-exec-once = [
-  "ambxst"
-];
-```
+A configuração do Hyprland deve permanecer em Lua e carregar condicionalmente `~/.local/share/ambxst/hyprland.lua`. Não execute `ambxst install hyprland`: esse subcomando edita `~/.config/hypr` imperativamente e conflita com o arquivo gerenciado pelo Home Manager.
 
 ## Referências
 
-- [Ambxst-X](https://github.com/OrynVail/Ambxst-X) — Shell Quickshell com suporte Hyprland
-- [axctl](https://github.com/Axenide/axctl) — Daemon IPC para Wayland compositors
-- [Hyprland](https://hyprland.org) — Compositor Wayland dinâmico
-- [Quickshell](https://quickshell.org) — Framework QML para shells Wayland
+[Ambxst-X](https://github.com/OrynVail/Ambxst-X) · [axctl](https://github.com/Axenide/axctl) · [Hyprland Lua configuration](https://wiki.hypr.land/Configuring/Start/) · [Home Manager Hyprland module](https://nix-community.github.io/home-manager/options.xhtml#opt-wayland.windowManager.hyprland.configType)
