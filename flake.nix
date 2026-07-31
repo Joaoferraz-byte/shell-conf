@@ -21,7 +21,7 @@
           upstreamPackage = ambxst-x.packages.${system}.default;
 
           # Estratégia Robusta: Substituição direta de arquivos QML problemáticos
-          # Isso evita falhas de hunk causadas por mudanças invisíveis no upstream.
+          # e correção de permissões e caminhos no cli.sh.
           patchedSource = pkgs.runCommand "ambxst-x-patched-source" {
             src = ambxst-x.outPath;
           } ''
@@ -35,6 +35,12 @@
             cp ${./files/CompositorTomlWriter.qml} "$out/modules/services/CompositorTomlWriter.qml"
             cp ${./files/PresetsService.qml} "$out/modules/services/PresetsService.qml"
             cp ${./files/shell.qml} "$out/shell.qml"
+
+            # Patch no cli.sh para respeitar AMBXST_CONFIG_ROOT (consistência com o shell)
+            sed -i 's|config_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/ambxst/config"|config_dir="''${AMBXST_CONFIG_ROOT:-''${XDG_CONFIG_HOME:-$HOME/.config}/ambxst}/config"|' "$out/cli.sh"
+            
+            # Garantir que o CLI seja executável
+            chmod +x "$out/cli.sh"
           '';
 
           fontconfigConf = pkgs.writeTextDir "etc/fonts/conf.d/99-ambxst-fonts.conf" ''
@@ -51,6 +57,7 @@
             export QML2_IMPORT_PATH="${upstreamPackage}/lib/qt-6/qml:$QML2_IMPORT_PATH"
             export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
             export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
+            # Define a raiz de configuração mutável (XDG_STATE_HOME)
             export AMBXST_CONFIG_ROOT="''${AMBXST_CONFIG_ROOT:-''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst}"
 
             exec ${patchedSource}/cli.sh "$@"
