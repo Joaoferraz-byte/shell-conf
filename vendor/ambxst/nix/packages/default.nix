@@ -62,6 +62,9 @@ let
     export QML2_IMPORT_PATH="${envAmbxst}/lib/qt-6/qml:$QML2_IMPORT_PATH"
     export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
 
+    # Expose icon themes and data from envAmbxst to Quickshell
+    export XDG_DATA_DIRS="${envAmbxst}/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+
     # Make bundled fonts available to fontconfig
     export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
 

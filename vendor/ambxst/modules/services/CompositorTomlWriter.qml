@@ -17,16 +17,22 @@ Singleton {
     readonly property string stateRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst")
     property string outputPath: stateRoot + "/axctl.toml"
 
-    property Process writeProcess: Process {
-        running: false
-        stdout: SplitParser {}
+    // Garante que o diretório pai do TOML existe antes de escrever.
+    property Process ensureDir: Process {
+        command: ["mkdir", "-p", root.stateRoot]
+        running: true
         onExited: (code) => {
-            if (code === 0) {
-                AxctlService.startDaemonAfterConfigWrite();
-            } else {
-                console.warn("CompositorTomlWriter: unable to write TOML, exit code:", code);
-            }
+            if (code === 0 && Config.loader.loaded) writeTomlFile();
         }
+    }
+
+    // FileView writes the TOML atomically without shell escaping issues.
+    property FileView tomlFileView: FileView {
+        path: root.outputPath
+        atomicWrites: true
+        printErrors: true
+        onSaved: AxctlService.startDaemonAfterConfigWrite()
+        onSaveFailed: (error) => console.warn("CompositorTomlWriter: TOML write failed:", error)
     }
 
     function getColorValue(colorName) {
@@ -403,11 +409,7 @@ Singleton {
 
     function writeTomlFile() {
         const tomlContent = generateToml();
-        const escapedPath = root.outputPath.replace(/'/g, "'\\''");
-        const escapedContent = tomlContent.replace(/'/g, "'\\''");
-
-        writeProcess.command = ["bash", "-c", `mkdir -p "$(dirname '${escapedPath}')" && echo '${escapedContent}' > '${escapedPath}'`];
-        writeProcess.running = true;
+        tomlFileView.setText(tomlContent);
         console.log("CompositorTomlWriter: Written TOML to", root.outputPath);
     }
 
