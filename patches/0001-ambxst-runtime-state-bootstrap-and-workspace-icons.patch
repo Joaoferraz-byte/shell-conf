@@ -1,0 +1,15 @@
+--- a/config/Config.qml
++++ b/config/Config.qml
+@@ -36,1 +36,4 @@
+-    property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/config"
++    readonly property string configRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst")
++    property string configDir: configRoot + "/config"
++    property string keybindsPath: configRoot + "/binds.json"
+--- a/modules/bar/workspaces/Workspaces.qml
++++ b/modules/bar/workspaces/Workspaces.qml
+@@ -484,3 +484,2 @@
+-                                anchors.bottom: parent.bottom
+-                                anchors.right: parent.right
+-                                anchors.bottomMargin: (parent.height - height) / 2
++                                anchors.centerIn: parent
++                                mipmap: true
