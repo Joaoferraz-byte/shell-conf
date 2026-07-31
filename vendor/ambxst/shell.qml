@@ -177,6 +177,20 @@ ShellRoot {
         id: compositorConfig
     }
 
+    // axctl owns Ambxst keybinds. This service first removes prior Ambxst
+    // bindings, then applies the active layout-specific set without touching
+    // the explicit Hyprland recovery bindings supplied by nix-conf.
+    CompositorKeybinds {
+        id: compositorKeybinds
+    }
+
+    Connections {
+        target: AxctlService
+        function onDaemonAvailable() {
+            compositorKeybinds.applyKeybinds();
+        }
+    }
+
     // Screenshot tool
     Variants {
         model: Quickshell.screens

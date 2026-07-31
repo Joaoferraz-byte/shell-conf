@@ -52,6 +52,9 @@ let
   };
 
   launcher = pkgs.writeShellScriptBin "ambxst" ''
+    # User-editable settings and generated compositor state must never reside
+    # in the immutable Nix store.
+    export AMBXST_CONFIG_ROOT="''${AMBXST_CONFIG_ROOT:-''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst}"
     export AMBXST_QS="${quickshellPkg}/bin/qs"
     export PATH="${envAmbxst}/bin:$PATH"
 

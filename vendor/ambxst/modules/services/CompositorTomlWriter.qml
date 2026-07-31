@@ -9,16 +9,24 @@ import "../../config/KeybindActions.js" as KeybindActions
 
 /**
  * CompositorTomlWriter - Generates TOML configuration for axctl
- * Writes to ~/.local/share/ambxst/axctl.toml
+ * Writes to the mutable Ambxst state root selected by the launcher.
  */
 Singleton {
     id: root
 
-    property string outputPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst/axctl.toml"
+    readonly property string stateRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst")
+    property string outputPath: stateRoot + "/axctl.toml"
 
     property Process writeProcess: Process {
         running: false
         stdout: SplitParser {}
+        onExited: (code) => {
+            if (code === 0) {
+                AxctlService.startDaemonAfterConfigWrite();
+            } else {
+                console.warn("CompositorTomlWriter: unable to write TOML, exit code:", code);
+            }
+        }
     }
 
     function getColorValue(colorName) {
@@ -127,9 +135,6 @@ Singleton {
 
     function generateToml() {
         let toml = "";
-
-        toml += "[startup]\n";
-        toml += "exec-once = \"ambxst\"\n";
 
         function tomlEscape(str) {
             if (str === null || str === undefined)

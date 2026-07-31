@@ -457,7 +457,7 @@ Item {
                         Behavior on opacity {
                             enabled: Config.animDuration > 0
                             NumberAnimation {
-                                duration: 150
+                                duration: Config.animDuration / 2
                                 easing.type: Easing.OutQuad
                             }
                         }
@@ -474,7 +474,7 @@ Item {
                         Behavior on opacity {
                             enabled: Config.animDuration > 0
                             NumberAnimation {
-                                duration: 150
+                                duration: Config.animDuration / 2
                                 easing.type: Easing.OutQuad
                             }
                         }
@@ -487,39 +487,28 @@ Item {
                         visible: opacity > 0
                         IconImage {
                             id: mainAppIcon
-                            anchors.bottom: parent.bottom
-                            anchors.right: parent.right
-                            anchors.bottomMargin: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? Math.round((workspaceButtonWidth - workspaceIconSize) / 2) : workspaceIconMarginShrinked
-                            anchors.rightMargin: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? Math.round((workspaceButtonWidth - workspaceIconSize) / 2) : workspaceIconMarginShrinked
+                            // The icon container already matches the workspace
+                            // button. Centering avoids the bottom/right bias that
+                            // appeared when the indicator was replaced by an icon.
+                            anchors.centerIn: parent
 
                             source: workspaceButtonBackground.mainAppIconSource
                             implicitSize: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? workspaceIconSize : workspaceIconSizeShrinked
+                            // IconImage recommends mipmaps for scaled-down icon
+                            // sources, preventing a low-resolution appearance.
+                            mipmap: true
 
                             Behavior on opacity {
                                 enabled: Config.animDuration > 0
                                 NumberAnimation {
-                                    duration: 150
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                            Behavior on anchors.bottomMargin {
-                                enabled: Config.animDuration > 0
-                                NumberAnimation {
-                                    duration: 150
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                            Behavior on anchors.rightMargin {
-                                enabled: Config.animDuration > 0
-                                NumberAnimation {
-                                    duration: 150
+                                    duration: Config.animDuration / 2
                                     easing.type: Easing.OutQuad
                                 }
                             }
                             Behavior on implicitSize {
                                 enabled: Config.animDuration > 0
                                 NumberAnimation {
-                                    duration: 150
+                                    duration: Config.animDuration / 2
                                     easing.type: Easing.OutQuad
                                 }
                             }
@@ -594,7 +583,7 @@ Item {
                         Behavior on opacity {
                             enabled: Config.animDuration > 0
                             NumberAnimation {
-                                duration: 150
+                                duration: Config.animDuration / 2
                                 easing.type: Easing.OutQuad
                             }
                         }
@@ -611,7 +600,7 @@ Item {
                         Behavior on opacity {
                             enabled: Config.animDuration > 0
                             NumberAnimation {
-                                duration: 150
+                                duration: Config.animDuration / 2
                                 easing.type: Easing.OutQuad
                             }
                         }
@@ -624,39 +613,23 @@ Item {
                         visible: opacity > 0
                         IconImage {
                             id: mainAppIconVert
-                            anchors.bottom: parent.bottom
-                            anchors.right: parent.right
-                            anchors.bottomMargin: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? Math.round((workspaceButtonWidth - workspaceIconSize) / 2) : workspaceIconMarginShrinked
-                            anchors.rightMargin: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? Math.round((workspaceButtonWidth - workspaceIconSize) / 2) : workspaceIconMarginShrinked
+                            anchors.centerIn: parent
 
                             source: workspaceButtonBackgroundVert.mainAppIconSource
                             implicitSize: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? workspaceIconSize : workspaceIconSizeShrinked
+                            mipmap: true
 
                             Behavior on opacity {
                                 enabled: Config.animDuration > 0
                                 NumberAnimation {
-                                    duration: 150
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                            Behavior on anchors.bottomMargin {
-                                enabled: Config.animDuration > 0
-                                NumberAnimation {
-                                    duration: 150
-                                    easing.type: Easing.OutQuad
-                                }
-                            }
-                            Behavior on anchors.rightMargin {
-                                enabled: Config.animDuration > 0
-                                NumberAnimation {
-                                    duration: 150
+                                    duration: Config.animDuration / 2
                                     easing.type: Easing.OutQuad
                                 }
                             }
                             Behavior on implicitSize {
                                 enabled: Config.animDuration > 0
                                 NumberAnimation {
-                                    duration: 150
+                                    duration: Config.animDuration / 2
                                     easing.type: Easing.OutQuad
                                 }
                             }
