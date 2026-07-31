@@ -15,7 +15,9 @@ import "../../config/KeybindActions.js" as KeybindActions
 Singleton {
     id: root
 
-    property string outputPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst/axctl.toml"
+    // Uses XDG_STATE_HOME (mutable runtime state) to match AMBXST_CONFIG_ROOT
+    // set by the Nix launcher wrapper in flake.nix and AxctlService.qml.
+    property string outputPath: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst/axctl.toml"
 
     property Process writeProcess: Process {
         running: false
