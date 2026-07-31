@@ -58,7 +58,7 @@
         config.programs.ambxst.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ambxst;
       };
 
-      homeManagerModules.default = { pkgs, lib, ... }:
+      homeModules.default = { pkgs, lib, ... }:
         let
           system = pkgs.stdenv.hostPlatform.system;
           settingsNames = [
