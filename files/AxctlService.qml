@@ -27,8 +27,10 @@ Singleton {
 
     signal rawEvent(var event)
 
-    // Config path for axctl daemon
-    property string configPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst/axctl.toml"
+    // Config path for axctl daemon.
+    // Uses XDG_STATE_HOME (mutable runtime state) to match AMBXST_CONFIG_ROOT
+    // set by the Nix launcher wrapper in flake.nix.
+    property string configPath: (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst/axctl.toml"
     property bool daemonStarted: false
     property bool daemonReady: false
     signal daemonAvailable()
@@ -168,7 +170,7 @@ Singleton {
     }
 
     property Process ensureConfigDir: Process {
-        command: ["mkdir", "-p", (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst"]
+        command: ["mkdir", "-p", (Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst"]
         running: true
     }
 
