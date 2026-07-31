@@ -22,7 +22,8 @@ fi
 
 # Ensure config files exist - copy from preset if missing
 ensure_config_files() {
-	local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ambxst/config"
+	local config_root="${AMBXST_CONFIG_ROOT:-${XDG_CONFIG_HOME:-$HOME/.config}/ambxst}"
+	local config_dir="${config_root}/config"
 	local preset_dir="${SCRIPT_DIR}/assets/presets/Ambxst Default"
 
 	# Create config directory if it doesn't exist

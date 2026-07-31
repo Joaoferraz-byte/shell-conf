@@ -1,94 +1,87 @@
 {
-  description = "Ambxst-X shell configuration for NixOS + Hyprland";
+  description = "Vendored Ambxst integration for NixOS, Home Manager, and Hyprland";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    ambxst-x = {
-      url = "github:OrynVail/Ambxst-X";
+
+    # axctl is a build/runtime dependency of the vendored Ambxst source.
+    axctl = {
+      url = "github:Axenide/axctl";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, ambxst-x, ... }:
+  outputs = { self, nixpkgs, axctl, ... }:
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+
+      mkAmbxst = system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          version = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./vendor/ambxst/version);
+        in
+        import ./vendor/ambxst/nix/packages {
+          inherit pkgs system axctl version;
+          lib = pkgs.lib;
+          # The upstream package calls this argument `self`; supplying the
+          # vendored directory makes the generated launcher reference only
+          # audited code contained in this repository.
+          self = ./vendor/ambxst;
+        };
     in
     {
       packages = forAllSystems (system:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
-          upstreamPackage = ambxst-x.packages.${system}.default;
-
-          # Estratégia Robusta: Substituição direta de arquivos QML problemáticos
-          # e correção de permissões e caminhos no cli.sh.
-          patchedSource = pkgs.runCommand "ambxst-x-patched-source" {
-            src = ambxst-x.outPath;
-          } ''
-            cp -R --no-preserve=mode "$src"/. "$out"
-            chmod -R u+w "$out"
-            
-            # Substituir arquivos QML pelos corrigidos
-            cp ${./files/Config.qml} "$out/config/Config.qml"
-            cp ${./files/Workspaces.qml} "$out/modules/bar/workspaces/Workspaces.qml"
-            cp ${./files/AxctlService.qml} "$out/modules/services/AxctlService.qml"
-            cp ${./files/CompositorTomlWriter.qml} "$out/modules/services/CompositorTomlWriter.qml"
-            cp ${./files/PresetsService.qml} "$out/modules/services/PresetsService.qml"
-            cp ${./files/shell.qml} "$out/shell.qml"
-
-            # Patch no cli.sh para respeitar AMBXST_CONFIG_ROOT (consistência com o shell)
-            sed -i 's|config_dir="''${XDG_CONFIG_HOME:-$HOME/.config}/ambxst/config"|config_dir="''${AMBXST_CONFIG_ROOT:-''${XDG_CONFIG_HOME:-$HOME/.config}/ambxst}/config"|' "$out/cli.sh"
-            
-            # Garantir que o CLI seja executável
-            chmod +x "$out/cli.sh"
-          '';
-
-          fontconfigConf = pkgs.writeTextDir "etc/fonts/conf.d/99-ambxst-fonts.conf" ''
-            <?xml version="1.0"?>
-            <!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
-            <fontconfig>
-              <dir>${upstreamPackage}/share/fonts</dir>
-            </fontconfig>
-          '';
-
-          patchedLauncher = pkgs.writeShellScriptBin "ambxst" ''
-            export AMBXST_QS="${upstreamPackage}/bin/qs"
-            export PATH="${upstreamPackage}/bin:$PATH"
-            export QML2_IMPORT_PATH="${upstreamPackage}/lib/qt-6/qml:$QML2_IMPORT_PATH"
-            export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
-            export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
-            # Define a raiz de configuração mutável (XDG_STATE_HOME)
-            export AMBXST_CONFIG_ROOT="''${AMBXST_CONFIG_ROOT:-''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst}"
-
-            exec ${patchedSource}/cli.sh "$@"
-          '';
-
-          ambxstPatched = pkgs.symlinkJoin {
-            name = "ambxst-x-patched";
-            paths = [ upstreamPackage ];
-            postBuild = ''
-              mkdir -p "$out/bin"
-              rm -f "$out/bin/ambxst"
-              ln -s ${patchedLauncher}/bin/ambxst "$out/bin/ambxst"
-            '';
-            meta = upstreamPackage.meta or { };
-          };
+          ambxst = mkAmbxst system;
         in
         {
-          default = ambxstPatched;
-          ambxst = ambxstPatched;
-          upstream = upstreamPackage;
+          default = ambxst;
+          ambxst = ambxst;
         });
 
-      nixosModules.default = ambxst-x.nixosModules.default;
+      apps = forAllSystems (system: {
+        default = {
+          type = "app";
+          program = "${self.packages.${system}.ambxst}/bin/ambxst";
+        };
+      });
+
+      nixosModules.default = { config, lib, pkgs, ... }: {
+        imports = [ ./vendor/ambxst/nix/modules ];
+
+        # Consumers may still override `programs.ambxst.package`, but the
+        # default is always the package built from this vendored source tree.
+        config.programs.ambxst.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ambxst;
+      };
 
       homeManagerModules.default = { pkgs, lib, ... }:
         let
           system = pkgs.stdenv.hostPlatform.system;
-          settingsNames = [ "theme" "bar" "compositor" "desktop" "dock" "overview" "performance" "lockscreen" "workspaces" "notch" "system" "weather" "prefix" ];
+          settingsNames = [
+            "theme"
+            "bar"
+            "compositor"
+            "desktop"
+            "dock"
+            "overview"
+            "performance"
+            "lockscreen"
+            "workspaces"
+            "notch"
+            "system"
+            "weather"
+            "prefix"
+          ];
         in
         {
           home.packages = [ self.packages.${system}.ambxst ];
+
+          # Ambxst settings are intentionally mutable. They are seeded once,
+          # then remain editable by Ambxst without creating links into /nix/store.
           home.activation.prepareAmbxstRuntimeState = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
             runtime_root="''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst"
             config_dir="$runtime_root/config"
@@ -141,5 +134,23 @@
             fi
           '';
         };
+
+      checks = forAllSystems (system:
+        let
+          pkgs = import nixpkgs { inherit system; };
+        in
+        {
+          source-layout = pkgs.runCommand "ambxst-source-layout" { } ''
+            test -f ${./vendor/ambxst}/flake.nix
+            test -f ${./vendor/ambxst}/shell.qml
+            test -f ${./vendor/ambxst}/nix/packages/default.nix
+            grep -q 'AMBXST_CONFIG_ROOT' ${./vendor/ambxst}/config/Config.qml
+            if grep -q 'exec-once = "ambxst"' ${./vendor/ambxst}/modules/services/CompositorTomlWriter.qml; then
+              echo "Ambxst must not generate a second shell autostart" >&2
+              exit 1
+            fi
+            touch "$out"
+          '';
+        });
     };
 }

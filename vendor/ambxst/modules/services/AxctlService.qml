@@ -27,8 +27,23 @@ Singleton {
 
     signal rawEvent(var event)
 
-    // Config path for axctl daemon
-    property string configPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst/axctl.toml"
+    // Keep the generated TOML in the same mutable root used by Config.qml.
+    readonly property string stateRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst")
+    property string configPath: stateRoot + "/axctl.toml"
+    property bool daemonStarted: false
+    property bool daemonReady: false
+    signal daemonAvailable()
+
+    // CompositorTomlWriter calls this after atomically writing the first TOML.
+    // It is intentionally idempotent because configuration changes can trigger
+    // several writes during shell startup.
+    function startDaemonAfterConfigWrite() {
+        if (daemonStarted)
+            return;
+        daemonStarted = true;
+        axctlProcess.running = true;
+        axctlSubscribe.running = true;
+    }
 
     function dispatch(command) {
         if (!command) return;
@@ -152,29 +167,23 @@ Singleton {
     }
 
     property Process ensureConfigDir: Process {
-        command: ["mkdir", "-p", (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst"]
+        command: ["mkdir", "-p", root.stateRoot]
         running: true
     }
 
     property Process axctlProcess: Process {
         command: ["axctl", "-c", root.configPath, "daemon"]
-        running: true
+        running: false
         stdout: SplitParser {
             onRead: (data) => {
                 // Daemon logs can be printed here if needed
             }
         }
         onExited: (code) => {
+            root.daemonStarted = false;
+            root.daemonReady = false;
             console.warn("axctl daemon exited with code:", code)
         }
-    }
-
-    // Brief delay to let daemon start before subscribing
-    Timer {
-        id: subscribeDelay
-        interval: 500
-        running: true
-        onTriggered: axctlSubscribe.running = true
     }
 
     // Auto-reconnect on unexpected subscribe exit
@@ -192,6 +201,12 @@ Singleton {
                 if (!data) return;
                 try {
                     let parsedJson = JSON.parse(data);
+
+                    // A parsed event confirms the daemon IPC socket is ready.
+                    if (!root.daemonReady) {
+                        root.daemonReady = true;
+                        root.daemonAvailable();
+                    }
 
                     // Apply inline state immediately (every event carries full state)
                     if (parsedJson.state) {

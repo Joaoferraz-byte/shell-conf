@@ -33,8 +33,11 @@ Singleton {
         onLoaded: root.version = text().trim()
     }
 
-    property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/config"
-    property string keybindsPath: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst/binds.json"
+    // Keep editable user state outside the Nix store while retaining the
+    // conventional XDG configuration location when no explicit root is set.
+    readonly property string configRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst")
+    property string configDir: configRoot + "/config"
+    property string keybindsPath: configRoot + "/binds.json"
     property string presetDir: Qt.resolvedUrl("../assets/presets/Ambxst Default").toString().replace("file://", "")
 
     property bool pauseAutoSave: false
