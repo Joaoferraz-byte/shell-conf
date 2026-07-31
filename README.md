@@ -1,76 +1,101 @@
-# shell-conf — Ambxst-X para NixOS e Hyprland
+# shell-conf
 
-Este repositório contém a camada declarativa do usuário para o shell [Ambxst-X](https://github.com/OrynVail/Ambxst-X) em NixOS. Ele não é um fork completo do shell QML: consome o pacote e o módulo NixOS mantidos pelo upstream via flake, injetando correções específicas de runtime e versionando os JSONs de personalização locais para integração com o Home Manager.
+## Visão geral
 
-## Arquitetura (Hyprland + axctl)
+Este repositório fornece uma **integração Nix reproduzível do Ambxst-X para NixOS, Home Manager e Hyprland**. A fonte completa do Ambxst está incorporada em `vendor/ambxst`; a flake constrói essa cópia local diretamente, em vez de aplicar uma camada de patches sobre uma fonte remota durante a avaliação.
+
+> **Princípio de manutenção:** o código do shell, a integração Nix e os ajustes de compatibilidade são versionados juntos. Atualizações upstream devem ser revisadas e incorporadas conscientemente à árvore vendorizada, nunca executadas por instaladores imperativos no sistema do usuário.
 
 | Camada | Responsabilidade | Fonte de verdade |
 |---|---|---|
-| `flake.nix` | Reexporta o pacote e o módulo NixOS oficiais do Ambxst-X, aplicando um `patchedSource` com correções críticas. Expõe o módulo Home Manager local. | `OrynVail/Ambxst-X` e `flake.lock` |
-| `settings/*.json` | Define tema, barra, compositor, workspaces, dock, notch e demais adaptadores lidos pelo shell. | Este repositório |
-| Ambxst-X | Inicia Quickshell, produz `~/.local/state/ambxst/axctl.toml` e inicializa o daemon `axctl`. | Pacote upstream + Patches locais |
-| `axctl` | Aplica o TOML ao compositor via IPC e gera `hyprland.lua`. | Pacote upstream |
-| `nix-conf` | Gera a configuração principal do sistema e carrega dinamicamente o `hyprland.lua` gerado pelo Ambxst-X. | Repositório do sistema |
+| `vendor/ambxst/` | Código QML, launcher, módulo NixOS e pacote Ambxst auditados. | Este repositório |
+| `flake.nix` | Expõe o pacote, aplicativo e módulo NixOS consumidos pelo `nix-conf`. | Este repositório |
+| `settings/*.json` | Valores iniciais editáveis de tema, barra, compositor, workspaces e widgets. | Este repositório |
+| Estado em `XDG_STATE_HOME/ambxst` | Configuração mutável criada e mantida pelo Ambxst durante o uso. | Perfil do usuário |
+| `axctl` | Aplica regras e atalhos dinâmicos ao compositor por IPC. | Input fixado em `flake.lock` |
+| `nix-conf` | Declara sessão, dependências de desktop e os atalhos de recuperação mínimos. | Repositório de sistema |
 
-> **Nota de Migração**: O setup anterior utilizava Niri, mas foi totalmente migrado para Hyprland. O Hyprland 0.55+ prefere Lua, e o Home Manager 26.05+ gera `hyprland.lua` por padrão. A integração correta é via `loadfile(.../ambxst/hyprland.lua)()` no `extraConfig` do Hyprland, protegida contra ausência do arquivo no primeiro boot.
+## Estrutura e integração
 
-## Patches e Riscos de Manutenção
+A flake raiz não depende de um input remoto do Ambxst. Ela importa `vendor/ambxst/nix/packages/default.nix`, passa a árvore vendorizada como fonte e exporta `packages.<system>.ambxst`, `apps.<system>.default`, `nixosModules.default` e `homeManagerModules.default`. O `nix-conf` consome os módulos NixOS e Home Manager diretamente.
 
-Para contornar falhas de `patch` e garantir o funcionamento no NixOS, o `flake.nix` deste repositório substitui integralmente **seis arquivos QML** do upstream. Isso introduz um risco de manutenção, pois atualizações no upstream (novas funcionalidades, como OSD ou Screenshot Tools) não serão refletidas automaticamente nestes arquivos:
-
-1. **`shell.qml`**: Modificado para forçar o bootstrap do `PresetsService` e injetar o `CompositorKeybinds` e `CompositorTomlWriter`. A versão local foi recentemente sincronizada com o upstream para recuperar as tools avançadas (screen record, mirror, settings).
-2. **`AxctlService.qml`**: Modificado para usar `XDG_STATE_HOME` e garantir a ordem de inicialização (só sobe o daemon axctl após o TOML ser escrito).
-3. **`CompositorTomlWriter.qml`**: Modificado para usar `XDG_STATE_HOME` e disparar o `AxctlService` no callback de sucesso.
-4. **`PresetsService.qml`**: Modificado para buscar presets no `AMBXST_CONFIG_ROOT` (injetado via launcher do Nix).
-5. **`Config.qml`**: Modificado para apontar o diretório de config para `AMBXST_CONFIG_ROOT`.
-6. **`Workspaces.qml`**: Ajustes estéticos e de animação.
-
-**Aviso**: Ao atualizar a revisão do `Ambxst-X` no `flake.lock`, verifique se o upstream alterou esses arquivos e incorpore as mudanças manualmente na pasta `files/`.
-
-## Configurações Versionadas
-
-| Arquivo | Função |
-|---|---|
-| `theme.json` | Paleta, fontes, arredondamento e componentes visuais. |
-| `bar.json`, `workspaces.json`, `overview.json`, `notch.json` | Barra, navegação e superfícies de produtividade. |
-| `compositor.json` | Valores dinâmicos de gaps, bordas, sombra, blur e animações enviados ao axctl. |
-| `desktop.json`, `dock.json`, `lockscreen.json` | Desktop, dock e lockscreen do shell. |
-| `performance.json`, `system.json` | Perfil de desempenho, idle, OCR e recursos de sistema. |
-| `weather.json`, `prefix.json` | Defaults explícitos para todos os adaptadores que o Ambxst-X atual carrega. |
-
-Os arquivos são semeados pelo Home Manager no primeiro login em `~/.local/state/ambxst/config/` (o novo runtime root mutável). Para alterar o comportamento persistente inicial, edite o JSON correspondente neste repositório.
-
-## Binds e Inicialização
-
-O arquivo `binds.json` vive em `~/.local/state/ambxst/binds.json` e **não** é gerenciado como link imutável pelo Home Manager. O Ambxst-X atualiza esse arquivo com seus próprios atalhos por meio do `axctl`; essa decisão evita conflito entre a UI do shell e o gerenciador declarativo.
-
-Os atalhos básicos e de recuperação (emergência) pertencem ao `nix-conf/modules/features/hyprland.nix`. O `axctl` cuida dos atalhos específicos do shell.
-
-## Uso no `nix-conf`
-
-O flake do sistema consome este repositório como input:
+O uso esperado no flake do sistema é o seguinte:
 
 ```nix
 inputs.shell-conf = {
   url = "github:Joaoferraz-byte/shell-conf";
   inputs.nixpkgs.follows = "nixpkgs";
 };
-```
 
-O módulo local do sistema (`ambxst.nix`) importa o módulo reexportado e adiciona o módulo Home Manager:
-
-```nix
-imports = [
-  inputs.shell-conf.nixosModules.default
-];
+# Em um módulo NixOS
+imports = [ inputs.shell-conf.nixosModules.default ];
 
 home-manager.sharedModules = [
   inputs.shell-conf.homeManagerModules.default
 ];
 ```
 
+A saída `homeManagerModules` é uma convenção amplamente usada por flakes que exportam módulos Home Manager. Ela é uma extensão de terceiros e, por isso, pode gerar um aviso informativo de saída desconhecida no `nix flake check`; esse aviso não invalida a avaliação nem indica uma API legada. [1] [2]
+
+## Ciclo de inicialização
+
+A inicialização foi deliberadamente separada para impedir duplicação de processos, carregamento de estado antigo e colisões de atalhos.
+
+| Etapa | Componente responsável | Resultado |
+|---|---|---|
+| 1 | Ativação do Home Manager | Semeia `settings/*.json` apenas quando o arquivo mutável ainda não existe. Migra conteúdo local antigo sem criar links para a store. |
+| 2 | `ambxst` | Inicia o Quickshell usando a árvore vendorizada e exporta `AMBXST_CONFIG_ROOT`. |
+| 3 | `CompositorTomlWriter` | Grava `axctl.toml` no diretório de estado mutável. |
+| 4 | `AxctlService` | Inicia o daemon somente após uma gravação bem-sucedida do TOML. A inicialização é idempotente. |
+| 5 | `axctl` | Confirma a disponibilidade do IPC e aplica regras e atalhos dinâmicos ao Hyprland. |
+| 6 | `CompositorKeybinds` | Aguarda o IPC do `axctl` antes de enviar um lote de unbinds e binds do Ambxst. |
+
+O `nix-conf` inicia o shell uma única vez no evento Lua `hyprland.start`. A antiga tentativa de chamar `settings.exec_once` foi removida porque não existe essa propriedade na API Lua; a documentação do Hyprland recomenda uma configuração baseada na API Lua quando `configType = "lua"`. [3] [4]
+
+## Estado persistente e personalização
+
+Os valores distribuídos em `settings/` são **defaults de primeira inicialização**, não arquivos imutáveis do Home Manager. Eles são copiados para os caminhos abaixo e podem ser alterados pela interface do Ambxst sem falhar por tentativas de escrita em links da Nix store.
+
+| Caminho | Conteúdo |
+|---|---|
+| `${XDG_STATE_HOME:-$HOME/.local/state}/ambxst/config/` | Arquivos JSON de tema, painel, compositor, desktop, dock, lockscreen e demais adaptadores. |
+| `${XDG_STATE_HOME:-$HOME/.local/state}/ambxst/binds.json` | Atalhos configuráveis pelo Ambxst. |
+| `${XDG_STATE_HOME:-$HOME/.local/state}/ambxst/presets/` | Presets criados pelo usuário. |
+| `${XDG_STATE_HOME:-$HOME/.local/state}/ambxst/axctl.toml` | Configuração entregue ao daemon `axctl`. |
+
+Para alterar o padrão de novas instalações, edite o JSON correspondente em `settings/`. Para alterar a configuração do usuário já inicializada, use a interface do Ambxst ou o arquivo no diretório de estado. Não modifique arquivos dentro de `/nix/store`.
+
+## Autoridade sobre compositor e atalhos
+
+A configuração é dividida por responsabilidade. O Hyprland mantém apenas ambiente de sessão, dispositivos e saídas de recuperação. O Ambxst e o `axctl` são a única autoridade para ajustes dinâmicos de aparência, workspaces, regras e atalhos do shell.
+
+| Atalho | Autoridade | Função |
+|---|---|---|
+| `SUPER + T` | Ambxst | Abre a interface de gerenciamento de terminais/tmux do shell. |
+| `SUPER + Return` | `nix-conf` | Recuperação: abre `kitty`. |
+| `SUPER + R` | `nix-conf` | Recuperação: executa `ambxst reload`. |
+| `SUPER + SHIFT + Q` | `nix-conf` | Recuperação: encerra a sessão por `uwsm stop`. |
+
+Os três atalhos de recuperação foram comparados com os defaults do Ambxst e não reutilizam `SUPER + T`. O serviço de keybinds do shell remove e recria apenas os atalhos que ele próprio administra; não toca nos três atalhos declarados no módulo Hyprland.
+
+## Validação e manutenção
+
+A validação estática recomendada é:
+
+```bash
+nix flake check --no-build
+nix build --dry-run --no-link .#packages.x86_64-linux.ambxst
+```
+
+Antes de atualizar o Ambxst upstream, compare a árvore completa com `vendor/ambxst`, revise as mudanças em QML, no launcher e nos módulos Nix e então integre a revisão como uma atualização explícita da fonte vendorizada. Antes de atualizar `axctl`, execute novamente os comandos acima e avalie os hosts consumidores no `nix-conf`.
+
 ## Referências
 
-* [Ambxst-X (Upstream)](https://github.com/OrynVail/Ambxst-X)
-* [axctl](https://github.com/Axenide/axctl)
-* [Hyprland Lua configuration](https://wiki.hypr.land/Configuring/Start/)
+[1]: https://discourse.nixos.org/t/nixos-home-manager-config-where-both-use-flakes/41410 "NixOS + Home Manager config where both use flakes"
+[2]: https://discourse.nixos.org/t/custom-flake-outputs-for-checks/18877 "Custom flake outputs for checks"
+[3]: https://wiki.hypr.land/Configuring/Start/ "Hyprland: Start"
+[4]: https://wiki.hypr.land/Configuring/Using-Lua/ "Hyprland: Using Lua"
+[5]: https://github.com/OrynVail/Ambxst-X "Ambxst-X upstream"
+[6]: https://github.com/Axenide/axctl "axctl"
+
+A implementação foi avaliada em relação ao Ambxst-X e às interfaces do Hyprland e do `axctl` disponíveis nas referências acima. [3] [4] [5] [6]
