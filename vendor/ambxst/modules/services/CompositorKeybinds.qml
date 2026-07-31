@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell.Io
 import qs.config
 import qs.modules.globals
+import qs.modules.services
 import "../../config/KeybindActions.js" as KeybindActions
 
 QtObject {
@@ -142,6 +143,13 @@ QtObject {
     }
 
     function applyKeybindsInternal() {
+        // The daemon owns compositor mutation. Wait for its IPC socket instead
+        // of issuing a best-effort command during shell bootstrap.
+        if (!AxctlService.daemonReady) {
+            console.log("CompositorKeybinds: Waiting for the axctl daemon...");
+            return;
+        }
+
         // Ensure adapter is loaded.
         if (!Config.keybindsLoader.loaded) {
             console.log("CompositorKeybinds: Esperando que se cargue el adapter...");
