@@ -2,7 +2,7 @@
 
 ## Visão geral
 
-Este repositório fornece uma **integração Nix reproduzível do Ambxst-X para NixOS, Home Manager e Hyprland**. A fonte completa do Ambxst está incorporada em `vendor/ambxst`; a flake constrói essa cópia local diretamente, em vez de aplicar uma camada de patches sobre uma fonte remota durante a avaliação.
+Este repositório fornece uma **integração Nix reproduzível do Ambxst para NixOS, Home Manager e Hyprland**. A fonte completa do Ambxst está incorporada em `vendor/ambxst`; a flake constrói essa cópia local diretamente, em vez de aplicar uma camada de patches sobre uma fonte remota durante a avaliação.
 
 > **Princípio de manutenção:** o código do shell, a integração Nix e os ajustes de compatibilidade são versionados juntos. Atualizações upstream devem ser revisadas e incorporadas conscientemente à árvore vendorizada, nunca executadas por instaladores imperativos no sistema do usuário.
 
@@ -95,7 +95,7 @@ Antes de atualizar o Ambxst upstream, compare a árvore completa com `vendor/amb
 [2]: https://discourse.nixos.org/t/custom-flake-outputs-for-checks/18877 "Custom flake outputs for checks"
 [3]: https://wiki.hypr.land/Configuring/Start/ "Hyprland: Start"
 [4]: https://wiki.hypr.land/Configuring/Using-Lua/ "Hyprland: Using Lua"
-[5]: https://github.com/OrynVail/Ambxst-X "Ambxst-X upstream"
+[5]: https://github.com/Axenide/Ambxst "Ambxst upstream"
 [6]: https://github.com/Axenide/axctl "axctl"
 
-A implementação foi avaliada em relação ao Ambxst-X e às interfaces do Hyprland e do `axctl` disponíveis nas referências acima. [3] [4] [5] [6]
+A implementação foi avaliada em relação ao Ambxst e às interfaces do Hyprland e do `axctl` disponíveis nas referências acima. [3] [4] [5] [6]
