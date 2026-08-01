@@ -21,8 +21,10 @@ Singleton {
     readonly property string assetsPresetsDir: Qt.resolvedUrl("../../assets/presets").toString().replace("file://", "")
     readonly property string activePresetFile: presetsDir + "/active_preset"
 
-    // Files to exclude from presets (never saved, loaded, or shown)
-    readonly property var excludedFiles: ["system.json", "ai.json", "prefix.json", "weather.json"]
+    // Files to exclude from presets (never saved, loaded, or shown).
+    // general.json holds user-specific settings (terminal emulator, etc.) that
+    // must not be overwritten by a preset load.
+    readonly property var excludedFiles: ["system.json", "ai.json", "prefix.json", "weather.json", "general.json"]
 
     // Signal when presets change
     signal presetsUpdated()
@@ -117,20 +119,9 @@ Singleton {
             const jsonFile = configFile.replace('.js', '.json')
             if (root.excludedFiles.includes(jsonFile)) continue;
 
-            // The source is configDir (~/.config/Ambxst), NOT configDir/config
-            // But wait, the configDir property is defined as ~/.config/Ambxst below?
-            // Let's check the property definition.
-            // property string configDir: ... + "/Ambxst"
-            // But Config.qml says configDir is ... + "/Ambxst/config"
-            // We need to match Config.qml's path.
-            
-            // In Config.qml: property string configDir: ... + "/Ambxst/config"
-            // Here: readonly property string configDir: ... + "/Ambxst"
-            // This is a mismatch!
-            
-            // We should use the same path as Config.qml for reading/writing config files.
-            // Let's assume the files are in .../Ambxst/config based on Config.qml and ls output.
-            
+            // configDir = AMBXST_CONFIG_ROOT (e.g. ~/.local/state/ambxst)
+            // Config.qml.configDir = configRoot + "/config" = AMBXST_CONFIG_ROOT + "/config"
+            // Both resolve to the same directory when AMBXST_CONFIG_ROOT is set.
             const srcPath = configDir + "/config/" + jsonFile 
             const dstPath = presetPath + "/" + jsonFile
             copyCmd += `cp "${srcPath}" "${dstPath}" && `
@@ -159,7 +150,7 @@ Singleton {
         // Find all JSON files in subdirectories of presetsDir (depth 2) and assetsPresetsDir
         // Exclude info.json and all excludedFiles from the file list
         // Then, read info.json files content using grep
-        command: ["sh", "-c", "find '" + presetsDir + "' '" + assetsPresetsDir + "' -mindepth 2 -maxdepth 2 -name '*.json' -not -name 'info.json' -not -name 'system.json' -not -name 'ai.json' -not -name 'prefix.json' -not -name 'weather.json'; echo '---METADATA---'; find '" + presetsDir + "' '" + assetsPresetsDir + "' -mindepth 2 -maxdepth 2 -name 'info.json' -exec grep -H . {} +"]
+        command: ["sh", "-c", "find '" + presetsDir + "' '" + assetsPresetsDir + "' -mindepth 2 -maxdepth 2 -name '*.json' -not -name 'info.json' -not -name 'system.json' -not -name 'ai.json' -not -name 'prefix.json' -not -name 'weather.json' -not -name 'general.json'; echo '---METADATA---'; find '" + presetsDir + "' '" + assetsPresetsDir + "' -mindepth 2 -maxdepth 2 -name 'info.json' -exec grep -H . {} +"]
         running: false
 
         stdout: StdioCollector {
