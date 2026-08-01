@@ -52,12 +52,21 @@ let
   };
 
   launcher = pkgs.writeShellScriptBin "ambxst" ''
+    # User-editable settings and generated compositor state must never reside
+    # in the immutable Nix store.
+    export AMBXST_CONFIG_ROOT="''${AMBXST_CONFIG_ROOT:-''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst}"
+    # nix-conf owns the Hyprland session declaratively. The CLI must not inject
+    # a second source/loadfile block into a user-managed Hyprland config.
+    export AMBXST_DECLARATIVE_HYPRLAND=1
     export AMBXST_QS="${quickshellPkg}/bin/qs"
     export PATH="${envAmbxst}/bin:$PATH"
 
     # Set QML2_IMPORT_PATH to include modules from envAmbxst (like syntax-highlighting)
     export QML2_IMPORT_PATH="${envAmbxst}/lib/qt-6/qml:$QML2_IMPORT_PATH"
     export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
+
+    # Expose icon themes and data from envAmbxst to Quickshell
+    export XDG_DATA_DIRS="${envAmbxst}/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
     # Make bundled fonts available to fontconfig
     export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"

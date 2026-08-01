@@ -1,10 +1,11 @@
 {
-  description = "Vendored Ambxst integration for NixOS, Home Manager, and Hyprland";
+  description = "Ambxst-X local fork for NixOS, Home Manager, and Hyprland";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # axctl is a build/runtime dependency of the vendored Ambxst source.
+    # axctl remains a runtime dependency while the Ambxst QML services use its
+    # daemon and IPC API. Its scope is reviewed in docs/axctl-decision.md.
     axctl = {
       url = "github:Axenide/axctl";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -15,22 +16,49 @@
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+      version = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./version);
 
+      mkPkgs = system: import nixpkgs {
+        inherit system;
+        config.allowUnfree = true;
+      };
+
+      # `self = ./.` is intentional: the Ambxst launcher and source derivation
+      # always resolve to this repository's tracked source tree, never to an
+      # upstream flake input or a generated patch directory.
       mkAmbxst = system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-          };
-          version = nixpkgs.lib.removeSuffix "\n" (builtins.readFile ./vendor/ambxst/version);
+          pkgs = mkPkgs system;
         in
-        import ./vendor/ambxst/nix/packages {
+        import ./nix/packages {
           inherit pkgs system axctl version;
           lib = pkgs.lib;
-          # The upstream package calls this argument `self`; supplying the
-          # vendored directory makes the generated launcher reference only
-          # audited code contained in this repository.
-          self = ./vendor/ambxst;
+          self = ./.;
+        };
+
+      mkAmbxstDev = system:
+        let
+          pkgs = mkPkgs system;
+          ambxst = mkAmbxst system;
+        in
+        pkgs.writeShellApplication {
+          name = "ambxst-dev";
+          runtimeInputs = with pkgs; [ bash coreutils ];
+          text = ''
+            : "''${AMBXST_SOURCE_ROOT:?Set AMBXST_SOURCE_ROOT to the shell-conf checkout.}"
+
+            source_root="$(realpath "$AMBXST_SOURCE_ROOT")"
+            test -f "$source_root/shell.qml" || {
+              echo "ambxst-dev: shell.qml not found in $source_root" >&2
+              exit 2
+            }
+
+            # The normal launcher provides Quickshell, axctl, QML imports,
+            # font configuration and XDG paths. The CLI then redirects only
+            # source lookups to AMBXST_SOURCE_ROOT, enabling QS live reload.
+            export AMBXST_SOURCE_ROOT="$source_root"
+            exec ${ambxst}/bin/ambxst
+          '';
         };
     in
     {
@@ -41,6 +69,7 @@
         {
           default = ambxst;
           ambxst = ambxst;
+          Ambxst = ambxst;
         });
 
       apps = forAllSystems (system: {
@@ -50,12 +79,13 @@
         };
       });
 
-      nixosModules.default = { config, lib, pkgs, ... }: {
-        imports = [ ./vendor/ambxst/nix/modules ];
+      nixosModules.default = { pkgs, lib, ... }: {
+        imports = [ ./nix/modules ];
 
-        # Consumers may still override `programs.ambxst.package`, but the
-        # default is always the package built from this vendored source tree.
-        config.programs.ambxst.package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ambxst;
+        programs.ambxst = {
+          enable = lib.mkDefault true;
+          package = lib.mkDefault self.packages.${pkgs.stdenv.hostPlatform.system}.ambxst;
+        };
       };
 
       homeManagerModules.default = { pkgs, lib, ... }:
@@ -80,8 +110,8 @@
         {
           home.packages = [ self.packages.${system}.ambxst ];
 
-          # Ambxst settings are intentionally mutable. They are seeded once,
-          # then remain editable by Ambxst without creating links into /nix/store.
+          # Ambxst settings are mutable by design. Seed once, then let Ambxst
+          # modify its state without linking mutable JSON into the Nix store.
           home.activation.prepareAmbxstRuntimeState = lib.hm.dag.entryBefore [ "writeBoundary" ] ''
             runtime_root="''${XDG_STATE_HOME:-$HOME/.local/state}/ambxst"
             config_dir="$runtime_root/config"
@@ -135,22 +165,47 @@
           '';
         };
 
-      checks = forAllSystems (system:
+      devShells = forAllSystems (system:
         let
-          pkgs = import nixpkgs { inherit system; };
+          pkgs = mkPkgs system;
+          ambxst = mkAmbxst system;
+          ambxstDev = mkAmbxstDev system;
         in
         {
-          source-layout = pkgs.runCommand "ambxst-source-layout" { } ''
-            test -f ${./vendor/ambxst}/flake.nix
-            test -f ${./vendor/ambxst}/shell.qml
-            test -f ${./vendor/ambxst}/nix/packages/default.nix
-            grep -q 'AMBXST_CONFIG_ROOT' ${./vendor/ambxst}/config/Config.qml
-            if grep -q 'exec-once = "ambxst"' ${./vendor/ambxst}/modules/services/CompositorTomlWriter.qml; then
-              echo "Ambxst must not generate a second shell autostart" >&2
-              exit 1
-            fi
-            touch "$out"
-          '';
+          default = pkgs.mkShell {
+            packages = [ ambxst ambxstDev ];
+            shellHook = ''
+              export AMBXST_SOURCE_ROOT="''${AMBXST_SOURCE_ROOT:-$PWD}"
+              echo "Ambxst local development environment loaded. Run: ambxst-dev"
+            '';
+          };
+        });
+
+      checks = forAllSystems (system:
+        let
+          pkgs = mkPkgs system;
+        in
+        {
+          source-layout = pkgs.stdenvNoCC.mkDerivation {
+            name = "ambxst-local-source-layout";
+            src = self;
+            dontUnpack = true;
+            buildPhase = ''
+              test -f "$src/flake.nix"
+              test -f "$src/shell.qml"
+              test -f "$src/nix/packages/default.nix"
+              test -f "$src/config/Config.qml"
+              test ! -e "$src/vendor"
+              grep -q 'AMBXST_CONFIG_ROOT' "$src/config/Config.qml"
+              if grep -q 'exec-once = "ambxst"' "$src/modules/services/CompositorTomlWriter.qml"; then
+                echo "Ambxst must not generate a second shell autostart" >&2
+                exit 1
+              fi
+            '';
+            installPhase = ''
+              touch "$out"
+            '';
+          };
         });
     };
 }

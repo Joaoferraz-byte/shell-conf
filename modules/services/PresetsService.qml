@@ -15,8 +15,8 @@ Singleton {
     property string currentPreset: ""
     property string activePreset: ""
 
-    // Config directory paths
-    readonly property string configDir: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst"
+    // Keep presets beside the editable Ambxst state selected by the launcher.
+    readonly property string configDir: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config")) + "/ambxst")
     readonly property string presetsDir: configDir + "/presets"
     readonly property string assetsPresetsDir: Qt.resolvedUrl("../../assets/presets").toString().replace("file://", "")
     readonly property string activePresetFile: presetsDir + "/active_preset"
@@ -136,10 +136,10 @@ Singleton {
             copyCmd += `cp "${srcPath}" "${dstPath}" && `
         }
         
-        // Create info.json with default author
+        // Create info.json with default author (escape single quotes for sh -c)
         const infoContent = JSON.stringify({ author: "User", authorUrl: "" }, null, 4)
-        // Use printf to write info.json safely
-        copyCmd += `printf '${infoContent}' > "${presetPath}/info.json" && `
+        const escapedInfo = infoContent.replace(/'/g, "'\\''")
+        copyCmd += `printf '%s\n' '${escapedInfo}' > "${presetPath}/info.json" && `
 
         copyCmd = copyCmd.slice(0, -4) // Remove last " && "
 

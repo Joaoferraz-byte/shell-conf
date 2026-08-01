@@ -9,16 +9,30 @@ import "../../config/KeybindActions.js" as KeybindActions
 
 /**
  * CompositorTomlWriter - Generates TOML configuration for axctl
- * Writes to ~/.local/share/ambxst/axctl.toml
+ * Writes to the mutable Ambxst state root selected by the launcher.
  */
 Singleton {
     id: root
 
-    property string outputPath: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/ambxst/axctl.toml"
+    readonly property string stateRoot: Quickshell.env("AMBXST_CONFIG_ROOT") || ((Quickshell.env("XDG_STATE_HOME") || (Quickshell.env("HOME") + "/.local/state")) + "/ambxst")
+    property string outputPath: stateRoot + "/axctl.toml"
 
-    property Process writeProcess: Process {
-        running: false
-        stdout: SplitParser {}
+    // Garante que o diretório pai do TOML existe antes de escrever.
+    property Process ensureDir: Process {
+        command: ["mkdir", "-p", root.stateRoot]
+        running: true
+        onExited: (code) => {
+            if (code === 0 && Config.loader.loaded) writeTomlFile();
+        }
+    }
+
+    // FileView writes the TOML atomically without shell escaping issues.
+    property FileView tomlFileView: FileView {
+        path: root.outputPath
+        atomicWrites: true
+        printErrors: true
+        onSaved: AxctlService.startDaemonAfterConfigWrite()
+        onSaveFailed: (error) => console.warn("CompositorTomlWriter: TOML write failed:", error)
     }
 
     function getColorValue(colorName) {
@@ -127,9 +141,6 @@ Singleton {
 
     function generateToml() {
         let toml = "";
-
-        toml += "[startup]\n";
-        toml += "exec-once = \"ambxst\"\n";
 
         function tomlEscape(str) {
             if (str === null || str === undefined)
@@ -273,6 +284,7 @@ Singleton {
             if (ambxst) {
                 pushCoreBind(ambxst.launcher);
                 pushCoreBind(ambxst.dashboard);
+                pushCoreBind(ambxst.assistant);
                 pushCoreBind(ambxst.clipboard);
                 pushCoreBind(ambxst.emoji);
                 pushCoreBind(ambxst.notes);
@@ -398,11 +410,7 @@ Singleton {
 
     function writeTomlFile() {
         const tomlContent = generateToml();
-        const escapedPath = root.outputPath.replace(/'/g, "'\\''");
-        const escapedContent = tomlContent.replace(/'/g, "'\\''");
-
-        writeProcess.command = ["bash", "-c", `mkdir -p "$(dirname '${escapedPath}')" && echo '${escapedContent}' > '${escapedPath}'`];
-        writeProcess.running = true;
+        tomlFileView.setText(tomlContent);
         console.log("CompositorTomlWriter: Written TOML to", root.outputPath);
     }
 

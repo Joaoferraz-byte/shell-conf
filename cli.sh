@@ -3,7 +3,13 @@
 
 set -euo pipefail
 
+# A packaged launcher resolves this script in the Nix store. During local
+# development, AMBXST_SOURCE_ROOT redirects QML, assets, and helper scripts to
+# the checked-out fork while retaining the package-provided runtime dependencies.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${AMBXST_SOURCE_ROOT:-}" ]; then
+	SCRIPT_DIR="$(cd "${AMBXST_SOURCE_ROOT}" && pwd)"
+fi
 
 # Use environment variables if set by flake, otherwise fall back to PATH
 QS_BIN="${AMBXST_QS:-qs}"
@@ -22,7 +28,8 @@ fi
 
 # Ensure config files exist - copy from preset if missing
 ensure_config_files() {
-	local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/ambxst/config"
+	local config_root="${AMBXST_CONFIG_ROOT:-${XDG_CONFIG_HOME:-$HOME/.config}/ambxst}"
+	local config_dir="${config_root}/config"
 	local preset_dir="${SCRIPT_DIR}/assets/presets/Ambxst Default"
 
 	# Create config directory if it doesn't exist
@@ -288,22 +295,42 @@ quit)
 	;;
 screen)
 	SUB="${2:-}"
-	if [ "$SUB" = "off" ]; then
-		if command -v hyprctl &>/dev/null; then
-			hyprctl dispatch dpms off
-		else
-			notify-send "Screen Off" "Not supported on this compositor yet"
-		fi
-	elif [ "$SUB" = "on" ]; then
-		if command -v hyprctl &>/dev/null; then
-			hyprctl dispatch dpms on
-		else
-			notify-send "Screen On" "Not supported on this compositor yet"
-		fi
-	else
+	AXCTL_STATE=""
+	case "$SUB" in
+	off) AXCTL_STATE="0" ;;
+	on) AXCTL_STATE="1" ;;
+	*)
 		echo "Usage: ambxst screen [on|off]"
 		exit 1
+		;;
+	esac
+
+	if ! command -v axctl &>/dev/null; then
+		notify-send "Screen ${SUB}" "axctl is required to control the screen"
+		exit 1
 	fi
+
+	MONITORS_JSON=$(axctl monitor list 2>/dev/null) || {
+		notify-send "Screen ${SUB}" "Failed to list monitors via axctl"
+		exit 1
+	}
+
+	MONITOR_IDS=$(echo "$MONITORS_JSON" | jq -r '.[].id' 2>/dev/null) || {
+		notify-send "Screen ${SUB}" "Failed to parse monitor list"
+		exit 1
+	}
+
+	if [ -z "$MONITOR_IDS" ]; then
+		notify-send "Screen ${SUB}" "No monitors detected"
+		exit 1
+	fi
+
+	for MON_ID in $MONITOR_IDS; do
+		if ! axctl monitor set-dpms "$MON_ID" "$AXCTL_STATE" >/dev/null 2>&1; then
+			notify-send "Screen ${SUB}" "Failed to set DPMS on monitor $MON_ID"
+			exit 1
+		fi
+	done
 	;;
 suspend)
 	if command -v systemctl &>/dev/null; then
@@ -539,6 +566,10 @@ version | -v | --version)
 	echo "Ambxst $(cat "${SCRIPT_DIR}/version")"
 	;;
 install)
+	if [ "${AMBXST_DECLARATIVE_HYPRLAND:-0}" = "1" ]; then
+		echo "Ambxst Hyprland integration is managed by nix-conf; do not run 'ambxst install hyprland'." >&2
+		exit 2
+	fi
 	TARGET="${2:-}"
 	if [ "$TARGET" = "hyprland" ]; then
 		HYPR_DIR="$HOME/.config/hypr"
@@ -559,6 +590,10 @@ install)
 	fi
 	;;
 remove)
+	if [ "${AMBXST_DECLARATIVE_HYPRLAND:-0}" = "1" ]; then
+		echo "Ambxst Hyprland integration is managed by nix-conf; there is no imperative block to remove." >&2
+		exit 2
+	fi
 	TARGET="${2:-}"
 	if [ "$TARGET" = "hyprland" ]; then
 		HYPR_DIR="$HOME/.config/hypr"

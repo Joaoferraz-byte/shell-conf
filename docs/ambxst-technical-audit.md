@@ -1,77 +1,82 @@
-# Avaliação técnica da integração Ambxst
+# Auditoria técnica da integração Ambxst
 
-## Escopo e método
+## Escopo e decisão
 
-Esta avaliação compara alternativas de Ambxst a partir de código, flake, modelo de configuração, integração com `axctl`, divergência de commits e disponibilidade verificável. Ela não usa nome, popularidade ou README como critério de escolha. O objetivo é manter uma integração NixOS previsível, com uma única autoridade para inicialização, estado e atalhos do compositor.
+Esta auditoria registra a arquitetura mantida por `shell-conf` depois da migração de um wrapper com fonte remota para um **fork local completo** do Ambxst-X. O objetivo é manter uma única autoridade para código, sessão, estado mutável e atalhos do compositor, sem depender de patches frágeis contra um input upstream em tempo de avaliação.
 
-A análise considerou a documentação Lua do Hyprland, a serialização do Home Manager, a implementação fixada de `axctl`, o instalador/launcher do Ambxst-X e as árvores dos projetos indicados. O problema inicial foi reproduzido conceitualmente: em configuração Lua, `settings.exec_once` é convertido para uma chamada Lua inexistente, enquanto o autostart compatível deve usar o evento `hyprland.start`. [1] [2] [3]
+A base escolhida continua sendo [OrynVail/Ambxst-X][1], pois ela fornece a estrutura de QML, flake, pacote NixOS e integração com `axctl` que este projeto já usa. A mudança de arquitetura não troca essa origem por um fork alternativo: ela a promove para a raiz deste próprio repositório, preservando histórico e permitindo atualizações explícitas por merge.
 
-## Critérios técnicos
-
-| Critério | Pergunta avaliada | Importância |
+| Critério | Decisão adotada | Resultado |
 |---|---|---|
-| Integração Nix | O projeto disponibiliza pacote, flake e módulo utilizáveis sem instalação imperativa? | Alta |
-| Atualidade e divergência | As mudanças próprias são aplicáveis sobre uma base recente ou exigem reintroduzir código obsoleto? | Alta |
-| Modelo de compositor | Há separação clara entre boot do shell, estado mutável e aplicação de regras/atalhos? | Alta |
-| Superfície de manutenção | A solução evita patches amplos e dependências remotas não verificadas em tempo de avaliação? | Alta |
-| Disponibilidade | A fonte pode ser obtida e auditada integralmente? | Obrigatória |
+| Origem do código | Árvore completa na raiz de `shell-conf`. | O código construído é o código versionado e revisado localmente. |
+| Atualização upstream | Remoto Git `upstream` para `OrynVail/Ambxst-X`. | Atualizações futuras usam `git fetch upstream && git merge upstream/main`. |
+| Fonte de build | `self = ./.` no `flake.nix`. | Nenhum input remoto do Ambxst, `patchedSource`, diretório `vendor` ou `runCommand` de remendo permanece. |
+| Sessão gráfica | UWSM/NixOS no `nix-conf`. | O shell é iniciado por `ambxst.service`, uma única vez após `graphical-session.target`. |
+| Estado mutável | `${XDG_STATE_HOME:-~/.local/state}/ambxst`. | Preferências não são vinculadas à Nix store e continuam editáveis pela interface. |
 
-## Resultados comparativos
+## Defeitos eliminados
 
-| Fonte | Evidência de código e integração | Risco técnico | Decisão |
-|---|---|---|---|
-| `OrynVail/Ambxst-X` | A fonte usada pela configuração original possui flake, pacote, módulo NixOS e integração com `axctl`. O launcher e a derivação são suficientemente estruturados para serem consumidos a partir de uma árvore local. [4] | O histórico é curto e o projeto não é uma distribuição NixOS estável por si só; atualizações upstream exigem revisão. | **Base escolhida, vendorizada e fixada.** |
-| `Valo-Asura/Ambxst-nixos` | Fork completo de `Axenide/Ambxst` sem commits à frente e aproximadamente 479 commits atrás da base comum no momento da análise. A árvore não oferece manutenção própria que justifique migrar toda a integração. [5] | Adotar o fork reintroduziria uma base antiga e aumentaria o custo de portabilidade de correções. | Não adotar como base; apenas comparar correções específicas se um defeito for reproduzido. |
-| `rafmiqgus/Ambxst-fork` | Fork com seis commits próprios, incluindo ajustes de dados/QML e remoção de terminais pré-instalados, porém aproximadamente 479 commits atrás da base comum. As alterações foram avaliadas como diffs seletivos, não como uma atualização segura de toda a árvore. [6] | Alterações locais sobre base muito defasada podem conflitar com arquitetura atual de painel, serviços e compositor. | Não adotar como base; considerar somente patches isolados, reproduzidos e testados. |
-| `TimothyBear11/AmbxstNixDots` | A URL indicada retornou 404 e a consulta autenticada não localizou o repositório. [7] | Não há código disponível para auditoria, teste ou manutenção. | Não avaliável enquanto uma fonte verificável não for fornecida. |
+A integração anterior dependia de uma combinação de fonte remota, lockfile e sobreposição de arquivos QML completos. Isso escondia a relação real entre uma alteração local e sua base upstream: uma mudança do autor original podia ser silenciosamente perdida pelo override local, e o resultado do build não era representado por uma única árvore Git.
 
-A decisão não foi migrar para um fork alternativo. A solução escolhida incorpora a revisão auditada do Ambxst-X por inteiro em `vendor/ambxst`, preserva sua estrutura de pacote e módulo, e mantém apenas adaptações explicitamente necessárias à execução declarativa no NixOS.
+Também havia múltiplas autoridades de inicialização. A configuração Lua do Hyprland tentava iniciar o shell, e o gerador de configuração do compositor podia introduzir outro autostart. A arquitetura atual elimina ambos os caminhos: o `nix-conf` declara a sessão UWSM e uma unidade `ambxst.service`; o fork impede que `CompositorTomlWriter.qml` gere `exec-once = "ambxst"` e bloqueia `ambxst install hyprland` no launcher empacotado.
 
-## Defeitos identificados na integração anterior
-
-A implementação anterior reexportava uma fonte remota e substituía arquivos QML completos por uma camada local de overrides. Esse padrão criava duas fragilidades: mudanças upstream podiam ser silenciosamente perdidas nos arquivos substituídos, e o pacote efetivamente construído dependia de uma combinação de fonte remota, patches e estado de lockfile mais difícil de auditar.
-
-Também havia duas autoridades de autostart. O Home Manager tentava gerar `settings.exec_once` em Lua e o gerador TOML adicionava outro `exec-once` para o próprio Ambxst. Além de a primeira forma produzir `attempt to call a nil value (field 'exec_once')`, a combinação podia iniciar o shell duas vezes. A implementação atual usa somente `hl.on("hyprland.start", ...)` para iniciar o Ambxst e não permite que o TOML do `axctl` reinicie o próprio shell. [1] [2] [3]
+> A sessão declarativa é deliberadamente diferente da instalação imperativa upstream. O instalador upstream adiciona um `source` ou `loadfile` a `hyprland.conf`/`hyprland.lua`; nesta topologia, esse arquivo seria uma segunda fonte de verdade fora do Nix e do Git.[2]
 
 ## Arquitetura implementada
 
-| Elemento | Implementação adotada | Justificativa |
+| Elemento | Implementação | Justificativa operacional |
 |---|---|---|
-| Fonte do Ambxst | Árvore completa em `vendor/ambxst`. | O código construído, revisado e versionado é idêntico ao que está no repositório. |
-| Flake | `shell-conf/flake.nix` constrói o pacote diretamente da árvore vendorizada. | Elimina o input remoto do Ambxst e reduz a superfície de atualização implícita. |
-| Estado | `AMBXST_CONFIG_ROOT` com fallback em `XDG_STATE_HOME/ambxst`. | Mantém arquivos editáveis fora da Nix store e preserva semeadura inicial pelo Home Manager. |
-| Inicialização | O Hyprland inicia `ambxst` uma única vez no evento Lua oficial. | Remove a chamada inexistente `exec_once` e elimina ciclo de autostart. |
-| Regras e binds dinâmicos | `axctl` aplica TOML e lote de keybinds por IPC após confirmar disponibilidade do daemon. | Evita carregar Lua de sessão antiga e impede comandos precoces durante o boot. |
-| Recuperação | O NixOS mantém apenas `SUPER + Return`, `SUPER + R` e `SUPER + SHIFT + Q`. | Preserva `SUPER + T` para a interface de terminais/tmux do Ambxst. |
+| Fonte QML | `shell.qml`, `config/`, `modules/`, `services/` e assets na raiz. | Edição, revisão, build e merge ocorrem na mesma árvore. |
+| Pacote | `nix/packages/default.nix` copia `self` para a Nix store e expõe `ambxst`. | Produção é imutável, mas parte da fonte Git local. |
+| Desenvolvimento | `nix develop .#default` e `ambxst-dev`. | `AMBXST_SOURCE_ROOT` faz o launcher usar o checkout sem duplicar dependências de runtime. |
+| Live reload | Quickshell recebe `-p <checkout>/shell.qml`. | O Quickshell recarrega arquivos QML salvos.[3] |
+| UWSM | Desktop entry declarada no `nix-conf`, com `-e -D Hyprland`. | Garante `XDG_CURRENT_DESKTOP=Hyprland`, evitando a divergência documentada no nixpkgs.[4] |
+| Spawn do shell | `systemd.user.services.ambxst`, associado a `graphical-session.target`. | UWSM importa o ambiente Wayland/DBus antes de iniciar o shell; não há callback Lua concorrente. |
+| Recuperação | `SUPER + R` executa `systemctl --user restart ambxst.service`. | O processo continua sob o controle do serviço, sem o launcher criar instância desacoplada. |
+| Serviços de compositor | `axctl` permanece fixado como input de runtime. | A revisão atual ainda o usa em serviços de compositor, idle, monitores, tela e atalhos. |
 
-O serviço `CompositorKeybinds` aguarda `AxctlService.daemonReady` antes de emitir `axctl config keybinds-batch`. A aplicação dinâmica remove apenas os atalhos previamente administrados pelo Ambxst e não atinge os três atalhos de recuperação do NixOS. Essa separação elimina a colisão histórica entre `SUPER + Enter` e a semântica prevista de `SUPER + T`.
+O plano de saída de `axctl`, a matriz de consumidores QML e os critérios de paridade para IPC direto do Hyprland estão em [axctl-decision.md](./axctl-decision.md). A manutenção atual não trata `axctl` como um atalho de suporte a vários compositores: ele continua sendo parte da implementação funcional de Hyprland do Ambxst.
 
-## Validação executada
+## Atualização upstream
 
-| Verificação | Resultado |
-|---|---|
-| `nix flake check --no-build` em `shell-conf` | Aprovado. |
-| `nix flake check --no-build` em `nix-conf` | Aprovado. |
-| Avaliação das derivações `myMachine` e `dellLatitude5410` | Aprovada. |
-| Planos de build sem execução do pacote Ambxst e dos dois hosts | Dependências resolvidas. |
-| `bash -n` no launcher vendorizado | Aprovado. |
-| Parsing de QML modificado com `qmlformat` | Aprovado para `Config.qml`, `AxctlService.qml`, `CompositorTomlWriter.qml`, `CompositorKeybinds.qml`, `PresetsService.qml` e `shell.qml`. |
-| Lint QML genérico | Sem erro sintático explícito; avisos de tipos/imports Quickshell são esperados fora de um runtime Quickshell. |
+O repositório contém um remoto local chamado `upstream`. Como remotos não são versionados, cada dispositivo deve configurá-lo uma vez:
 
-A validação no ambiente de automação não inicia uma sessão Wayland gráfica real. Depois de aplicar a geração, a verificação operacional recomendada é iniciar uma sessão Hyprland, confirmar que existe apenas um processo `ambxst`, testar `SUPER + T`, testar os três atalhos de recuperação e verificar o socket/processo do `axctl`.
+```bash
+cd ~/shell-conf
+git remote get-url upstream 2>/dev/null \
+  || git remote add upstream https://github.com/OrynVail/Ambxst-X.git
+```
 
-## Processo de atualização
+Uma atualização é uma mesclagem consciente, não uma substituição de diretório nem um novo patch. Antes de integrar, reveja os commits e os arquivos impactados; depois, resolva conflitos preservando as regras declarativas deste fork.
 
-Atualizações devem preservar a auditoria. Primeiro, compare a fonte upstream com `vendor/ambxst`; em seguida, integre a revisão como mudança explícita, revise os arquivos QML tocados e valide a flake do `shell-conf`. Depois de publicar essa revisão, atualize o input `shell-conf` no `nix-conf`, reavalie os dois hosts e aplique a geração somente após os checks serem aprovados.
+```bash
+git fetch upstream --prune
+git log --oneline --left-right HEAD...upstream/main
+git merge upstream/main
 
-Evite executar instaladores upstream em uma instalação gerenciada pelo NixOS. Eles podem escrever arquivos de configuração fora do fluxo declarativo e reintroduzir fontes concorrentes de autostart, binds ou estado.
+git diff --check
+nix flake check
+git push origin main
+```
+
+Mudanças upstream em `cli.sh`, `flake.nix`, `nix/`, `modules/services/AxctlService.qml`, `modules/services/CompositorTomlWriter.qml`, `modules/services/PresetsService.qml`, `config/Config.qml`, `modules/bar/workspaces/Workspaces.qml` e `shell.qml` merecem revisão adicional, porque são as superfícies que conectam a fonte do Ambxst à integração declarativa local.
+
+## Validação requerida
+
+A validação estática deste fork deve comprovar que a árvore é local, que o launcher preserva a sintaxe de shell e que o Nix pode avaliar o pacote. Como uma sessão Wayland real não é iniciada em automação sem desktop, a validação funcional continua sendo obrigatória no host NixOS após a troca de geração.
+
+| Camada | Comando ou teste | Resultado esperado |
+|---|---|---|
+| Estrutura | `git diff --check` e `grep` por referências antigas. | Sem `vendor/ambxst`, `patchedSource`, input remoto do Ambxst ou autostart TOML do shell. |
+| Launcher | `bash -n cli.sh`. | Sintaxe válida; `AMBXST_DECLARATIVE_HYPRLAND=1 ambxst install hyprland` falha sem escrever config. |
+| Flake do shell | `nix flake check` e `nix build .#packages.x86_64-linux.ambxst`. | Fonte local, `axctl` e dependências resolvidos. |
+| Flake do sistema | `nix flake check` em `nix-conf`. | Sessão UWSM e serviço do Ambxst avaliam sem conflito. |
+| Sessão | Login em **Hyprland (UWSM)**. | `XDG_CURRENT_DESKTOP=Hyprland`, uma instância do shell e `ambxst.service` ativo. |
+| Interface | Edite um `.qml` via `ambxst-dev`. | Quickshell recarrega ao salvar e o serviço de produção permanece parado durante o desenvolvimento. |
 
 ## Referências
 
-[1]: https://wiki.hypr.land/Configuring/Basics/Autostart/ "Hyprland: Autostart"
-[2]: https://github.com/nix-community/home-manager/issues/9341 "Home Manager issue #9341"
-[3]: https://github.com/Axenide/axctl/tree/1e163c0193cf3b407b5d9bf65fbdb3ef8c8c1710 "axctl revision audited"
-[4]: https://github.com/OrynVail/Ambxst-X/tree/ee9fcbd4f8d602bad3bc9ede0f32f20b09989ba3 "Ambxst-X revision audited"
-[5]: https://github.com/Valo-Asura/Ambxst-nixos "Valo-Asura/Ambxst-nixos"
-[6]: https://github.com/rafmiqgus/Ambxst-fork "rafmiqgus/Ambxst-fork"
-[7]: https://github.com/TimothyBear11/AmbxstNixDots "TimothyBear11/AmbxstNixDots"
+[1]: https://github.com/OrynVail/Ambxst-X "OrynVail/Ambxst-X"
+[2]: https://github.com/Axenide/Ambxst "Ambxst — instalação e integração com Hyprland"
+[3]: https://quickshell.org/docs/v0.1.0/guide/introduction/ "Quickshell — live reload de código QML"
+[4]: https://github.com/NixOS/nixpkgs/issues/476375 "NixOS/nixpkgs #476375 — `XDG_CURRENT_DESKTOP` com UWSM"

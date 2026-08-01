@@ -1,178 +1,317 @@
-import QtQuick
-import QtQuick.Layouts
-import Quickshell
-import Quickshell.Io
+//@ pragma UseQApplication
+//@ pragma ShellId ambxst
+//@ pragma DataDir $BASE/ambxst
+//@ pragma StateDir $BASE/ambxst
 
-Scope {
+import QtQuick
+import Quickshell
+import Quickshell.Wayland
+import qs.modules.bar
+import qs.modules.bar.workspaces
+import qs.modules.notifications
+import qs.modules.widgets.dashboard.wallpapers
+
+import qs.modules.notch
+import qs.modules.widgets.overview
+import qs.modules.widgets.presets
+import qs.modules.services
+import qs.modules.corners
+import qs.modules.frame
+import qs.modules.components
+import qs.modules.desktop
+import qs.modules.lockscreen
+import qs.modules.dock
+import qs.modules.globals
+import qs.modules.shell
+import qs.config
+import qs.modules.shell.osd
+import "modules/tools"
+
+ShellRoot {
     id: root
 
-    // ── Persistência de Configurações ───────────────────────────────────
-    FileView {
-        id: settingsFile
-        path: Qt.resolvedUrl("settings.json").toString().replace("file://", "")
-        watchChanges: true
-        onFileChanged: reload()
-        onAdapterUpdated: writeAdapter()
-
-        JsonAdapter {
-            property real opacity: 0.85
-            property string accentColor: "#7c3aed"
-            property int fontSize: 13
-            property int barHeight: 42
-            property int borderRadius: 16
-        }
+    ContextMenu {
+        id: contextMenu
+        screen: Quickshell.screens[0]
+        Component.onCompleted: Visibilities.setContextMenu(contextMenu)
     }
 
-    // ── Integração com Hyprland via axctl ──────────────────────────────
-    // O axctl detecta automaticamente o Hyprland e fornece uma API JSON-RPC
-    // unificada. Usamos axctl em vez de hyprctl diretamente para manter
-    // compatibilidade com múltiplos compositores.
-    property var hyprlandWorkspaces: []
-    property string activeWindow: "No Window"
-
-    Process {
-        id: hyprlandWorkspacesProc
-        command: ["axctl", "workspaces"]
-        running: true
-        onRunningChanged: if (!running) running = true // Loop contínuo
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(this.text);
-                    root.hyprlandWorkspaces = (Array.isArray(data) ? data : Object.values(data)).map(ws => ({
-                        id: ws.id !== undefined ? ws.id : (ws.idx !== undefined ? ws.idx : 0),
-                        name: ws.name || String(ws.id !== undefined ? ws.id : (ws.idx !== undefined ? ws.idx : 0))
-                    }));
-                } catch (e) {
-                    console.log("Erro ao parsear workspaces:", e);
-                }
-            }
-        }
-    }
-
-    Process {
-        id: hyprlandWindowProc
-        command: ["axctl", "active-window"]
-        running: true
-        onRunningChanged: if (!running) running = true
-
-        // Atualizar a cada 2 segundos para não sobrecarregar
-        Timer {
-            interval: 2000
-            running: true
-            repeat: true
-            onTriggered: hyprlandWindowProc.running = true
-        }
-
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    const data = JSON.parse(this.text);
-                    root.activeWindow = data.title || "No Window";
-                } catch (e) {
-                    root.activeWindow = "No Window";
-                }
-            }
-        }
-    }
-
-    // ── Barra Principal (Estilo Ambxst/Notch) ─────────────────────────
     Variants {
         model: Quickshell.screens
-        FloatingWindow {
-            required property var modelData
-            screen: modelData
 
-            // Posicionamento Flutuante (Top Center)
-            anchors {
-                top: parent.top
-                horizontalCenter: parent.horizontalCenter
-                topMargin: 16
+        Loader {
+            id: wallpaperLoader
+            active: true
+            required property ShellScreen modelData
+            sourceComponent: Wallpaper {
+                screen: wallpaperLoader.modelData
+            }
+        }
+    }
+
+    Variants {
+        model: Quickshell.screens
+
+        Loader {
+            id: desktopLoader
+            active: Config.desktop.enabled && SuspendManager.wakeReady
+            required property ShellScreen modelData
+            sourceComponent: Desktop {
+                screen: desktopLoader.modelData
+            }
+        }
+    }
+
+    // Visual panel & reservations
+    Variants {
+        model: Quickshell.screens
+
+        Item {
+            id: screenShellContainer
+            required property ShellScreen modelData
+
+            // Panel components (Bar, Notch, Dock, Frame, Corners)
+            UnifiedShellPanel {
+                id: unifiedPanel
+                targetScreen: screenShellContainer.modelData
             }
 
-            implicitWidth: contentRow.width + 40
-            implicitHeight: settingsFile.JsonAdapter.barHeight
-
-            // Estilo Visual (Glassmorphism / Material)
-            Rectangle {
-                anchors.fill: parent
-                color: Qt.rgba(24/255, 24/255, 27/255, settingsFile.JsonAdapter.opacity)
-                radius: settingsFile.JsonAdapter.borderRadius
-
-                // Borda sutil
-                border.color: Qt.rgba(255/255, 255/255, 255/255, 0.05)
-                border.width: 1
-
-                // Sombras (Simulação com drop shadow)
-                layer.enabled: true
-                layer.effect: DropShadow {
-                    horizontalOffset: 0
-                    verticalOffset: 4
-                    radius: 12
-                    color: Qt.rgba(0, 0, 0, 0.3)
+            Loader {
+                active: Config.theme.enableCorners && Config.roundness > 0
+                sourceComponent: ScreenCorners {
+                    screen: screenShellContainer.modelData
                 }
             }
 
-            RowLayout {
-                id: contentRow
-                anchors.centerIn: parent
-                spacing: 16
+            // Exclusive zone reservations
+            ReservationWindows {
+                screen: screenShellContainer.modelData
 
-                // ── Workspaces (Hyprland) ────────────────────────────
-                Repeater {
-                    model: root.hyprlandWorkspaces
-                    delegate: Rectangle {
-                        width: 32
-                        height: 32
-                        radius: 10
-                        color: (modelData.id === root.currentWorkspaceId)
-                               ? settingsFile.JsonAdapter.accentColor
-                               : "transparent"
+                // Bar status for reservations
+                barEnabled: {
+                    const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
+                    return (!list || list.length === 0 || list.indexOf(screen.name) !== -1);
+                }
+                barPosition: unifiedPanel.barPosition
+                barPinned: unifiedPanel.pinned
+                barSize: (unifiedPanel.barPosition === "left" || unifiedPanel.barPosition === "right") ? unifiedPanel.barTargetWidth : unifiedPanel.barTargetHeight
+                barOuterMargin: unifiedPanel.barOuterMargin
 
-                        Text {
-                            anchors.centerIn: parent
-                            text: modelData.name
-                            color: "white"
-                            font.pixelSize: settingsFile.JsonAdapter.fontSize
-                            font.bold: true
-                        }
+                // Dock status for reservations
+                dockEnabled: {
+                    if (!((Config.dock && Config.dock.enabled !== undefined ? Config.dock.enabled : false)) || (Config.dock && Config.dock.theme !== undefined ? Config.dock.theme : "default") === "integrated")
+                        return false;
 
-                        MouseArea {
-                            anchors.fill: parent
-                            onClicked: {
-                                // Comando para mudar workspace no Hyprland via axctl
-                                Quickshell.execDetached(["axctl", "focus-workspace", String(modelData.id)]);
-                            }
-                        }
+                    const list = (Config.dock && Config.dock.screenList !== undefined ? Config.dock.screenList : []);
+                    if (!list || list.length === 0)
+                        return true;
+                    return list.indexOf(screenShellContainer.modelData.name) !== -1;
+                }
+                dockPosition: unifiedPanel.dockPosition
+                dockPinned: unifiedPanel.dockPinned
+                dockHeight: unifiedPanel.dockHeight
+                containBar: unifiedPanel.containBar
+
+                frameEnabled: (Config.bar && Config.bar.frameEnabled !== undefined ? Config.bar.frameEnabled : false)
+                frameThickness: (Config.bar && Config.bar.frameThickness !== undefined ? Config.bar.frameThickness : 6)
+
+                // Sidebar status for reservations
+                sidebarEnabled: GlobalStates.assistantVisible && screenShellContainer.modelData.name === GlobalStates.assistantScreenName
+                sidebarPinned: GlobalStates.assistantPinned
+                sidebarWidth: GlobalStates.assistantWidth
+                sidebarPosition: GlobalStates.assistantPosition
+            }
+        }
+    }
+
+    // Overview popup
+    Variants {
+        model: {
+            const screens = Quickshell.screens;
+            const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
+            if (!list || list.length === 0)
+                return screens;
+            return screens.filter(screen => list.indexOf(screen.name) !== -1);
+        }
+
+        Loader {
+            id: overviewLoader
+            active: ((Config.overview && Config.overview.enabled !== undefined ? Config.overview.enabled : true)) && SuspendManager.wakeReady && (Visibilities.getForScreen(modelData.name) ? Visibilities.getForScreen(modelData.name).overview : false)
+            required property ShellScreen modelData
+            sourceComponent: OverviewPopup {
+                screen: overviewLoader.modelData
+            }
+        }
+    }
+
+    // Presets popup
+    Variants {
+        model: {
+            const screens = Quickshell.screens;
+            const list = (Config.bar && Config.bar.screenList !== undefined ? Config.bar.screenList : []);
+            if (!list || list.length === 0)
+                return screens;
+            return screens.filter(screen => list.indexOf(screen.name) !== -1);
+        }
+
+        Loader {
+            id: presetsLoader
+            active: SuspendManager.wakeReady && (Visibilities.getForScreen(modelData.name) ? Visibilities.getForScreen(modelData.name).presets : false)
+            required property ShellScreen modelData
+            sourceComponent: PresetsPopup {
+                screen: presetsLoader.modelData
+            }
+        }
+    }
+
+    // Secure WlSessionLock lockscreen
+    WlSessionLock {
+        id: sessionLock
+        locked: GlobalStates.lockscreenVisible
+
+        // Surface auto-created per screen
+        LockScreen {}
+    }
+
+    CompositorConfig {
+        id: compositorConfig
+    }
+
+    // axctl owns Ambxst keybinds. This service first removes prior Ambxst
+    // bindings, then applies the active layout-specific set without touching
+    // the explicit Hyprland recovery bindings supplied by nix-conf.
+    CompositorKeybinds {
+        id: compositorKeybinds
+    }
+
+    Connections {
+        target: AxctlService
+        function onDaemonAvailable() {
+            compositorKeybinds.applyKeybinds();
+        }
+    }
+
+    // Screenshot tool
+    Variants {
+        model: Quickshell.screens
+
+        Loader {
+            id: screenshotLoader
+            active: GlobalStates.screenshotToolVisible
+            required property ShellScreen modelData
+            sourceComponent: ScreenshotTool {
+                targetScreen: screenshotLoader.modelData
+            }
+        }
+    }
+
+    // Screenshot preview overlay
+    Variants {
+        model: Quickshell.screens
+
+        Loader {
+            id: screenshotOverlayLoader
+            active: SuspendManager.wakeReady
+            required property ShellScreen modelData
+            sourceComponent: ScreenshotOverlay {
+                targetScreen: screenshotOverlayLoader.modelData
+            }
+        }
+    }
+
+    // Screen recording tool
+    Loader {
+        id: screenRecordLoader
+        active: SuspendManager.wakeReady && GlobalStates.screenRecordToolVisible
+        source: "modules/tools/ScreenrecordTool.qml"
+
+        onLoaded: {
+            if (GlobalStates.screenRecordToolVisible && item) {
+                item.open();
+            }
+        }
+
+        Connections {
+            target: GlobalStates
+            function onScreenRecordToolVisibleChanged() {
+                if (screenRecordLoader.status === Loader.Ready) {
+                    if (GlobalStates.screenRecordToolVisible) {
+                        screenRecordLoader.item.open();
+                    } else {
+                        screenRecordLoader.item.close();
                     }
                 }
+            }
+        }
 
-                // ── Título da Janela Ativa ────────────────────────────
-                Text {
-                    text: root.activeWindow
-                    color: "white"
-                    font.pixelSize: settingsFile.JsonAdapter.fontSize
-                    elide: Text.ElideMiddle
-                    Layout.maximumWidth: 300
-                }
-
-                // ── Relógio ───────────────────────────────────────────
-                Text {
-                    id: clockText
-                    text: Qt.formatTime(new Date(), "hh:mm")
-                    color: settingsFile.JsonAdapter.accentColor
-                    font.pixelSize: settingsFile.JsonAdapter.fontSize
-                    font.bold: true
-
-                    Timer {
-                        interval: 1000
-                        running: true
-                        repeat: true
-                        onTriggered: clockText.text = Qt.formatTime(new Date(), "hh:mm")
-                    }
+        Connections {
+            target: screenRecordLoader.item
+            ignoreUnknownSignals: true
+            function onVisibleChanged() {
+                if (!screenRecordLoader.item.visible && GlobalStates.screenRecordToolVisible) {
+                    GlobalStates.screenRecordToolVisible = false;
                 }
             }
+        }
+    }
+
+    // Mirror tool
+    Loader {
+        id: mirrorLoader
+        active: SuspendManager.wakeReady && GlobalStates.mirrorWindowVisible
+        source: "modules/tools/MirrorWindow.qml"
+    }
+
+    // Settings
+    Loader {
+        id: settingsWindowLoader
+        active: SuspendManager.wakeReady && GlobalStates.settingsWindowVisible
+        source: "modules/widgets/config/SettingsWindow.qml"
+    }
+
+    // On-screen display
+    Variants {
+        model: Quickshell.screens
+
+        Loader {
+            id: osdLoader
+            active: SuspendManager.wakeReady
+            required property ShellScreen modelData
+            sourceComponent: OSD {
+                targetScreen: osdLoader.modelData
+            }
+        }
+    }
+
+    // Init clipboard service
+    Connections {
+        target: ClipboardService
+        function onListCompleted() {
+        // Service initialized and ready
+        }
+    }
+
+    // Force service init at startup but defer it slightly so it doesn't block the UI
+    QtObject {
+        id: serviceInitializer
+
+        Component.onCompleted: {
+            // Critical services — init immediately (next tick)
+            Qt.callLater(() => {
+                let _ = CaffeineService.inhibit;
+                _ = IdleService.lockCmd; // Force init
+                _ = GlobalShortcuts.appId; // Force init (IPC pipe listener)
+            });
+        }
+    }
+
+    // Non-critical services — defer 2s after startup
+    Timer {
+        interval: 2000
+        running: true
+        onTriggered: {
+            let _ = NightLightService.active;
+            _ = GameModeService.toggled;
         }
     }
 }
