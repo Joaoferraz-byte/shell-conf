@@ -613,10 +613,15 @@ Item {
                         visible: opacity > 0
                         IconImage {
                             id: mainAppIconVert
+                            // The icon container already matches the workspace
+                            // button. Centering avoids the bottom/right bias that
+                            // appeared when the indicator was replaced by an icon.
                             anchors.centerIn: parent
 
                             source: workspaceButtonBackgroundVert.mainAppIconSource
                             implicitSize: (!Config.workspaces.alwaysShowNumbers && Config.workspaces.showAppIcons) ? workspaceIconSize : workspaceIconSizeShrinked
+                            // IconImage recommends mipmaps for scaled-down icon
+                            // sources, preventing a low-resolution appearance.
                             mipmap: true
 
                             Behavior on opacity {

@@ -16,7 +16,7 @@ Rectangle {
     color: "transparent"
     implicitWidth: 400
     implicitHeight: 300
-    // 0: Network, 1: Bluetooth, 2: Mixer, 3: Effects, 4: Theme, 5: Binds, 6: System, 7: Compositor, 8: Shell
+    // 0: Network, 1: Bluetooth, 2: Mixer, 3: AI, 4: Effects, 5: Theme, 6: Binds, 7: System, 8: Compositor, 9: Shell
 
     property int currentSection: 0
     property int selectedIndex: GlobalStates.settingsCurrentTab
@@ -125,8 +125,8 @@ Rectangle {
         if (!subSectionId || subSectionId === "")
             return;
 
-        // Panels that support subsections: Theme(4), System(6), Compositor(7), Shell(8)
-        if ([4, 6, 7, 8].includes(sectionId)) {
+        // Panels that support subsections: Theme(5), System(7), Compositor(8), Shell(9)
+        if ([5, 7, 8, 9].includes(sectionId)) {
             if (panelLoader.item && panelLoader.status === Loader.Ready) {
                 panelLoader.item.currentSection = subSectionId;
             } else {
@@ -219,39 +219,45 @@ Rectangle {
             isIcon: true
         },
         {
+            icon: Icons.robot,
+            label: "AI",
+            section: 3,
+            isIcon: true
+        },
+        {
             icon: Icons.waveform,
             label: "Effects",
-            section: 3,
+            section: 4,
             isIcon: true
         },
         {
             icon: Icons.paintBrush,
             label: "Theme",
-            section: 4,
+            section: 5,
             isIcon: true
         },
         {
             icon: Icons.keyboard,
             label: "Binds",
-            section: 5,
+            section: 6,
             isIcon: true
         },
         {
             icon: Icons.circuitry,
             label: "System",
-            section: 6,
+            section: 7,
             isIcon: true
         },
         {
             icon: Icons.compositor,
             label: "Compositor",
-            section: 7,
+            section: 8,
             isIcon: true
         },
         {
             icon: Qt.resolvedUrl("../../../../assets/ambxst/ambxst-icon.svg"),
             label: "Ambxst",
-            section: 8,
+            section: 9,
             isIcon: false
         }
     ]
@@ -548,6 +554,7 @@ Rectangle {
                 }
             }
 
+            // Panel definitions for Loader
             readonly property var panelComponents: [
                 {
                     component: "WifiPanel.qml",
@@ -562,28 +569,32 @@ Rectangle {
                     section: 2
                 },
                 {
-                    component: "EasyEffectsPanel.qml",
+                    component: "../../config/AiPanel.qml",
                     section: 3
                 },
                 {
-                    component: "ThemePanel.qml",
+                    component: "EasyEffectsPanel.qml",
                     section: 4
                 },
                 {
-                    component: "BindsPanel.qml",
+                    component: "ThemePanel.qml",
                     section: 5
                 },
                 {
-                    component: "SystemPanel.qml",
+                    component: "BindsPanel.qml",
                     section: 6
                 },
                 {
-                    component: "CompositorPanel.qml",
+                    component: "SystemPanel.qml",
                     section: 7
                 },
                 {
-                    component: "ShellPanel.qml",
+                    component: "CompositorPanel.qml",
                     section: 8
+                },
+                {
+                    component: "ShellPanel.qml",
+                    section: 9
                 }
             ]
 

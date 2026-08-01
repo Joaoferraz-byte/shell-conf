@@ -42,9 +42,11 @@ QtObject {
             // Dashboard
             case "dashboard": toggleDashboardTab(0); break;
             case "wallpapers": toggleDashboardTab(1); break;
+            case "assistant": toggleAssistant(); break;
             case "dashboard-widgets": toggleDashboardTab(0); break;
             case "dashboard-wallpapers": toggleDashboardTab(1); break;
             case "dashboard-kanban": toggleDashboardTab(2); break;
+            case "dashboard-assistant": toggleAssistant(); break;
             case "dashboard-controls": toggleSettings(); break;
 
             // System
@@ -53,7 +55,14 @@ QtObject {
             case "tools": toggleSimpleModule("tools"); break;
             case "config": toggleSettings(); break;
             case "screenshot": Screenshot.initialize(); GlobalStates.screenshotToolVisible = true; break;
-            case "screenrecord": ScreenRecorder.initialize(); GlobalStates.screenRecordToolVisible = true; break;
+            case "screenrecord":
+                ScreenRecorder.initialize();
+                if (ScreenRecorder.isRecording) {
+                    ScreenRecorder.toggleRecording();
+                } else {
+                    GlobalStates.screenRecordToolVisible = true;
+                }
+                break;
             case "lens": 
                 Screenshot.initialize();
                 Screenshot.captureMode = "lens";
@@ -82,12 +91,16 @@ QtObject {
         }
     }
 
-    function toggleSettings() {
+    function toggleSettings(screenName) {
         const willOpen = !GlobalStates.settingsWindowVisible;
         if (willOpen) {
-            GlobalStates.settingsTargetWorkspaceId = AxctlService.focusedMonitor?.activeWorkspace?.id || AxctlService.focusedWorkspace?.id || 0;
-            GlobalStates.settingsTargetScreenName = AxctlService.focusedMonitor?.name || "";
-            Visibilities.setActiveModule("");
+            const targetMonitor = screenName ? AxctlService.monitorFor(screenName) : AxctlService.focusedMonitor;
+            GlobalStates.settingsTargetWorkspaceId = targetMonitor?.activeWorkspace?.id || AxctlService.focusedMonitor?.activeWorkspace?.id || AxctlService.focusedWorkspace?.id || 0;
+            GlobalStates.settingsTargetScreenName = targetMonitor?.name || AxctlService.focusedMonitor?.name || "";
+            if (targetMonitor && targetMonitor.id !== AxctlService.focusedMonitor?.id) {
+                AxctlService.dispatch(`focusmonitor ${targetMonitor.id}`);
+            }
+            Qt.callLater(() => Visibilities.setActiveModule(""));
         }
         GlobalStates.settingsWindowVisible = willOpen;
     }
@@ -187,7 +200,9 @@ QtObject {
         }
     }
 
-
+    function toggleAssistant() {
+        GlobalStates.toggleAssistant();
+    }
     function seekActivePlayer(offset) {
         const player = MprisController.activePlayer;
         if (!player || !player.canSeek) {

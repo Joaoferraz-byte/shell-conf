@@ -5,6 +5,18 @@
 An <i><b>Ax</b>tremely</i> customizable shell.
 </p>
 
+  <p align="center">
+  <a href="https://github.com/Axenide/Ax-Shell/stargazers">
+    <img src="https://img.shields.io/github/stars/Axenide/Ambxst?style=for-the-badge&logo=github&color=E3B341&logoColor=D9E0EE&labelColor=000000" alt="GitHub stars">
+  </a>
+  <a href="https://ko-fi.com/Axenide">
+    <img src="https://img.shields.io/badge/Support me on-Ko--fi-FF6433?style=for-the-badge&logo=kofi&logoColor=white&labelColor=000000" alt="Ko-Fi">
+  </a>
+  <a href="https://axeni.de/discord">
+    <img src="https://img.shields.io/discord/669048311034150914?style=for-the-badge&logo=discord&logoColor=D9E0EE&labelColor=000000&color=5865F2&label=Discord" alt="Discord">
+  </a>
+</p>
+
 ---
 
 <h2><sub><img src="https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Objects/Camera%20with%20Flash.png" alt="Camera with Flash" width="32" height="32" /></sub> Screenshots</h2>
@@ -12,6 +24,19 @@ An <i><b>Ax</b>tremely</i> customizable shell.
 <div align="center">
   <img src="./assets/screenshots/1.png" width="100%" />
 
+  <br />
+
+  <img src="./assets/screenshots/2.png" width="32%" />
+  <img src="./assets/screenshots/3.png" width="32%" />
+  <img src="./assets/screenshots/4.png" width="32%" />
+
+  <img src="./assets/screenshots/5.png" width="32%" />
+  <img src="./assets/screenshots/6.png" width="32%" />
+  <img src="./assets/screenshots/7.png" width="32%" />
+
+  <img src="./assets/screenshots/8.png" width="32%" />
+  <img src="./assets/screenshots/9.png" width="32%" />
+  <img src="./assets/screenshots/10.png" width="32%" />
 </div>
 
 ---
@@ -103,6 +128,8 @@ Nope! Besides the Ambxst import block in your `hyprland.conf` or `hyprland.lua`,
 - [x] Support for different layouts (dwindle, master, scrolling, etc.)
 - [x] Multi-monitor support
 - [x] Customizable keybindings
+- [ ] Plugin and extension system
+- [ ] Compatibility with other Wayland compositors
 
 ---
 

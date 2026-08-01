@@ -284,6 +284,7 @@ Singleton {
             if (ambxst) {
                 pushCoreBind(ambxst.launcher);
                 pushCoreBind(ambxst.dashboard);
+                pushCoreBind(ambxst.assistant);
                 pushCoreBind(ambxst.clipboard);
                 pushCoreBind(ambxst.emoji);
                 pushCoreBind(ambxst.notes);
