@@ -25,4 +25,18 @@ with pkgs; [
   zenity
   inetutils
   adw-gtk3
+
+  # Missing runtime dependencies required by QML services and scripts
+  bash
+  coreutils
+  curl
+  findutils
+  gawk
+  gnugrep
+  gnused
+  procps
+  xdg-user-dirs
+  xdg-utils
+  hyprpicker
+  wf-recorder
 ]
