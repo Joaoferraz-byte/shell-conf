@@ -49,7 +49,8 @@ Singleton {
         if (!screen || !screen.name)
             return false;
         const lower = screen.name.toLowerCase();
-        return lower.includes("edp") || lower.includes("lvds") || lower.includes("dsi");
+        // Expanded detection for common internal display names
+        return lower.includes("edp") || lower.includes("lvds") || lower.includes("dsi") || lower.includes("lcd") || lower.includes("internal");
     }
 
     function getMonitorForScreen(screen: ShellScreen): var {
@@ -190,7 +191,9 @@ Singleton {
                 return;
             if (isDdc && !busNum)
                 return;
-            initProc.command = isDdc ? ["ddcutil", "-b", busNum, "getvcp", "10"] : ["sh", "-c", `echo "a b c $(brightnessctl g) $(brightnessctl m)"`];
+            // Use a more robust way to get brightnessctl values. 
+            // We use 'brightnessctl -m' which returns machine-readable output: device,class,current,max,percentage
+            initProc.command = isDdc ? ["ddcutil", "-b", busNum, "getvcp", "10"] : ["brightnessctl", "-m"];
             initProc.running = true;
         }
 
@@ -211,7 +214,23 @@ Singleton {
                         }
                         return;
                     }
-                    // Fallback: token-based (brief format / brightnessctl)
+                    // Fallback: token-based (brief format / brightnessctl -m)
+                    // brightnessctl -m output: "backlight,intel_backlight,500,1000,50%"
+                    if (trimmed.includes(",")) {
+                        const csvTokens = trimmed.split(",");
+                        if (csvTokens.length >= 4) {
+                            const currentRaw = parseInt(csvTokens[2]);
+                            const maxRaw = parseInt(csvTokens[3]);
+                            if (!isNaN(currentRaw) && !isNaN(maxRaw) && maxRaw > 0) {
+                                monitor.rawMaxBrightness = maxRaw;
+                                monitor.brightness = currentRaw / monitor.rawMaxBrightness;
+                                monitor.ready = true;
+                                root.brightnessChanged(monitor.brightness, monitor.screen);
+                                return;
+                            }
+                        }
+                    }
+                    
                     const tokens = trimmed.split(/\s+/);
                     if (tokens.length < 2)
                         return;

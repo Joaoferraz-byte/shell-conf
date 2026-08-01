@@ -65,11 +65,22 @@ let
     export QML2_IMPORT_PATH="${envAmbxst}/lib/qt-6/qml:$QML2_IMPORT_PATH"
     export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
 
-    # Expose icon themes and data from envAmbxst to Quickshell
-    export XDG_DATA_DIRS="${envAmbxst}/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
+    # Expose icon themes and data from envAmbxst and user profile to Quickshell.
+    # We include common Nix profile paths to ensure Home Manager installed icons are found.
+    export XDG_DATA_DIRS="${envAmbxst}/share:$HOME/.nix-profile/share:/etc/profiles/per-user/$USER/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 
     # Make bundled fonts available to fontconfig
     export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
+
+    # Try to detect the current GTK icon theme to help Qt/Quickshell pick the right one.
+    if command -v gsettings >/dev/null 2>&1; then
+      GTK_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d "'")
+      if [ -n "$GTK_ICON_THEME" ]; then
+        export XCURSOR_THEME="$GTK_ICON_THEME"
+        # Some Qt versions/Quickshell setups might look for this.
+        export QS_ICON_THEME="$GTK_ICON_THEME"
+      fi
+    fi
 
     # Delegate execution to CLI (now in the Nix store)
     exec ${shellSrc}/cli.sh "$@"
