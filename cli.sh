@@ -654,11 +654,15 @@ help | --help | -h)
 	# Run daemon priority script (backgrounded to not block startup)
 	bash "${SCRIPT_DIR}/scripts/daemon_priority.sh" &
 
-	# Set QS_ICON_THEME environment variable
-	if command -v gsettings >/dev/null 2>&1; then
-		export QS_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d "'")
-	else
-		echo "DEBUG: gsettings not found in PATH" >&2
+	# Set QS_ICON_THEME for Quickshell icon resolution.
+	# Only query gsettings when the value has not already been set (e.g. by the
+	# Nix wrapper which already ran gsettings with the correct XDG_DATA_DIRS).
+	if [ -z "${QS_ICON_THEME:-}" ]; then
+		if command -v gsettings >/dev/null 2>&1; then
+			QS_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")
+		fi
+		# Fallback: use kora if gsettings is unavailable or returned empty.
+		export QS_ICON_THEME="${QS_ICON_THEME:-kora}"
 	fi
 
 	# Force Qt6CT

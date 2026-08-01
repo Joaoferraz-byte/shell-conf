@@ -65,22 +65,28 @@ let
     export QML2_IMPORT_PATH="${envAmbxst}/lib/qt-6/qml:$QML2_IMPORT_PATH"
     export QML_IMPORT_PATH="$QML2_IMPORT_PATH"
 
-    # Expose icon themes and data from envAmbxst and user profile to Quickshell.
-    # We include common Nix profile paths to ensure Home Manager installed icons are found.
-    export XDG_DATA_DIRS="${envAmbxst}/share:$HOME/.nix-profile/share:/etc/profiles/per-user/$USER/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
-
+    # Expose icon themes, GSettings schemas, and data from envAmbxst and user
+    # profile to Quickshell.  /run/current-system/sw/share is included so that
+    # gsettings can find the org.gnome.desktop.interface schema even when the
+    # systemd user service does not inherit the full desktop-session environment.
+    export XDG_DATA_DIRS="${envAmbxst}/share:$HOME/.nix-profile/share:/etc/profiles/per-user/$USER/share:/run/current-system/sw/share:''${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
     # Make bundled fonts available to fontconfig
     export FONTCONFIG_PATH="${fontconfigConf}/etc/fonts:''${FONTCONFIG_PATH:-}"
-
-    # Try to detect the current GTK icon theme to help Qt/Quickshell pick the right one.
+    # Detect the current GTK icon theme and export it for Quickshell (QS_ICON_THEME)
+    # and the cursor (XCURSOR_THEME).  Falls back to 'kora' (the theme declared in
+    # home.nix) when gsettings is unavailable or returns empty (e.g. dconf daemon
+    # not yet running at service start).
+    GTK_ICON_THEME=""
     if command -v gsettings >/dev/null 2>&1; then
-      GTK_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme | tr -d "'")
-      if [ -n "$GTK_ICON_THEME" ]; then
-        export XCURSOR_THEME="$GTK_ICON_THEME"
-        # Some Qt versions/Quickshell setups might look for this.
-        export QS_ICON_THEME="$GTK_ICON_THEME"
-      fi
+      GTK_ICON_THEME=$(gsettings get org.gnome.desktop.interface icon-theme 2>/dev/null | tr -d "'")
     fi
+    # Fall back to the theme declared in home.nix when gsettings is unavailable or
+    # returns an empty string (e.g. dconf daemon not yet running at service start).
+    if [ -z "$GTK_ICON_THEME" ]; then
+      GTK_ICON_THEME="kora"
+    fi
+    export XCURSOR_THEME="$GTK_ICON_THEME"
+    export QS_ICON_THEME="$GTK_ICON_THEME"
 
     # Delegate execution to CLI (now in the Nix store)
     exec ${shellSrc}/cli.sh "$@"

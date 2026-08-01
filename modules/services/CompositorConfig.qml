@@ -209,13 +209,11 @@ QtObject {
         console.log(`CompositorConfig: Applying ignorealpha: ${ignoreAlphaValue}, explicit: ${Config.compositor.blurExplicitIgnoreAlpha}`);
         batchCommand += ` ; keyword layerrule noanim,quickshell ; keyword layerrule blur,quickshell ; keyword layerrule blurpopups,quickshell ; keyword layerrule ignorealpha ${ignoreAlphaValue},quickshell`;
         console.log("CompositorConfig: Refreshing TOML via CompositorTomlWriter");
+        // The axctl daemon watches axctl.toml and applies all compositor
+        // settings (rounding, blur, borders, animations, layer rules) to
+        // Hyprland via its own IPC socket. No separate hyprctl call is needed
+        // — the upstream Ambxst-X does not call hyprctl from CompositorConfig.
         CompositorTomlWriter.refresh();
-
-        // Apply live changes via hyprctl batch
-        if (batchCommand) {
-            compositorProcess.command = ["hyprctl", "batch", batchCommand];
-            compositorProcess.running = true;
-        }
     }
 
     property Connections configConnections: Connections {
