@@ -42,13 +42,13 @@ Item {
     readonly property alias innerRadius: frameContent.innerRadius
     readonly property bool containBar: Config.bar?.containBar ?? false
 
-    readonly property bool sidebarActive: false
-    readonly property bool sidebarPinned: false
-    readonly property int sidebarWidth: 0
-    readonly property string sidebarPosition: "right"
+    readonly property bool sidebarActive: GlobalStates.assistantVisible && targetScreen.name === GlobalStates.assistantScreenName
+    readonly property bool sidebarPinned: GlobalStates.assistantPinned
+    readonly property int sidebarWidth: GlobalStates.assistantWidth
+    readonly property string sidebarPosition: GlobalStates.assistantPosition
 
-    readonly property int sidebarMargin: 0
-    readonly property int sidebarExpansion: 0
+    readonly property int sidebarMargin: 4
+    readonly property int sidebarExpansion: sidebarPinned ? (sidebarWidth + thickness) : 0
 
     readonly property string barPos: Config.bar?.position ?? "top"
     // Bar height is 44. Total size = Thickness (Outer) + Bar (44) + Thickness (Inner)

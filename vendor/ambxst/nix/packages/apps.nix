@@ -2,8 +2,8 @@
 { pkgs }:
 
 with pkgs; [
-  # Terminal
-  kitty
+  # Terminal — none by default; user configures their preferred terminal in
+  # ~/.config/ambxst/config/general.json (Config.general.terminal)
   tmux
 
   # Launcher
@@ -17,7 +17,6 @@ with pkgs; [
   gradia
 
   # Icons
-  kora-icon-theme
   kdePackages.breeze-icons
   hicolor-icon-theme
 ]

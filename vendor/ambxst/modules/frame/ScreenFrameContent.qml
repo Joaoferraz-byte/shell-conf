@@ -34,12 +34,12 @@ Item {
     readonly property bool dockHovered: dockPanel ? (dockPanel.reveal && (dockPanel.activeWindowFullscreen || dockPanel.keepHidden || !dockPanel.pinned)) : false
 
     // Sidebar State
-    readonly property bool sidebarActive: false
-    readonly property bool sidebarPinned: false
-    readonly property int sidebarWidth: 0
-    readonly property string sidebarPosition: "right"
+    readonly property bool sidebarActive: GlobalStates.assistantVisible && targetScreen.name === GlobalStates.assistantScreenName
+    readonly property bool sidebarPinned: GlobalStates.assistantPinned
+    readonly property int sidebarWidth: GlobalStates.assistantWidth
+    readonly property string sidebarPosition: GlobalStates.assistantPosition
 
-    readonly property int sidebarMargin: 0
+    readonly property int sidebarMargin: 4
     readonly property real baseThickness: {
         const base = Config.bar?.frameThickness ?? 6;
         return Math.max(0, Math.min(Math.round(base), 40));
@@ -75,7 +75,14 @@ Item {
     // Only expand if frame is enabled and bar is being contained
     readonly property int barExpansion: (frameEnabled && configContainBar) ? Math.round((barSize + baseThickness) * _barAnimProgress) : 0
 
-    readonly property int sidebarExpansion: 0
+    property real _sidebarAnimProgress: sidebarActive ? 1.0 : 0.0
+    Behavior on _sidebarAnimProgress {
+        enabled: Config.animDuration > 0
+        NumberAnimation { duration: Config.animDuration; easing.type: Easing.OutCubic }
+    }
+
+    // Sidebar expansion logic (synchronized with sidebar active and pinned)
+    readonly property int sidebarExpansion: (frameEnabled && sidebarPinned) ? Math.round((sidebarWidth + baseThickness) * _sidebarAnimProgress) : 0
 
     // --- Side-Specific Thickness Restoration ---
 

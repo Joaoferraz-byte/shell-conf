@@ -53,6 +53,7 @@ QtObject {
             ambxst: {
                 launcher: cloneKeybind(ambxst.launcher),
                 dashboard: cloneKeybind(ambxst.dashboard),
+                assistant: cloneKeybind(ambxst.assistant),
                 clipboard: cloneKeybind(ambxst.clipboard),
                 emoji: cloneKeybind(ambxst.emoji),
                 notes: cloneKeybind(ambxst.notes),
@@ -173,6 +174,7 @@ QtObject {
             if (previousAmbxstBinds.ambxst) {
                 payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.launcher));
                 payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.dashboard));
+                payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.assistant));
                 payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.clipboard));
                 payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.emoji));
                 payload.unbinds.push(makeUnbindTarget(previousAmbxstBinds.ambxst.notes));
@@ -213,6 +215,7 @@ QtObject {
         // Unbind current core keybinds (ensures clean state before rebinding)
         payload.unbinds.push(makeUnbindTarget(ambxst.launcher));
         payload.unbinds.push(makeUnbindTarget(ambxst.dashboard));
+        payload.unbinds.push(makeUnbindTarget(ambxst.assistant));
         payload.unbinds.push(makeUnbindTarget(ambxst.clipboard));
         payload.unbinds.push(makeUnbindTarget(ambxst.emoji));
         payload.unbinds.push(makeUnbindTarget(ambxst.notes));
@@ -220,7 +223,7 @@ QtObject {
         payload.unbinds.push(makeUnbindTarget(ambxst.wallpapers));
 
         // Bind current core keybinds
-        [ambxst.launcher, ambxst.dashboard, ambxst.clipboard, ambxst.emoji, ambxst.notes, ambxst.tmux, ambxst.wallpapers].forEach(bind => {
+        [ambxst.launcher, ambxst.dashboard, ambxst.assistant, ambxst.clipboard, ambxst.emoji, ambxst.notes, ambxst.tmux, ambxst.wallpapers].forEach(bind => {
             const resolved = makeBindFromCore(bind);
             if (resolved) payload.binds.push(resolved);
         });
