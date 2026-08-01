@@ -3,7 +3,13 @@
 
 set -euo pipefail
 
+# A packaged launcher resolves this script in the Nix store. During local
+# development, AMBXST_SOURCE_ROOT redirects QML, assets, and helper scripts to
+# the checked-out fork while retaining the package-provided runtime dependencies.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -n "${AMBXST_SOURCE_ROOT:-}" ]; then
+	SCRIPT_DIR="$(cd "${AMBXST_SOURCE_ROOT}" && pwd)"
+fi
 
 # Use environment variables if set by flake, otherwise fall back to PATH
 QS_BIN="${AMBXST_QS:-qs}"
@@ -560,6 +566,10 @@ version | -v | --version)
 	echo "Ambxst $(cat "${SCRIPT_DIR}/version")"
 	;;
 install)
+	if [ "${AMBXST_DECLARATIVE_HYPRLAND:-0}" = "1" ]; then
+		echo "Ambxst Hyprland integration is managed by nix-conf; do not run 'ambxst install hyprland'." >&2
+		exit 2
+	fi
 	TARGET="${2:-}"
 	if [ "$TARGET" = "hyprland" ]; then
 		HYPR_DIR="$HOME/.config/hypr"
@@ -580,6 +590,10 @@ install)
 	fi
 	;;
 remove)
+	if [ "${AMBXST_DECLARATIVE_HYPRLAND:-0}" = "1" ]; then
+		echo "Ambxst Hyprland integration is managed by nix-conf; there is no imperative block to remove." >&2
+		exit 2
+	fi
 	TARGET="${2:-}"
 	if [ "$TARGET" = "hyprland" ]; then
 		HYPR_DIR="$HOME/.config/hypr"
