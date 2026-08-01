@@ -673,7 +673,7 @@ help | --help | -h)
 	if [ -n "$NIXGL_BIN" ]; then
 		exec "$NIXGL_BIN" "$QS_BIN" -p "${SCRIPT_DIR}/shell.qml"
 	else
-		exec qs -p "${SCRIPT_DIR}/shell.qml"
+		exec "$QS_BIN" -p "${SCRIPT_DIR}/shell.qml"
 	fi
 	;;
 *)
