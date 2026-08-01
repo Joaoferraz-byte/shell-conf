@@ -210,6 +210,12 @@ QtObject {
         batchCommand += ` ; keyword layerrule noanim,quickshell ; keyword layerrule blur,quickshell ; keyword layerrule blurpopups,quickshell ; keyword layerrule ignorealpha ${ignoreAlphaValue},quickshell`;
         console.log("CompositorConfig: Refreshing TOML via CompositorTomlWriter");
         CompositorTomlWriter.refresh();
+
+        // Apply live changes via hyprctl batch
+        if (batchCommand) {
+            compositorProcess.command = ["hyprctl", "batch", batchCommand];
+            compositorProcess.running = true;
+        }
     }
 
     property Connections configConnections: Connections {
