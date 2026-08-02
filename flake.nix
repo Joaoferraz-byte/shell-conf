@@ -1,10 +1,9 @@
 {
-  description = "DankMaterialShell configuration for NixOS + Niri (este flake apenas fixa a versão do DMS e expõe um módulo fino com as preferências do usuário; a build em si vive inteira em AvengeMedia/DankMaterialShell)";
+  description = "DankMaterialShell configuration for NixOS + Niri/Hyprland";
 
   inputs = {
     # Compartilha o mesmo nixpkgs do nix-conf pai, para evitar builds
-    # duplicadas de Quickshell/Qt e drift de versão (era parte do que
-    # deixava o setup antigo do Ambxst-X instável).
+    # duplicadas de Quickshell/Qt e drift de versão.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
     dms = {
@@ -26,28 +25,24 @@
         dms-shell = dms.packages.${system}.dms-shell;
       });
 
-      # Módulo fino de Home Manager: liga o programa DMS e aplica só as
-      # preferências deste usuário (tema/tokens), como um attrset simples —
-      # em vez de 8 arquivos JSON separados como no setup antigo do
-      # Ambxst-X. O DMS já expõe `programs.dank-material-shell.settings`
-      # como JSON estruturado; não duplicamos essa superfície de opções.
-      #
-      # IMPORTANTE: de propósito NÃO importamos `dms.homeModules.niri`.
-      # Ver README.md — esse módulo é um "include hack" que não gera os
-      # fragmentos niri/dms/*.kdl necessários quando o config.kdl do Niri
-      # é gerenciado declarativamente (fica no /nix/store, somente leitura),
-      # e isso é uma causa conhecida (AvengeMedia/DankMaterialShell#1788)
-      # da shell travar na tela de carregamento do Quickshell sem nunca
-      # terminar de subir.
+      # Módulo fino de Home Manager: liga o programa DMS e aplica as preferências do usuário.
       homeManagerModules.default = { config, lib, pkgs, ... }: {
         imports = [ dms.homeModules.dank-material-shell ];
 
         programs.dank-material-shell = {
           enable = true;
 
+          # Habilita o serviço systemd para gerenciar o ciclo de vida da shell.
+          # Isso evita o travamento na tela de carregamento do Quickshell ao
+          # garantir que o daemon Go (dms) seja iniciado corretamente.
+          systemd = {
+            enable = true;
+            # Para sessões UWSM (como configurado no nix-conf), o target
+            # correto é graphical-session.target.
+            target = "graphical-session.target";
+          };
+
           settings = {
-            # Preferências do usuário — ajuste livremente, isto é só um
-            # ponto de partida sensato para Niri + tema escuro.
             theme = {
               mode = "dark";
               matugenEnabled = true;
@@ -57,6 +52,12 @@
             };
           };
         };
+
+        # Adiciona matugen e outras dependências necessárias ao PATH do usuário.
+        # O DMS com matugenEnabled exige o binário matugen para gerar temas.
+        home.packages = with pkgs; [
+          matugen
+        ];
       };
 
       nixosModules.default = dms.nixosModules.dank-material-shell;
