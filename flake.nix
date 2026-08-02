@@ -1,65 +1,54 @@
 {
-  description = "DankMaterialShell configuration for NixOS + Niri/Hyprland";
+  description = "DankMaterialShell thin configuration wrapper for NixOS + Niri";
 
   inputs = {
-    # Compartilha o mesmo nixpkgs do nix-conf pai, para evitar builds
-    # duplicadas de Quickshell/Qt e drift de versão.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
     dms = {
       url = "github:AvengeMedia/DankMaterialShell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs =
-    { self, nixpkgs, dms, ... }:
+  outputs = { self, nixpkgs, dms, ... }:
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
-      # Não reimplementamos o packaging do DMS — apenas re-exportamos.
+      # Expose upstream packages directly
       packages = forAllSystems (system: {
         default = dms.packages.${system}.dms-shell;
         dms-shell = dms.packages.${system}.dms-shell;
       });
 
-      # Módulo fino de Home Manager: liga o programa DMS e aplica as preferências do usuário.
+      # Thin Home Manager module that delegates to upstream but fixes Niri integration
       homeManagerModules.default = { config, lib, pkgs, ... }: {
         imports = [ dms.homeModules.dank-material-shell ];
 
         programs.dank-material-shell = {
           enable = true;
-
-          # Habilita o serviço systemd para gerenciar o ciclo de vida da shell.
-          # Isso evita o travamento na tela de carregamento do Quickshell ao
-          # garantir que o daemon Go (dms) seja iniciado corretamente.
+          
+          # Use systemd for session management (best practice for NixOS + UWSM/Niri)
           systemd = {
             enable = true;
-            # Para sessões UWSM (como configurado no nix-conf), o target
-            # correto é graphical-session.target.
             target = "graphical-session.target";
           };
 
+          # User preferences
           settings = {
             theme = {
               mode = "dark";
               matugenEnabled = true;
             };
-            bar = {
-              position = "top";
-            };
+            bar.position = "top";
           };
         };
 
-        # Adiciona matugen e outras dependências necessárias ao PATH do usuário.
-        # O DMS com matugenEnabled exige o binário matugen para gerar temas.
-        home.packages = with pkgs; [
-          matugen
-        ];
+        # Ensure matugen is available for dynamic theming
+        home.packages = [ pkgs.matugen ];
       };
 
+      # Expose upstream NixOS module directly
       nixosModules.default = dms.nixosModules.dank-material-shell;
     };
 }
