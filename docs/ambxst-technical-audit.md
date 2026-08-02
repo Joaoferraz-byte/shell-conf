@@ -6,6 +6,8 @@ Esta auditoria registra a arquitetura mantida por `shell-conf` depois da migraç
 
 A base escolhida continua sendo [OrynVail/Ambxst-X][1], pois ela fornece a estrutura de QML, flake, pacote NixOS e integração com `axctl` que este projeto já usa. A mudança de arquitetura não troca essa origem por um fork alternativo: ela a promove para a raiz deste próprio repositório, preservando histórico e permitindo atualizações explícitas por merge.
 
+A reavaliação comparativa mais recente com o Ambxst principal está registrada em [ambxst-upstream-verdict.md](./ambxst-upstream-verdict.md). Até que os critérios de paridade descritos nesse documento sejam satisfeitos, esta árvore vendorizada permanece sendo a fonte aprovada para a integração NixOS.
+
 | Critério | Decisão adotada | Resultado |
 |---|---|---|
 | Origem do código | Árvore completa na raiz de `shell-conf`. | O código construído é o código versionado e revisado localmente. |
