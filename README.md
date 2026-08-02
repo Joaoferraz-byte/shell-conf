@@ -1,107 +1,91 @@
-# shell-conf — DankMaterialShell
+# shell-conf — DankMaterialShell para NixOS + Niri
 
-> Este repositório é a camada de integração declarativa do **DankMaterialShell**
-> para a configuração NixOS do projeto. Ele não reimplementa o DMS; apenas
-> importa e expõe os módulos oficiais do upstream, adicionando as preferências
-> específicas do usuário.
+Repositório de configuração do shell [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell)
+(DMS) para NixOS com o compositor [Niri](https://github.com/YaLTeR/niri).
 
-O `nix-conf` é a autoridade da sessão Hyprland/UWSM; este repositório é a
-autoridade do shell DankMaterialShell e das suas dependências declarativas.
+Este repositório **não empacota** o DMS — ele apenas fixa a versão
+(`inputs.dms.follows`/`inputs.nixpkgs.follows`) e expõe um módulo fino de
+Home Manager com as preferências deste usuário. Toda a lógica de build,
+QML e Go vive em `AvengeMedia/DankMaterialShell` e é consumida como flake
+input, exatamente como recomendado pelos mantenedores do projeto.
 
 ## Arquitetura
 
-| Componente | Responsabilidade | Fonte de verdade |
-|---|---|---|
-| `flake.nix` | Flake wrapper que importa os módulos HM e NixOS do DMS upstream. | Este checkout Git. |
-| `modules/default.nix` | Preferências do usuário (tema, fontes, layout) mescladas no JSON do DMS. | Este checkout Git. |
-| DankMaterialShell upstream | Shell completo: painel, launcher, dashboard, IPC, theming dinâmico. | [`AvengeMedia/DankMaterialShell`](https://github.com/AvengeMedia/DankMaterialShell) |
-| `nix-conf` | Sessão Hyprland (UWSM), módulo HM do DMS, systemd target. | Repositório `nix-conf`. |
-| `~/.config/DankMaterialShell/` | Configuração mutável gerada pelo DMS (settings.json, plugins). | Máquina local, inicializado pelo Home Manager. |
-
-O `flake.nix` é deliberadamente enxuto: ele importa `dms.homeModules.dank-material-shell`
-e `dms.nixosModules.dank-material-shell` diretamente. Nenhuma lógica de empacotamento
-é reimplementada localmente — o DMS constrói o próprio binário a partir do fonte
-(`core/`) com Go, Quickshell e as dependências Qt6 necessárias.
-
-## Como o nix-conf consome este flake
-
-```nix
-{ inputs, ... }: {
-  flake.nixosModules.dankMaterialShell = { pkgs, ... }: {
-    imports = [
-      inputs.shell-conf.nixosModules.default
-      inputs.shell-conf.homeManagerModules.default
-    ];
-  };
-}
+```
+shell-conf/
+├── flake.nix   # Fixa dms + nixpkgs, expõe homeManagerModules.default
+└── README.md
 ```
 
-O `inputs.shell-conf.nixosModules.default` habilita `programs.dank-material-shell`
-no nível do sistema (systemd, polkit, accounts-daemon). O
-`inputs.shell-conf.homeManagerModules.default` habilita o mesmo programa no nível
-do usuário (settings JSON, Quickshell, systemd user service para `dms.service`).
+Comparado ao setup anterior (Ambxst-X): não há mais `settings/*.json`
+copiados manualmente por ativação do Home Manager, nem QML remendado por
+cima do pacote upstream. As preferências do usuário são um único attrset
+Nix (`programs.dank-material-shell.settings`), que o próprio DMS já expõe
+como opção estruturada.
 
-## Personalização
+## Como funciona
 
-Para alterar tema, fontes, ou preferências de layout, edite
-`modules/default.nix` e ajuste o attrset `userSettings`:
+- **Empacotamento:** vem 100% de `dms.packages.${system}.dms-shell`
+  (Go + QML), sem patches locais.
+- **Integração com o Niri:** o DMS roda como serviço `systemd --user`
+  (`dms.service`), não via `spawn-at-startup` do Niri — esse é o caminho
+  oficialmente recomendado pelos docs do DMS quando o compositor roda como
+  sessão systemd (que é o padrão em NixOS).
+- **Config do Niri:** deliberadamente **não** usamos o módulo
+  `dms.homeModules.niri` nem `programs.dank-material-shell.niri.includes`.
+  Esse "hack" de include não gera os fragmentos `niri/dms/*.kdl` quando o
+  `config.kdl` do Niri é gerenciado declarativamente pelo Home Manager
+  (arquivo fica no `/nix/store`, somente leitura) — isso é uma causa
+  conhecida da shell travar na tela de carregamento do Quickshell sem
+  nunca terminar de subir (ver
+  [AvengeMedia/DankMaterialShell#1788](https://github.com/AvengeMedia/DankMaterialShell/issues/1788)).
+  Se você quiser keybinds/includes específicos do DMS no Niri, gere os
+  fragmentos uma vez com `dms setup --niri` fora do Nix store e traga-os
+  para o flake como texto estático.
+
+## Integração no nix-conf
+
+No `nix-conf`, no `flake.nix`:
 
 ```nix
-programs.dank-material-shell.userSettings = {
-  appearance.colorScheme = "light";
-  font.family = "JetBrainsMono Nerd Font";
+inputs.shell-conf = {
+  url = "github:Joaoferraz-byte/shell-conf";
+  inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
 
-Esse attrset é mesclado com as configurações padrão do DMS e serializado para
-`~/.config/DankMaterialShell/settings.json` pelo módulo Home Manager.
+No home-manager do usuário (não em `configuration.nix` a nível de sistema —
+isto é um programa de usuário):
 
-## Sessão Hyprland declarativa
+```nix
+imports = [ inputs.shell-conf.homeManagerModules.default ];
 
-A sessão é declarada pelo `nix-conf` e aplicada por rebuild. O DMS é iniciado
-pela unidade `dms.service` associada a `graphical-session.target`, alcançada
-depois que o UWSM importa o ambiente Wayland/DBus.
-
-| Operação | Comando |
-|---|---|
-| Verificar o shell | `systemctl --user status dms.service` |
-| Acompanhar logs | `journalctl --user -u dms.service -f` |
-| Reiniciar o shell | `systemctl --user restart dms.service` |
-| Parar a sessão Hyprland/UWSM | `uwsm stop` |
-
-## Compositor
-
-DMS suporta Hyprland, Niri, Sway, MangoWC, labwc, MiracleWM e Scroll.
-Este repositório atualmente integra com **Hyprland** (via UWSM). Caso o usuário
-migre de volta para Niri, o módulo `dms.homeModules.niri` fica disponível para
-habilitar keybinds e spawn-at-startup específicos do Niri.
-
-## Validação
-
-```bash
-cd ~/shell-conf
-nix flake check
-
-cd ~/nix-conf
-nix flake check
-sudo nixos-rebuild build --flake .#myMachine
+programs.dank-material-shell.systemd.enable = true;
 ```
 
-## Limites de estado
+Veja `nix-conf_niri-e-home_snippet.nix` para o trecho completo, incluindo o
+que **não** habilitar.
 
-O checkout Git contém código e defaults. Preferências alteradas pela interface
-são mutáveis e vivem em `~/.config/DankMaterialShell/` e
-`~/.local/state/DankMaterialShell/`; o módulo Home Manager os inicializa via
-`xdg.configFile` e `xdg.stateFile`. Não versione esse estado como se fosse
-código do shell.
+## ⚠️ Antes de rodar `nixos-rebuild`
 
-Para uma configuração reprodutível de defaults, edite `modules/default.nix`,
-valide no ambiente local e publique a mudança no Git. Para uma personalização
-exclusiva de uma máquina, altere a interface do DMS diretamente.
+Os nomes de opção usados aqui (`programs.dank-material-shell.settings`,
+`.systemd.enable`, `.systemd.target`, `.niri.enableSpawn`,
+`.niri.includes`) foram confirmados contra o `flake.nix` e a documentação
+oficial do DMS em 02/08/2026, mas esse projeto evolui rápido. Antes de
+aplicar:
+
+```bash
+nix flake show github:AvengeMedia/DankMaterialShell
+# e/ou
+nix eval github:AvengeMedia/DankMaterialShell#homeModules.dank-material-shell --apply builtins.attrNames
+```
+
+para confirmar que as opções ainda existem com esses nomes na revisão que
+você travou no `flake.lock`.
 
 ## Referências
 
-- [DankMaterialShell Docs](https://danklinux.com/docs)
-- [DankMaterialShell Nix Module Source](https://github.com/AvengeMedia/DankMaterialShell/tree/master/distro/nix)
-- [Quickshell](https://quickshell.org/)
-- [NixOS Hyprland Module](https://search.nixos.org/options?query=programs.hyprland)
+- [DankMaterialShell](https://github.com/AvengeMedia/DankMaterialShell) — shell Quickshell + Go
+- [Docs oficiais](https://danklinux.com/docs/dankmaterialshell/) — instalação, compositores, IPC
+- [Niri](https://github.com/YaLTeR/niri) — compositor Wayland scrolling
+- [Quickshell](https://quickshell.org) — framework QML para shells Wayland
