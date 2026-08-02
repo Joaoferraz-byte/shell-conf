@@ -177,19 +177,10 @@ ShellRoot {
         id: compositorConfig
     }
 
-    // axctl owns Ambxst keybinds. This service first removes prior Ambxst
-    // bindings, then applies the active layout-specific set without touching
-    // the explicit Hyprland recovery bindings supplied by nix-conf.
-    CompositorKeybinds {
-        id: compositorKeybinds
-    }
-
-    Connections {
-        target: AxctlService
-        function onDaemonAvailable() {
-            compositorKeybinds.applyKeybinds();
-        }
-    }
+    // Keybinds are managed declaratively via CompositorTomlWriter, which
+    // writes the keybinds section into axctl.toml.  The daemon picks them
+    // up and registers them with Hyprland — no in-process rebinding needed.
+    // (Upstream Ambxst-X follows the same pattern.)
 
     // Screenshot tool
     Variants {
