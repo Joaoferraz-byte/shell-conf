@@ -196,11 +196,19 @@ in {
         #      hyprland.lua that sources them in the correct order
         (lib.mkIf cfg.hyprland.enable {
           # Place all Caelestia Lua config files under ~/.config/hypr/
+          # NOTE: Individual files are placed separately (not as directory
+          # sources) because hyprland.lua needs to copy scheme/default.lua
+          # to scheme/current.lua, which requires a writable directory.
           "hypr/hyprland.lua".source = ../hypr_upstream/hyprland.lua;
           "hypr/variables.lua".source = ../hypr_upstream/variables.lua;
           "hypr/hyprland".source = ../hypr_upstream/hyprland;
           "hypr/utils".source = ../hypr_upstream/utils;
-          "hypr/scheme".source = ../hypr_upstream/scheme;
+          # scheme/default.lua — read-only reference from the store
+          "hypr/scheme/default.lua".source = ../hypr_upstream/scheme/default.lua;
+          # scheme/current.lua — writable copy used at runtime by variables.lua
+          # This is a plain text copy, NOT a symlink, so maybe_copy in
+          # hyprland.lua will see it exists and skip copying.
+          "hypr/scheme/current.lua".text = builtins.readFile ../hypr_upstream/scheme/default.lua;
           "caelestia/hypr-user.lua" = lib.mkIf (cfg.hyprland.userConfig != "") {
             text = cfg.hyprland.userConfig;
           };
