@@ -51,5 +51,9 @@
     });
 
     homeManagerModules.default = import ./nix/hm-module.nix self;
+
+    nixosModules.default = {
+      # Placeholder for future system-level configuration
+    };
   };
 }
