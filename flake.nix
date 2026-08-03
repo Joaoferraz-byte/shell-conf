@@ -47,32 +47,45 @@
               target = "graphical-session.target";
             };
 
+            # ── Configurações Estruturais e Visuais (O "Jeito Nix") ──────────
+            # No NixOS, arquivos declarados aqui tornam-se read-only no store.
+            # Isso impede que a GUI do Caelestia salve alterações, causando erro.
+            #
+            # RECOMENDAÇÃO: Use este bloco para fixar o que você quer que seja
+            # imutável (como atalhos e caminhos). Se preferir usar a GUI para
+            # aparência, remova os campos 'bar' e 'appearance' daqui.
             settings = {
               general.apps = {
                 terminal = [ "kitty" ];
                 audio = [ "pavucontrol" ];
               };
-              bar.status.showBattery = true;
-              paths.wallpaperDir = "~/Pictures/Wallpapers";
-              appearance.transparency.enabled = false;
+
+              # ── Caminho dos Wallpapers ──────────────────────────────────
+              # Aponta para o diretório no seu repositório nix-conf.
+              paths.wallpaperDir = "/home/livara/.config/nixos/Wallpapers";
+
+              # ── Ajustes de Escala e Barra ───────────────────────────────
+              # Se a barra parecer grande/pequena ou os ícones desproporcionais,
+              # ajuste os valores abaixo.
+              bar = {
+                height = 40;           # Altura da barra em pixels
+                iconSize = 22;         # Tamanho dos ícones na barra
+                status.showBattery = true;
+              };
+
+              appearance = {
+                transparency.enabled = true;
+                # Se o shell parecer "esticado" ou pequeno, você pode tentar
+                # forçar uma escala global (se suportado pelo seu monitor/shell)
+                # scale = 1.0; 
+              };
             };
 
             # ── CLI settings ────────────────────────────────────────────────
-            # toggles: configura os special workspaces gerenciados pelo caelestia-cli.
-            #   - social  → Vesktop  (Super + D)
-            #   - todo    → ZenNotes (Super + I)
-            #
-            # theme: desabilita GTK para evitar conflito com o tema declarativo
-            #   do home-manager (adw-gtk3-dark + kora).
-            #
-            # wallpaper.postHook: após trocar wallpaper/scheme, regenera o
-            #   template do Kitty e recarrega as cores em todas as janelas abertas
-            #   via `kitty @ set-colors`.
             cli.settings = {
               theme.enableGtk = false;
 
               toggles = {
-                # ── social → Vesktop ──────────────────────────────────────
                 social = {
                   vesktop = {
                     enable = true;
@@ -82,7 +95,6 @@
                   };
                 };
 
-                # ── todo → ZenNotes (Flatpak) ─────────────────────────────
                 todo = {
                   zennotes = {
                     enable = true;
@@ -97,33 +109,18 @@
                 };
               };
 
-              # ── Wallpaper post-hook: reaplica tema dinâmico ao Kitty ────
-              # Após qualquer troca de wallpaper/scheme o Caelestia regera os
-              # templates em ~/.local/state/caelestia/theme/.  O hook abaixo
-              # recarrega as cores em todas as janelas Kitty já abertas.
               wallpaper.postHook = "kitty @ --to unix:/tmp/kitty-livara set-colors --all ~/.local/state/caelestia/theme/kitty.conf 2>/dev/null || true";
             };
           };
 
           # ── Template do Kitty para tema dinâmico do Caelestia ───────────
-          # O Caelestia CLI processa os templates em ~/.config/caelestia/templates/
-          # e escreve o resultado em ~/.local/state/caelestia/theme/kitty.conf.
-          # O kitty.conf inclui esse arquivo gerado via `include`.
           xdg.configFile."caelestia/templates/kitty.conf".text = ''
-            # Caelestia dynamic theme template for Kitty
-            # Gerado automaticamente — não edite manualmente.
-            # Variáveis disponíveis: {{ <role>.hex }} ou {{ <role>.rgb }}
-            # Roles: primary, secondary, tertiary, surface, onSurface,
-            #        background, onBackground, term0..term15, etc.
-
             foreground            #{{ onSurface.hex }}
             background            #{{ surface.hex }}
             cursor                #{{ primary.hex }}
             cursor_text_color     #{{ onPrimary.hex }}
             selection_foreground  #{{ onSecondaryContainer.hex }}
             selection_background  #{{ secondaryContainer.hex }}
-
-            # URL color
             url_color             #{{ primary.hex }}
 
             # Terminal colors (0-15)
