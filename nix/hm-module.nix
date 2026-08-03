@@ -154,19 +154,7 @@ in {
       '');
 
       # Configuration files
-      xdg.configFile = let
-        mkConfig = c:
-          lib.pipe (
-            if c.extraConfig != ""
-            then c.extraConfig
-            else "{}"
-          ) [
-            builtins.fromJSON
-            (lib.recursiveUpdate c.settings)
-            builtins.toJSON
-          ];
-        shouldGenerate = c: c.extraConfig != "" || c.settings != {};
-      in lib.mkMerge [
+      xdg.configFile = lib.mkMerge [
         # JSON Configs (only if mutableSettings is false)
         (lib.mkIf (!cfg.mutableSettings) {
           "caelestia/shell.json" = lib.mkIf (shouldGenerate cfg) {
@@ -186,6 +174,14 @@ in {
           "caelestia/hypr-user.lua" = lib.mkIf (cfg.hyprland.userConfig != "") {
             text = cfg.hyprland.userConfig;
           };
+          # Ensure Hyprland loads the correct Lua configuration
+          "hypr/hyprland.conf".text = ''
+            exec-once = hyprctl reload
+            # Set LUA_PATH to include the vendored Hyprland Lua modules
+            env = LUA_PATH,${config.xdg.configHome}/hypr/?.lua;${config.xdg.configHome}/hypr/?/init.lua;;
+            source = ${config.xdg.configHome}/hypr/hyprland.lua
+            source = ${config.xdg.configHome}/caelestia/hypr-user.lua
+          '';
         })
       ];
 
