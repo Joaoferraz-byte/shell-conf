@@ -4,7 +4,8 @@ local fn   = require("utils.functions")
 hl.on("hyprland.start", function()
     -- Keyring and auth
     hl.exec_cmd("gnome-keyring-daemon --start --components=secrets")
-    hl.exec_cmd("/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1")
+    -- NixOS path for polkit-gnome
+    hl.exec_cmd("/run/current-system/sw/libexec/polkit-gnome-authentication-agent-1")
 
     -- Clipboard history
     hl.exec_cmd("wl-paste --type text --watch cliphist store")
@@ -18,14 +19,15 @@ hl.on("hyprland.start", function()
     hl.exec_cmd("gsettings set org.gnome.desktop.interface cursor-theme " .. vars.cursorTheme)
     hl.exec_cmd("gsettings set org.gnome.desktop.interface cursor-size " .. vars.cursorSize)
 
-    -- Location provider and night light
-    hl.exec_cmd("/usr/lib/geoclue-2.0/demos/agent")
+    -- Location provider and night light (NixOS paths)
+    hl.exec_cmd("/run/current-system/sw/libexec/geoclue-2.0/demos/agent")
     hl.exec_cmd("sleep 1 && gammastep")
 
     -- Forward bluetooth media commands to MPRIS
     hl.exec_cmd("mpris-proxy")
 
     -- Start shell
+    print("[Caelestia] Launching shell...")
     hl.exec_cmd("caelestia shell -d")
 end)
 

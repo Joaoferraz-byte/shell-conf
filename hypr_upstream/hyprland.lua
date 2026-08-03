@@ -1,6 +1,10 @@
 local home   = os.getenv("HOME")
 local hypr   = home .. "/.config/hypr"
-package.path = package.path .. ";" .. home .. "/.config/caelestia/?.lua"
+-- Ensure Lua can find modules in ~/.config/hypr/ and ~/.config/caelestia/
+package.path = package.path .. ";" .. hypr .. "/?.lua;" .. hypr .. "/?/init.lua;" .. home .. "/.config/caelestia/?.lua"
+
+print("[Caelestia] Starting Hyprland Lua configuration...")
+print("[Caelestia] package.path: " .. package.path)
 
 -- Create a file if it doesn't exist, optionally with initial content
 local function maybe_create(file, content)
