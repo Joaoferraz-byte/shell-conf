@@ -119,6 +119,19 @@ in {
       ''}
     '';
 
+    # Helper functions for configuration generation
+    mkConfig = c:
+      lib.pipe (
+        if c.extraConfig != ""
+        then c.extraConfig
+        else "{}"
+      ) [
+        builtins.fromJSON
+        (lib.recursiveUpdate c.settings)
+        builtins.toJSON
+      ];
+    shouldGenerate = c: c.extraConfig != "" || c.settings != {};
+
   in
     lib.mkIf cfg.enable {
       systemd.user.services.caelestia = lib.mkIf cfg.systemd.enable {
