@@ -26,11 +26,11 @@
     nixpkgs,
     ...
   } @ inputs: let
-    supportedSystems = [
-      "x86_64-linux"
-      "aarch64-linux"
-    ];
-    forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
+    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+    forAllSystems = fn:
+      nixpkgs.lib.genAttrs supportedSystems (
+        system: fn nixpkgs.legacyPackages.${system}
+      );
   in {
     formatter = forAllSystems (pkgs: pkgs.alejandra);
 
