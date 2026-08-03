@@ -1,54 +1,52 @@
 {
-  description = "DankMaterialShell thin configuration wrapper for NixOS + Niri";
+  description = "Caelestia Shell thin configuration wrapper for NixOS + Hyprland";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    dms = {
-      url = "github:AvengeMedia/DankMaterialShell";
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, dms, ... }:
+  outputs = { self, nixpkgs, caelestia-shell, ... }:
     let
       supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
-      # Expose upstream packages directly
       packages = forAllSystems (system: {
-        default = dms.packages.${system}.dms-shell;
-        dms-shell = dms.packages.${system}.dms-shell;
+        default = caelestia-shell.packages.${system}.default;
       });
 
-      # Thin Home Manager module that delegates to upstream but fixes Niri integration
       homeManagerModules.default = { config, lib, pkgs, ... }: {
-        imports = [ dms.homeModules.dank-material-shell ];
+        imports = [ caelestia-shell.homeManagerModules.default ];
 
-        programs.dank-material-shell = {
+        programs.caelestia = {
           enable = true;
-          
-          # Use systemd for session management (best practice for NixOS + UWSM/Niri)
+          cli.enable = true;
+
           systemd = {
-            enable = true;
+            enable = false;
             target = "graphical-session.target";
           };
 
-          # User preferences
           settings = {
-            theme = {
-              mode = "dark";
-              matugenEnabled = true;
+            general.apps = {
+              terminal = [ "kitty" ];
+              audio = [ "pavucontrol" ];
             };
-            bar.position = "top";
+            bar.status.showBattery = true;
+            paths.wallpaperDir = "~/Pictures/Wallpapers";
+            appearance.transparency.enabled = false;
+          };
+
+          cli.settings = {
+            theme.enableGtk = false;
           };
         };
-
-        # Ensure matugen is available for dynamic theming
-        home.packages = [ pkgs.matugen ];
       };
 
-      # Expose upstream NixOS module directly
-      nixosModules.default = dms.nixosModules.dank-material-shell;
+      nixosModules.default = caelestia-shell.nixosModules.default or { };
     };
 }
