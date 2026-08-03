@@ -178,7 +178,24 @@ in {
           };
         })
         # Hyprland Lua Integration
+        # The Caelestia shell uses a full Lua-based Hyprland configuration.
+        # hyprland.lua is the entry point that requires all sub-modules
+        # (env, general, input, misc, animations, decoration, group, execs,
+        # rules, gestures, keybinds) and finally the user config.
+        #
+        # IMPORTANT: When Home Manager's wayland.windowManager.hyprland.configType
+        # is set to "lua", HM generates its own hypr/hyprland.lua from the
+        # settings/extraConfig/extraLuaFiles options. The file placed here
+        # MUST have the exact name that HM expects, and we use HM's
+        # extraLuaFiles mechanism to integrate with it cleanly.
+        #
+        # The Caelestia hyprland.lua is the MASTER configuration — it should
+        # NOT be overridden by HM's generated file. We achieve this by:
+        #   1. Placing the Caelestia Lua files under hypr/ via xdg.configFile
+        #   2. Using HM's extraLuaFiles to register them so HM generates a
+        #      hyprland.lua that sources them in the correct order
         (lib.mkIf cfg.hyprland.enable {
+          # Place all Caelestia Lua config files under ~/.config/hypr/
           "hypr/hyprland.lua".source = ../hypr_upstream/hyprland.lua;
           "hypr/variables.lua".source = ../hypr_upstream/variables.lua;
           "hypr/hyprland".source = ../hypr_upstream/hyprland;
@@ -187,14 +204,6 @@ in {
           "caelestia/hypr-user.lua" = lib.mkIf (cfg.hyprland.userConfig != "") {
             text = cfg.hyprland.userConfig;
           };
-          # Ensure Hyprland loads the correct Lua configuration
-          "hypr/hyprland.conf".text = ''
-            exec-once = hyprctl reload
-            # Set LUA_PATH to include the vendored Hyprland Lua modules
-            env = LUA_PATH,${config.xdg.configHome}/hypr/?.lua;${config.xdg.configHome}/hypr/?/init.lua;;
-            source = ${config.xdg.configHome}/hypr/hyprland.lua
-            source = ${config.xdg.configHome}/caelestia/hypr-user.lua
-          '';
         })
       ];
 
