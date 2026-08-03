@@ -1,39 +1,26 @@
 {
   description = "Caelestia Shell - Vendored and Customized";
-
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-
     quickshell = {
       url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     caelestia-cli = {
       url = "github:caelestia-dots/cli";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.caelestia-shell.follows = "";
     };
-
     m3shapes = {
       url = "github:soramanew/m3shapes/bdc327b29f95394a732baf3c9b19658ba23755b6";
       flake = false;
     };
   };
-
-  outputs = {
-    self,
-    nixpkgs,
-    ...
-  } @ inputs: let
+  outputs = { self, nixpkgs, ... } @ inputs: let
     supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-    forAllSystems = fn:
-      nixpkgs.lib.genAttrs supportedSystems (
-        system: fn nixpkgs.legacyPackages.${system}
-      );
+    forAllSystems = fn: nixpkgs.lib.genAttrs supportedSystems (system: fn nixpkgs.legacyPackages.${system});
   in {
     formatter = forAllSystems (pkgs: pkgs.alejandra);
-
     packages = forAllSystems (pkgs: rec {
       caelestia-shell = pkgs.callPackage ./nix {
         inherit (inputs) m3shapes;
@@ -49,11 +36,10 @@
       debug = caelestia-shell.override {debug = true;};
       default = caelestia-shell;
     });
+    
+    # Export the module factory directly
+    homeManagerModules.default = import ./nix/hm-module.nix;
 
-    homeManagerModules.default = { self, ... }@args: import ./nix/hm-module.nix (args // { inherit self; });
-
-    nixosModules.default = {
-      # Placeholder for future system-level configuration
-    };
+    nixosModules.default = {};
   };
 }
