@@ -9,9 +9,18 @@
     };
   };
 
-  outputs = { self, nixpkgs, caelestia-shell, ... }:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      caelestia-shell,
+      ...
+    }:
     let
-      supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
+      supportedSystems = [
+        "x86_64-linux"
+        "aarch64-linux"
+      ];
       forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
     in
     {
@@ -19,33 +28,40 @@
         default = caelestia-shell.packages.${system}.default;
       });
 
-      homeManagerModules.default = { config, lib, pkgs, ... }: {
-        imports = [ caelestia-shell.homeManagerModules.default ];
+      homeManagerModules.default =
+        {
+          config,
+          lib,
+          pkgs,
+          ...
+        }:
+        {
+          imports = [ caelestia-shell.homeManagerModules.default ];
 
-        programs.caelestia = {
-          enable = true;
-          cli.enable = true;
+          programs.caelestia = {
+            enable = true;
+            cli.enable = true;
 
-          systemd = {
-            enable = false;
-            target = "graphical-session.target";
-          };
-
-          settings = {
-            general.apps = {
-              terminal = [ "kitty" ];
-              audio = [ "pavucontrol" ];
+            systemd = {
+              enable = true;
+              target = "graphical-session.target";
             };
-            bar.status.showBattery = true;
-            paths.wallpaperDir = "~/Pictures/Wallpapers";
-            appearance.transparency.enabled = false;
-          };
 
-          cli.settings = {
-            theme.enableGtk = false;
+            settings = {
+              general.apps = {
+                terminal = [ "kitty" ];
+                audio = [ "pavucontrol" ];
+              };
+              bar.status.showBattery = true;
+              paths.wallpaperDir = "~/Pictures/Wallpapers";
+              appearance.transparency.enabled = false;
+            };
+
+            cli.settings = {
+              theme.enableGtk = false;
+            };
           };
         };
-      };
 
       nixosModules.default = caelestia-shell.nixosModules.default or { };
     };
