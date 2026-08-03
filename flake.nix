@@ -50,7 +50,7 @@
       default = caelestia-shell;
     });
 
-    homeManagerModules.default = import ./nix/hm-module.nix self;
+    homeManagerModules.default = { self, ... }@args: import ./nix/hm-module.nix (args // { inherit self; });
 
     nixosModules.default = {
       # Placeholder for future system-level configuration
