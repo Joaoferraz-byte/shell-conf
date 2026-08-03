@@ -153,8 +153,8 @@ in {
         $DRY_RUN_CMD ${seederScript}
       '');
 
-      # Fallback for immutable configs if mutableSettings is false
-      xdg.configFile = lib.mkIf (!cfg.mutableSettings) (let
+      # Configuration files
+      xdg.configFile = let
         mkConfig = c:
           lib.pipe (
             if c.extraConfig != ""
@@ -166,26 +166,28 @@ in {
             builtins.toJSON
           ];
         shouldGenerate = c: c.extraConfig != "" || c.settings != {};
-      in {
-        "caelestia/shell.json" = lib.mkIf (shouldGenerate cfg) {
-          text = mkConfig cfg;
-        };
-        "caelestia/cli.json" = lib.mkIf (shouldGenerate cfg.cli) {
-          text = mkConfig cfg.cli;
-        };
-      });
-
-      # Hyprland Lua Integration
-      xdg.configFile = lib.mkIf cfg.hyprland.enable {
-        "hypr/hyprland.lua".source = ../hypr_upstream/hyprland.lua;
-        "hypr/variables.lua".source = ../hypr_upstream/variables.lua;
-        "hypr/hyprland".source = ../hypr_upstream/hyprland;
-        "hypr/utils".source = ../hypr_upstream/utils;
-        "hypr/scheme".source = ../hypr_upstream/scheme;
-        "caelestia/hypr-user.lua" = lib.mkIf (cfg.hyprland.userConfig != "") {
-          text = cfg.hyprland.userConfig;
-        };
-      };
+      in lib.mkMerge [
+        # JSON Configs (only if mutableSettings is false)
+        (lib.mkIf (!cfg.mutableSettings) {
+          "caelestia/shell.json" = lib.mkIf (shouldGenerate cfg) {
+            text = mkConfig cfg;
+          };
+          "caelestia/cli.json" = lib.mkIf (shouldGenerate cfg.cli) {
+            text = mkConfig cfg.cli;
+          };
+        })
+        # Hyprland Lua Integration
+        (lib.mkIf cfg.hyprland.enable {
+          "hypr/hyprland.lua".source = ../hypr_upstream/hyprland.lua;
+          "hypr/variables.lua".source = ../hypr_upstream/variables.lua;
+          "hypr/hyprland".source = ../hypr_upstream/hyprland;
+          "hypr/utils".source = ../hypr_upstream/utils;
+          "hypr/scheme".source = ../hypr_upstream/scheme;
+          "caelestia/hypr-user.lua" = lib.mkIf (cfg.hyprland.userConfig != "") {
+            text = cfg.hyprland.userConfig;
+          };
+        })
+      ];
 
       home.packages = [shell] ++ lib.optional cfg.cli.enable cli;
     };
