@@ -1,4 +1,9 @@
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   programs.niri = {
@@ -16,7 +21,13 @@
 
       # cliphist is used for clipboard history (DMS clipboard widget reads from it)
       spawn-at-startup = [
-        { command = [ "bash" "-c" "wl-paste --watch cliphist store" ]; }
+        {
+          command = [
+            "bash"
+            "-c"
+            "wl-paste --watch cliphist store"
+          ];
+        }
       ];
 
       layout = {
@@ -27,7 +38,7 @@
 
       window-rules = [
         {
-          matches = [{ is-active = false; }];
+          matches = [ { is-active = false; } ];
           opacity = 0.9;
         }
         {
@@ -69,38 +80,41 @@
         "Mod+O".action.spawn = "zennotes";
         "Mod+T".action.spawn = "wezterm";
         "Mod+Return".action.spawn = "wezterm";
-        "Mod+C".action.close-window = {};
+        "Mod+C".action.close-window = { };
 
         # Window focus
-        "Mod+Left".action.focus-column-left = {};
-        "Mod+Right".action.focus-column-right = {};
-        "Mod+Up".action.focus-window-up = {};
-        "Mod+Down".action.focus-window-down = {};
+        "Mod+Left".action.focus-column-left = { };
+        "Mod+Right".action.focus-column-right = { };
+        "Mod+Up".action.focus-window-up = { };
+        "Mod+Down".action.focus-window-down = { };
 
         # Mouse scroll on window selection (with cooldown to avoid over-scrolling)
         "Mod+WheelScrollDown" = {
-          action.focus-column-right = {};
+          action.focus-column-right = { };
           cooldown-ms = 150;
         };
         "Mod+WheelScrollUp" = {
-          action.focus-column-left = {};
+          action.focus-column-left = { };
           cooldown-ms = 150;
         };
 
         # Window sizing
         # Super+F: maximize column to cover the full workspace width (not fullscreen)
         "Mod+F" = {
-          action.maximize-column = {};
+          action.maximize-column = { };
           hotkey-overlay.title = "Maximize Column";
         };
         # Super+Shift+F: fullscreen the focused window
         "Mod+Shift+F" = {
-          action.fullscreen-window = {};
+          action.fullscreen-window = { };
           hotkey-overlay.title = "Fullscreen Window";
         };
-        "Mod+Shift+W" = { spawn "dms" "ipc" "wallpaperCarousel" "toggle"; }
-
-
+        "Mod+Shift+W".action.spawn = [
+          "dms"
+          "ipc"
+          "wallpaperCarousel"
+          "toggle"
+        ];
       };
     };
   };
