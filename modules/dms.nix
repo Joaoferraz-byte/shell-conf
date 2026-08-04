@@ -16,11 +16,6 @@
     enableCalendarEvents = true;
     enableClipboardPaste = true;
 
-    settings = {
-      showWelcome = false;
-      showKeybinds = false;
-    };
-
     # enableKeybinds provides: Mod+Space (launcher), Mod+N (notifications),
     # Mod+Comma (settings), Mod+P (notepad), Super+Alt+L (lock), Mod+X (power),
     # volume/brightness media keys, Mod+V (clipboard), Mod+M (process list).
@@ -36,4 +31,17 @@
       };
     };
   };
+
+  # DMS settings.json and session.json are managed as out-of-store symlinks pointing
+  # to the versioned files in the shell-conf repository clone at
+  # ~/.config/nixos/shell-conf/settings/. This allows the DMS UI to write changes
+  # directly to those files, which can then be committed and pushed to the repository.
+  # On rebuild the symlinks are recreated pointing to the same mutable files.
+  xdg.configFile."DankMaterialShell/settings.json".source =
+    config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/.config/nixos/shell-conf/settings/dms-settings.json";
+
+  home.file.".local/state/DankMaterialShell/session.json".source =
+    config.lib.file.mkOutOfStoreSymlink
+      "${config.home.homeDirectory}/.config/nixos/shell-conf/settings/dms-session.json";
 }

@@ -16,7 +16,8 @@
   };
 
   outputs = { self, nixpkgs, dms, niri, ... }@inputs: {
-    # NixOS module: combines DMS system components and Niri compositor
+    # NixOS module: DMS system components (power-profiles-daemon, accounts-daemon,
+    # geoclue2, polkit) + Niri compositor
     nixosModules.dankMaterialShell = { ... }: {
       imports = [
         dms.nixosModules.dank-material-shell
@@ -24,6 +25,14 @@
       ];
     };
     nixosModules.default = self.nixosModules.dankMaterialShell;
+
+    # NixOS module: dank-greeter (greetd-based, replaces SDDM)
+    # Opt-in: import this module only if you want to replace SDDM with dank-greeter.
+    nixosModules.dankGreeter = { ... }: {
+      imports = [
+        dms.nixosModules.greeter
+      ];
+    };
 
     # Home Manager module: DMS + Niri + theme
     homeManagerModules.default = import ./modules/default.nix { inherit inputs; };

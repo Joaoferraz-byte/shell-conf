@@ -5,6 +5,8 @@
     settings = {
       prefer-no-csd = true;
 
+      hotkeys-overlay.skip-at-startup = true;
+
       environment = {
         XDG_CURRENT_DESKTOP = "niri";
         QT_QPA_PLATFORM = "wayland";
@@ -83,6 +85,18 @@
         "Mod+WheelScrollUp" = {
           action.focus-column-left = {};
           cooldown-ms = 150;
+        };
+
+        # Window sizing
+        # Super+F: maximize column to cover the full workspace width (not fullscreen)
+        "Mod+F" = {
+          action.maximize-column = {};
+          hotkey-overlay.title = "Maximize Column";
+        };
+        # Super+Shift+F: fullscreen the focused window
+        "Mod+Shift+F" = {
+          action.fullscreen-window = {};
+          hotkey-overlay.title = "Fullscreen Window";
         };
 
         # Alt+Tab triggers DMS window switcher (alttab overlay)
