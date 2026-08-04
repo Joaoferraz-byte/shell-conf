@@ -7,7 +7,7 @@ Este repositório atua como um intermediário (wrapper) para o **DankMaterialShe
 O `shell-conf` consome os flakes upstream do DMS e Niri e re-exporta os módulos com configurações "opinadas":
 
 - **DankMaterialShell**: Configurado com monitoramento de sistema, VPN, tema dinâmico e integração nativa com Niri.
-- **Niri**: Configurado com atalhos de teclado complementares (Super+1..9 para workspaces, Super+W para Brave, etc), regras de janelas para arredondamento (radius 12) e variáveis de ambiente Wayland.
+- **Niri**: Configurado com atalhos de teclado complementares (Super+1..9 para workspaces, Super+W para Helium, etc), regras de janelas para arredondamento (radius 12) e variáveis de ambiente Wayland.
 - **Tema**: Força o tema de ícones `kora` (via GTK e dconf) de forma declarativa, evitando conflitos com o gerador de cores dinâmicas do DMS.
 
 ## Como usar no NixOS

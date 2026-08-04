@@ -64,7 +64,7 @@
         "Mod+Shift+9".action.move-column-to-workspace = 9;
 
         # Application shortcuts (complementary to DMS defaults)
-        "Mod+W".action.spawn = "brave";
+        "Mod+W".action.spawn = "helium";
         "Mod+E".action.spawn = "nautilus";
         "Mod+O".action.spawn = "zennotes";
         "Mod+T".action.spawn = "wezterm";
