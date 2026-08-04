@@ -16,8 +16,13 @@
   };
 
   outputs = { self, nixpkgs, dms, niri, ... }@inputs: {
-    # Re-export DMS NixOS module (enables quickshell, polkit, etc at system level)
-    nixosModules.dankMaterialShell = dms.nixosModules.dank-material-shell;
+    # NixOS module: combines DMS system components and Niri compositor
+    nixosModules.dankMaterialShell = { ... }: {
+      imports = [
+        dms.nixosModules.dank-material-shell
+        niri.nixosModules.niri
+      ];
+    };
     nixosModules.default = self.nixosModules.dankMaterialShell;
 
     # Home Manager module: DMS + Niri + theme
