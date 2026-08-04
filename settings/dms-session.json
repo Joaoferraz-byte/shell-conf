@@ -3,12 +3,12 @@
   "doNotDisturb": false,
   "doNotDisturbUntil": 0,
   "terminalOverride": "",
-  "wallpaperPath": "/home/livara/Wallpapers/dark6.jpg",
+  "wallpaperPath": "/home/livara/Wallpapers/aero7.jpg",
   "perMonitorWallpaper": false,
   "monitorWallpapers": {},
   "perModeWallpaper": true,
   "wallpaperPathLight": "/home/livara/Wallpapers/dark7.png",
-  "wallpaperPathDark": "/home/livara/Wallpapers/dark6.jpg",
+  "wallpaperPathDark": "/home/livara/Wallpapers/aero7.jpg",
   "monitorWallpapersLight": {},
   "monitorWallpapersDark": {},
   "monitorWallpaperFillModes": {},
@@ -95,6 +95,6 @@
   "appDrawerLastMode": "apps",
   "niriOverviewLastMode": "apps",
   "settingsSidebarExpandedIds": ",dankbar,",
-  "settingsSidebarCollapsedIds": ",",
+  "settingsSidebarCollapsedIds": ",dock_launcher,power_security,",
   "configVersion": 3
 }
