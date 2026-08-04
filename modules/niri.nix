@@ -5,7 +5,7 @@
     settings = {
       prefer-no-csd = true;
 
-      hotkeys-overlay.skip-at-startup = true;
+      hotkey-overlay.skip-at-startup = true;
 
       environment = {
         XDG_CURRENT_DESKTOP = "niri";
