@@ -16,37 +16,53 @@
     enableCalendarEvents = true;
     enableClipboardPaste = true;
 
-    # enableKeybinds provides: Mod+Space (launcher), Mod+N (notifications),
-    # Mod+Comma (settings), Mod+P (notepad), Super+Alt+L (lock), Mod+X (power),
-    # volume/brightness media keys, Mod+V (clipboard), Mod+M (process list).
-    # includes.enable is mutually exclusive with enableKeybinds — we use enableKeybinds
-    # so DMS manages its own binds declaratively and niri.nix adds the complementary ones.
     niri = {
       enableKeybinds = true;
-      # enableSpawn is set to false to avoid double bars (systemd service is already enabled)
       enableSpawn = false;
-
-      includes = {
-        enable = false;
-      };
+      includes.enable = false;
     };
 
-    # Set settings and session to empty to prevent the DMS module from creating
-    # read-only files in the nix-store that would overwrite our mutable symlinks.
+    # Impedimos que o módulo DMS crie arquivos imutáveis no nix-store
     settings = lib.mkForce {};
     session = lib.mkForce {};
   };
 
-  # DMS settings.json and session.json are managed as out-of-store symlinks pointing
-  # to the versioned files in the shell-conf repository clone at
-  # ~/.config/nixos/shell-conf/settings/. This allows the DMS UI to write changes
-  # directly to those files, which can then be committed and pushed to the repository.
-  # On rebuild the symlinks are recreated pointing to the same mutable files.
-  xdg.configFile."DankMaterialShell/settings.json".source =
-    config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/.config/nixos/shell-conf/settings/dms-settings.json";
+  # Em vez de um symlink estático que pode quebrar se o repositório mudar de lugar,
+  # usamos um script de ativação que detecta onde o repositório está clonado
+  # (assumindo que o usuário roda o rebuild de dentro dele ou de um local conhecido).
+  # No entanto, para ser robusto, vamos procurar o repositório shell-conf no sistema.
+  home.activation.linkDmsSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    # Procuramos pelo repositório shell-conf em locais comuns
+    # 1. ~/.config/nixos/shell-conf (padrão sugerido)
+    # 2. ~/Projects/shell-conf (local de desenvolvimento)
+    # 3. No diretório atual se houver um .git do shell-conf
+    
+    SEARCH_PATHS=(
+      "$HOME/.config/nixos/shell-conf"
+      "$HOME/Projects/shell-conf"
+      "$(pwd)"
+    )
+    
+    REPO_PATH=""
+    for path in "''${SEARCH_PATHS[@]}"; do
+      if [ -d "$path/settings" ] && [ -f "$path/flake.nix" ]; then
+        REPO_PATH="$path"
+        break
+      fi
+    done
 
-  home.file.".local/state/DankMaterialShell/session.json".source =
-    config.lib.file.mkOutOfStoreSymlink
-      "${config.home.homeDirectory}/.config/nixos/shell-conf/settings/dms-session.json";
+    if [ -n "$REPO_PATH" ]; then
+      mkdir -p "$HOME/.config/DankMaterialShell"
+      mkdir -p "$HOME/.local/state/DankMaterialShell"
+      
+      # Link settings.json
+      ln -sf "$REPO_PATH/settings/dms-settings.json" "$HOME/.config/DankMaterialShell/settings.json"
+      # Link session.json
+      ln -sf "$REPO_PATH/settings/dms-session.json" "$HOME/.local/state/DankMaterialShell/session.json"
+      
+      echo "DMS settings linked to $REPO_PATH/settings"
+    else
+      echo "Warning: shell-conf repository not found. DMS settings persistence might not work."
+    fi
+  '';
 }
