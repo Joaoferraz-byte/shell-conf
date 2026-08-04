@@ -3,27 +3,29 @@
 {
   programs.dank-material-shell = {
     enable = true;
-    
-    # Systemd integration for auto-start
+
     systemd = {
       enable = true;
       restartIfChanged = true;
     };
 
-    # Core features
     enableSystemMonitoring = true;
     enableVPN = true;
     enableDynamicTheming = true;
     enableAudioWavelength = true;
     enableCalendarEvents = true;
-    
-    # Integration with niri
+    enableClipboardPaste = true;
+
+    # enableKeybinds provides: Mod+Space (launcher), Mod+N (notifications),
+    # Mod+Comma (settings), Mod+P (notepad), Super+Alt+L (lock), Mod+X (power),
+    # volume/brightness media keys, Mod+V (clipboard), Mod+M (process list).
+    # includes.enable is mutually exclusive with enableKeybinds — we use enableKeybinds
+    # so DMS manages its own binds declaratively and niri.nix adds the complementary ones.
     niri = {
-      enableKeybinds = true; # Enables default DMS keybinds (Mod+Space, etc)
-      enableSpawn = false;   # We'll handle spawn in our niri config
+      enableKeybinds = true;
+      enableSpawn = true;
       includes = {
-        enable = true;
-        override = true;
+        enable = false;
       };
     };
   };
