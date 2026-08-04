@@ -98,9 +98,9 @@
           action.fullscreen-window = {};
           hotkey-overlay.title = "Fullscreen Window";
         };
+        "Mod+Shift+W" = { spawn "dms" "ipc" "wallpaperCarousel" "toggle"; }
 
-        # Alt+Tab triggers DMS window switcher (alttab overlay)
-        "Alt+Tab".action.spawn = [ "dms" "ipc" "call" "alttab" "toggle" ];
+
       };
     };
   };
