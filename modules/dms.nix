@@ -16,8 +16,10 @@
     enableCalendarEvents = true;
     enableClipboardPaste = true;
 
-    # Disable the welcome page at startup
-    welcome.enable = false;
+    settings = {
+      showWelcome = false;
+      showKeybinds = false;
+    };
 
     # enableKeybinds provides: Mod+Space (launcher), Mod+N (notifications),
     # Mod+Comma (settings), Mod+P (notepad), Super+Alt+L (lock), Mod+X (power),
