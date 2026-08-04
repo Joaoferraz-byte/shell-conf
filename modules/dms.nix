@@ -30,6 +30,11 @@
         enable = false;
       };
     };
+
+    # Set settings and session to empty to prevent the DMS module from creating
+    # read-only files in the nix-store that would overwrite our mutable symlinks.
+    settings = lib.mkForce {};
+    session = lib.mkForce {};
   };
 
   # DMS settings.json and session.json are managed as out-of-store symlinks pointing

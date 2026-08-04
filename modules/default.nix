@@ -13,5 +13,6 @@
     ./dms.nix
     ./niri.nix
     ./theme.nix
+    ./wezterm.nix
   ];
 }
