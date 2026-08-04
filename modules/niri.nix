@@ -1,0 +1,96 @@
+{ config, pkgs, lib, ... }:
+
+{
+  programs.niri = {
+    enable = true;
+    
+    settings = {
+      prefer-no-csd = true;
+      
+      environment = {
+        XDG_CURRENT_DESKTOP = "niri";
+        QT_QPA_PLATFORM = "wayland";
+        ELECTRON_OZONE_PLATFORM_HINT = "auto";
+        QT_QPA_PLATFORMTHEME = "gtk3";
+      };
+
+      spawn-at-startup = [
+        { command = [ "dms" "run" ]; }
+        { command = [ "bash" "-c" "wl-paste --watch cliphist store &" ]; }
+      ];
+
+      layout = {
+        gaps = 5;
+        border = {
+          enable = false; # DMS prefers no borders, uses shadows/radius
+        };
+        focus-ring.enable = false;
+      };
+
+      window-rules = [
+        {
+          matches = [{ is-active = false; }];
+          opacity = 0.9;
+        }
+        {
+          matches = [{ app-id = "^org\\.quickshell$"; }];
+          open-floating = true;
+        }
+        {
+          geometry-corner-radius = {
+            top-left = 12.0;
+            top-right = 12.0;
+            bottom-left = 12.0;
+            bottom-right = 12.0;
+          };
+          clip-to-geometry = true;
+        }
+      ];
+
+      binds = with config.lib.niri.actions; {
+        # Workspace navigation (Super + Number)
+        "Mod+1".action = focus-workspace 1;
+        "Mod+2".action = focus-workspace 2;
+        "Mod+3".action = focus-workspace 3;
+        "Mod+4".action = focus-workspace 4;
+        "Mod+5".action = focus-workspace 5;
+        "Mod+6".action = focus-workspace 6;
+        "Mod+7".action = focus-workspace 7;
+        "Mod+8".action = focus-workspace 8;
+        "Mod+9".action = focus-workspace 9;
+        
+        # Move window to workspace
+        "Mod+Shift+1".action = move-column-to-workspace 1;
+        "Mod+Shift+2".action = move-column-to-workspace 2;
+        "Mod+Shift+3".action = move-column-to-workspace 3;
+        "Mod+Shift+4".action = move-column-to-workspace 4;
+        "Mod+Shift+5".action = move-column-to-workspace 5;
+        "Mod+Shift+6".action = move-column-to-workspace 6;
+        "Mod+Shift+7".action = move-column-to-workspace 7;
+        "Mod+Shift+8".action = move-column-to-workspace 8;
+        "Mod+Shift+9".action = move-column-to-workspace 9;
+
+        # Application shortcuts
+        "Mod+W".action = spawn "brave";
+        "Mod+E".action = spawn "nautilus";
+        "Mod+O".action = spawn "zennotes";
+        "Mod+T".action = spawn "kitty";
+        "Mod+Return".action = spawn "kitty";
+        "Mod+C".action = close-window;
+
+        # Window management
+        "Mod+Left".action = focus-column-left;
+        "Mod+Right".action = focus-column-right;
+        "Mod+Up".action = focus-window-up;
+        "Mod+Down".action = focus-window-down;
+        
+        # Mouse scroll for windows
+        "Mod+WheelScrollDown".action = focus-column-right;
+        "Mod+WheelScrollUp".action = focus-column-left;
+        
+        # Alt+Tab (Recent windows) handled by DMS via dms alttab
+        "Alt+Tab".action = spawn "dms" "ipc" "call" "alttab" "toggle";
+      };
+    };
+  };
+}

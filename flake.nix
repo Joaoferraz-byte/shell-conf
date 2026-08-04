@@ -1,45 +1,36 @@
 {
-  description = "Caelestia Shell - Vendored and Customized";
+  description = "Shell configuration layer combining DankMaterialShell and Niri";
+
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    quickshell = {
-      url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    
+    # DankMaterialShell (DMS)
+    dms = {
+      url = "github:AvengeMedia/DankMaterialShell/stable";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    caelestia-cli = {
-      url = "github:caelestia-dots/cli";
+
+    # Niri compositor
+    niri = {
+      url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
-      inputs.caelestia-shell.follows = "";
     };
-    m3shapes = {
-      url = "github:soramanew/m3shapes/bdc327b29f95394a732baf3c9b19658ba23755b6";
-      flake = false;
+
+    # DMS System monitoring widget dependency
+    dgop = {
+      url = "github:AvengeMedia/dgop";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
-  outputs = { self, nixpkgs, ... } @ inputs: let
-    supportedSystems = [ "x86_64-linux" "aarch64-linux" ];
-    forAllSystems = fn: nixpkgs.lib.genAttrs supportedSystems (system: fn nixpkgs.legacyPackages.${system});
-  in {
-    formatter = forAllSystems (pkgs: pkgs.alejandra);
-    packages = forAllSystems (pkgs: rec {
-      caelestia-shell = pkgs.callPackage ./nix {
-        inherit (inputs) m3shapes;
-        rev = self.rev or self.dirtyRev or "dirty";
-        stdenv = pkgs.clangStdenv;
-        quickshell = inputs.quickshell.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
-          withX11 = false;
-          withI3 = false;
-        };
-        caelestia-cli = inputs.caelestia-cli.packages.${pkgs.stdenv.hostPlatform.system}.default;
-      };
-      with-cli = caelestia-shell.override {withCli = true;};
-      debug = caelestia-shell.override {debug = true;};
-      default = caelestia-shell;
-    });
-    
-    # Export the module factory directly
-    homeManagerModules.default = import ./nix/hm-module.nix;
 
-    nixosModules.default = {};
+  outputs = { self, nixpkgs, dms, niri, dgop, ... }@inputs: {
+    # Re-exporting DMS NixOS module
+    nixosModules.dankMaterialShell = dms.nixosModules.dank-material-shell;
+    
+    # Our custom Home Manager module that wraps DMS and Niri
+    homeManagerModules.default = import ./modules/default.nix { inherit inputs; };
+    
+    # Expose for legacy compatibility if needed
+    homeManagerModules.dankMaterialShell = self.homeManagerModules.default;
   };
 }
