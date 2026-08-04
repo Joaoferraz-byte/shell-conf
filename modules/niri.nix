@@ -67,8 +67,8 @@
         "Mod+W".action.spawn = "brave";
         "Mod+E".action.spawn = "nautilus";
         "Mod+O".action.spawn = "zennotes";
-        "Mod+T".action.spawn = "kitty";
-        "Mod+Return".action.spawn = "kitty";
+        "Mod+T".action.spawn = "wezterm";
+        "Mod+Return".action.spawn = "wezterm";
         "Mod+C".action.close-window = {};
 
         # Window focus
