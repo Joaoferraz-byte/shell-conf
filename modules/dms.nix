@@ -28,8 +28,7 @@
       enableKeybinds = true;
       # enableSpawn is set to false to avoid double bars (systemd service is already enabled)
       enableSpawn = false;
-      # Disable the keybinds cheatsheet widget at startup
-      enableCheatsheet = false;
+
       includes = {
         enable = false;
       };
