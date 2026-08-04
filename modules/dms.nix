@@ -16,6 +16,9 @@
     enableCalendarEvents = true;
     enableClipboardPaste = true;
 
+    # Disable the welcome page at startup
+    welcome.enable = false;
+
     # enableKeybinds provides: Mod+Space (launcher), Mod+N (notifications),
     # Mod+Comma (settings), Mod+P (notepad), Super+Alt+L (lock), Mod+X (power),
     # volume/brightness media keys, Mod+V (clipboard), Mod+M (process list).
