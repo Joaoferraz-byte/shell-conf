@@ -749,10 +749,10 @@
       "enabled": true,
       "config": {
         "style": "analog",
-        "transparency": 0.8,
+        "transparency": 0.44,
         "colorMode": "primary",
         "customColor": "#ffffff",
-        "showDate": true,
+        "showDate": false,
         "showAnalogNumbers": false,
         "showAnalogSeconds": true,
         "displayPreferences": [
