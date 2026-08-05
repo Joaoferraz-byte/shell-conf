@@ -803,7 +803,7 @@
   "launcherPluginOrder": [],
   "frameEnabled": false,
   "frameThickness": 16,
-  "frameRounding": 23,
+  "frameRounding": 30,
   "frameColor": "",
   "frameOpacity": 1,
   "frameScreenPreferences": [
