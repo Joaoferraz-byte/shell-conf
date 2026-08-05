@@ -8,7 +8,7 @@
   "runUserMatugenTemplates": true,
   "matugenTargetMonitor": "",
   "popupTransparency": 1,
-  "dockTransparency": 1,
+  "dockTransparency": 0.54,
   "widgetBackgroundColor": "sch",
   "widgetBackgroundCustomColor": "#6750A4",
   "widgetBackgroundCustomStrength": 0.5,
@@ -288,7 +288,7 @@
   },
   "appPickerViewMode": "grid",
   "filePickerUsageHistory": {},
-  "sortAppsAlphabetically": false,
+  "sortAppsAlphabetically": true,
   "appLauncherGridColumns": 4,
   "spotlightCloseNiriOverview": true,
   "rememberLastQuery": false,
@@ -308,7 +308,7 @@
   "dankLauncherV2IncludeFoldersInAll": false,
   "launcherUseOverlayLayer": false,
   "launcherStyle": "full",
-  "spotlightBarShowModeChips": false,
+  "spotlightBarShowModeChips": true,
   "keybindsFloatingWindow": false,
   "useAutoLocation": false,
   "weatherEnabled": true,
@@ -358,9 +358,9 @@
       "cursorHideTimeout": 0
     }
   },
-  "launcherLogoMode": "apps",
+  "launcherLogoMode": "compositor",
   "launcherLogoCustomPath": "",
-  "launcherLogoColorOverride": "",
+  "launcherLogoColorOverride": "surface",
   "launcherLogoColorInvertOnMode": false,
   "launcherLogoBrightness": 0.5,
   "launcherLogoContrast": 1,
@@ -463,28 +463,28 @@
     }
   },
   "matugenTemplateNeovimSetBackground": true,
-  "showDock": false,
+  "showDock": true,
   "dockAutoHide": false,
-  "dockSmartAutoHide": false,
+  "dockSmartAutoHide": true,
   "dockUseOverlayLayer": false,
-  "dockGroupByApp": false,
+  "dockGroupByApp": true,
   "dockRestoreSpecialWorkspaceOnClick": false,
   "dockOpenOnOverview": false,
   "dockPosition": 1,
-  "dockSpacing": 4,
+  "dockSpacing": 5,
   "dockBottomGap": 0,
   "dockMargin": 0,
-  "dockIconSize": 40,
-  "dockIndicatorStyle": "circle",
+  "dockIconSize": 35,
+  "dockIndicatorStyle": "line",
   "dockBorderEnabled": false,
   "dockBorderColor": "surfaceText",
   "dockBorderOpacity": 1,
   "dockBorderThickness": 1,
-  "dockIsolateDisplays": false,
+  "dockIsolateDisplays": true,
   "dockLauncherEnabled": false,
-  "dockLauncherLogoMode": "apps",
+  "dockLauncherLogoMode": "compositor",
   "dockLauncherLogoCustomPath": "",
-  "dockLauncherLogoColorOverride": "",
+  "dockLauncherLogoColorOverride": "surface",
   "dockLauncherLogoSizeOffset": 0,
   "dockLauncherLogoBrightness": 0.5,
   "dockLauncherLogoContrast": 1,
@@ -492,7 +492,7 @@
   "dockMaxVisibleRunningApps": 0,
   "dockShowOverflowBadge": true,
   "dockShowTrash": false,
-  "dockTrashFileManager": "default",
+  "dockTrashFileManager": "nautilus",
   "dockTrashCustomCommand": "",
   "notificationOverlayEnabled": false,
   "notificationPopupShadowEnabled": true,
@@ -609,7 +609,11 @@
       "leftWidgets": [
         "launcherButton",
         "workspaceSwitcher",
-        "focusedWindow"
+        "focusedWindow",
+        {
+          "id": "dankPomodoroTimer",
+          "enabled": true
+        }
       ],
       "centerWidgets": [
         "music",
@@ -617,17 +621,29 @@
         "weather"
       ],
       "rightWidgets": [
-        "systemTray",
-        "clipboard",
-        "cpuUsage",
-        "memUsage",
         "notificationButton",
-        "battery",
-        "controlCenterButton"
+        "memUsage",
+        {
+          "id": "diskUsage",
+          "enabled": true,
+          "mountPath": "/",
+          "diskUsageMode": 0,
+          "showMountPath": true,
+          "minimumWidth": true
+        },
+        {
+          "id": "cpuUsage",
+          "enabled": true,
+          "minimumWidth": true
+        },
+        {
+          "id": "controlCenterButton",
+          "enabled": true
+        }
       ],
-      "spacing": 4,
+      "spacing": 7,
       "innerPadding": 4,
-      "bottomGap": 0,
+      "bottomGap": 2,
       "transparency": 0.6,
       "widgetTransparency": 0.59,
       "squareCorners": false,
@@ -645,7 +661,9 @@
       "openOnOverview": false,
       "visible": true,
       "popupGapsAuto": true,
-      "popupGapsManual": 4
+      "popupGapsManual": 4,
+      "widgetPadding": 12,
+      "barInsetPadding": 9
     }
   ],
   "desktopClockEnabled": false,
