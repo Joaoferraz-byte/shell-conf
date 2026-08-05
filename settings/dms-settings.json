@@ -468,7 +468,7 @@
     }
   },
   "matugenTemplateNeovimSetBackground": true,
-  "showDock": true,
+  "showDock": false,
   "dockAutoHide": false,
   "dockSmartAutoHide": true,
   "dockUseOverlayLayer": false,
@@ -669,7 +669,9 @@
       "popupGapsAuto": true,
       "popupGapsManual": 4,
       "widgetPadding": 12,
-      "barInsetPadding": 9
+      "barInsetPadding": 9,
+      "shadowIntensity": 0,
+      "hoverPopouts": false
     }
   ],
   "desktopClockEnabled": false,

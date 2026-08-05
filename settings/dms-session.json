@@ -3,12 +3,12 @@
   "doNotDisturb": false,
   "doNotDisturbUntil": 0,
   "terminalOverride": "wezterm",
-  "wallpaperPath": "/home/livara/Wallpapers/calm3.jpg",
+  "wallpaperPath": "/home/livara/Wallpapers/purple7.png",
   "perMonitorWallpaper": false,
   "monitorWallpapers": {},
   "perModeWallpaper": true,
   "wallpaperPathLight": "",
-  "wallpaperPathDark": "/home/livara/Wallpapers/calm3.jpg",
+  "wallpaperPathDark": "/home/livara/Wallpapers/purple7.png",
   "monitorWallpapersLight": {},
   "monitorWallpapersDark": {},
   "monitorWallpaperFillModes": {},
@@ -85,6 +85,7 @@
   "launcherLastQuery": "",
   "launcherQueryHistory": [
     "zen",
+    "neo",
     "ay",
     "ta",
     "fire",
@@ -97,7 +98,7 @@
   ],
   "appDrawerLastMode": "apps",
   "niriOverviewLastMode": "apps",
-  "settingsSidebarExpandedIds": ",dock_launcher,applications,personalization,dankbar,system,displays,power_security,workspaces_widgets,",
-  "settingsSidebarCollapsedIds": ",",
+  "settingsSidebarExpandedIds": ",applications,dankbar,system,displays,power_security,workspaces_widgets,dock_launcher,",
+  "settingsSidebarCollapsedIds": ",personalization,",
   "configVersion": 3
 }
