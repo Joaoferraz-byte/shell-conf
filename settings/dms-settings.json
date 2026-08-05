@@ -284,6 +284,11 @@
       "count": 1,
       "lastUsed": 1785854313932,
       "name": "Helium"
+    },
+    "zen-beta": {
+      "count": 2,
+      "lastUsed": 1785932564424,
+      "name": "Zen Browser (Beta)"
     }
   },
   "appPickerViewMode": "grid",
@@ -609,10 +614,11 @@
       "leftWidgets": [
         "launcherButton",
         "workspaceSwitcher",
-        "focusedWindow",
         {
-          "id": "dankPomodoroTimer",
-          "enabled": true
+          "id": "focusedWindow",
+          "enabled": true,
+          "focusedWindowSize": 0,
+          "focusedWindowCompactMode": true
         }
       ],
       "centerWidgets": [
@@ -735,7 +741,44 @@
   "systemMonitorVariants": [],
   "desktopWidgetPositions": {},
   "desktopWidgetGridSettings": {},
-  "desktopWidgetInstances": [],
+  "desktopWidgetInstances": [
+    {
+      "id": "dw_1785931424502_6goq8ai5k",
+      "widgetType": "desktopClock",
+      "name": "Desktop Clock",
+      "enabled": true,
+      "config": {
+        "style": "analog",
+        "transparency": 0.8,
+        "colorMode": "primary",
+        "customColor": "#ffffff",
+        "showDate": true,
+        "showAnalogNumbers": false,
+        "showAnalogSeconds": true,
+        "displayPreferences": [
+          "all"
+        ],
+        "showOnOverlay": false,
+        "showOnOverview": false,
+        "clickThrough": false,
+        "syncPositionAcrossScreens": true
+      },
+      "positions": {
+        "HDMI-A-1": {
+          "width": 200,
+          "height": 200,
+          "x": 860,
+          "y": 440
+        },
+        "_synced": {
+          "x": 0.8880391438802083,
+          "y": 0.8041485821759259,
+          "width": 200,
+          "height": 200
+        }
+      }
+    }
+  ],
   "desktopWidgetGroups": [],
   "builtInPluginSettings": {
     "dms_settings_search": {
