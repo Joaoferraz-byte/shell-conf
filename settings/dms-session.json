@@ -73,7 +73,7 @@
   "appOverrides": {},
   "searchAppActions": true,
   "vpnLastConnected": "",
-  "lastPlayerIdentity": "Brave",
+  "lastPlayerIdentity": "Mozilla firefox",
   "deviceMaxVolumes": {},
   "hiddenOutputDeviceNames": [],
   "hiddenInputDeviceNames": [],
@@ -82,8 +82,10 @@
   "notepadLastMode": "",
   "launcherLastMode": "all",
   "launcherLastFileSearchType": "all",
-  "launcherLastQuery": "fire",
+  "launcherLastQuery": "ta",
   "launcherQueryHistory": [
+    "ta",
+    "zen",
     "fire",
     "wallpap",
     "!",
@@ -95,7 +97,7 @@
   ],
   "appDrawerLastMode": "apps",
   "niriOverviewLastMode": "apps",
-  "settingsSidebarExpandedIds": ",dock_launcher,applications,power_security,personalization,",
-  "settingsSidebarCollapsedIds": ",workspaces_widgets,displays,system,dankbar,",
+  "settingsSidebarExpandedIds": ",dock_launcher,applications,power_security,personalization,dankbar,",
+  "settingsSidebarCollapsedIds": ",workspaces_widgets,displays,system,",
   "configVersion": 3
 }

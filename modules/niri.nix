@@ -17,6 +17,8 @@
         QT_QPA_PLATFORM = "wayland";
         ELECTRON_OZONE_PLATFORM_HINT = "auto";
         QT_QPA_PLATFORMTHEME = "gtk3";
+        XCURSOR_THEME = "Bibata-Modern-Classic";
+        XCURSOR_SIZE = "24";
       };
 
       # cliphist is used for clipboard history (DMS clipboard widget reads from it)
@@ -75,7 +77,7 @@
         "Mod+Shift+9".action.move-column-to-workspace = 9;
 
         # Application shortcuts (complementary to DMS defaults)
-        "Mod+W".action.spawn = "helium";
+        "Mod+W".action.spawn = "zen-browser";
         "Mod+E".action.spawn = "nautilus";
         "Mod+O".action.spawn = "zennotes";
         "Mod+T".action.spawn = "wezterm";
