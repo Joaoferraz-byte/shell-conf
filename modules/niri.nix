@@ -140,6 +140,22 @@
           "wallpaperCarousel"
           "toggle"
         ];
+
+        # Wallpaper cycling (manual next/previous)
+        "Mod+Ctrl+Shift+W".action.spawn = [
+          "dms"
+          "ipc"
+          "call"
+          "wallpaper"
+          "cycleNext"
+        ];
+        "Mod+Alt+Shift+W".action.spawn = [
+          "dms"
+          "ipc"
+          "call"
+          "wallpaper"
+          "cyclePrevious"
+        ];
       };
     };
   };
