@@ -2,32 +2,44 @@
 
 {
   # ─── Zen Browser + DMS Theme Integration ──────────────────────────────────
-  # Matugen generates zen.css from the DMS palette.
-  # This module symlinks the generated theme to Zen Browser's chrome directory
-  # and enables userChrome.css support.
+  # DMS matugen generates ~/.config/DankMaterialShell/zen.css automatically.
+  # This module symlinks it to Zen Browser's chrome directory as userChrome.css
+  # and enables userChrome.css support via a custom prefs.js override.
+  #
+  # Supports: native install (~/.zen), Flatpak (~/.var/app/app.zen_browser.zen/.zen)
 
-  home.activation.setupZenBrowserTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    # Create Zen Browser chrome directory
-    mkdir -p "$HOME/.zen/default/chrome"
-    mkdir -p "$HOME/.zen/default/user"
-
-    # Symlink DMS matugen-generated zen.css to Zen Browser chrome
-    DMS_CSS="$HOME/.config/DankMaterialShell/zen.css"
-    ZEN_CSS="$HOME/.zen/default/chrome/zen.css"
-
-    if [ -f "$DMS_CSS" ]; then
-      $DRY_RUN_CMD ln -sf "$DMS_CSS" "$ZEN_CSS"
-    fi
-
-    # Enable userChrome.css in Zen Browser preferences
-    ZEN_PREFS="$HOME/.zen/default/prefs.js"
-    if [ -f "$ZEN_PREFS" ]; then
-      $DRY_RUN_CMD grep -q "toolkit.legacyUserProfileCustomizations.stylesheets" "$ZEN_PREFS" 2>/dev/null \
-        || $DRY_RUN_CMD echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$ZEN_PREFS"
-    fi
+  # Write a custom prefs.js fragment that enables userChrome.css support
+  xdg.configFile."zen/default/user.js".text = ''
+    // DMS theme: enable userChrome.css for dynamic theming
+    user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
   '';
 
-  # Systemd timer to re-link zen.css when DMS theme changes
+  # Symlink DMS-generated zen.css to Zen Browser chrome directory
+  # We use home.file to create the symlink declaratively.
+  # The symlink name must be userChrome.css (not zen.css) per Firefox/Zen convention.
+  home.file."zen/default/chrome/userChrome.css".source =
+    lib.mkIf (lib.pathExists "${config.home.homeDirectory}/.config/DankMaterialShell/zen.css")
+      "${config.home.homeDirectory}/.config/DankMaterialShell/zen.css";
+
+  # Activation script: handles the case where zen.css may not exist yet
+  # (DMS needs to run at least once to generate it). Also covers Flatpak path.
+  home.activation.linkZenBrowserTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    # Find Zen Browser profile directories and symlink zen.css
+    DMS_CSS="$HOME/.config/DankMaterialShell/zen.css"
+
+    for PROFILE_DIR in \
+      "$(find "$HOME/.zen" -maxdepth 1 -type d -name "*.Default Profile" 2>/dev/null | head -n 1)" \
+      "$(find "$HOME/.config/zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)" \
+      "$(find "$HOME/.var/app/app.zen_browser.zen/.zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)"; do
+
+      if [ -n "$PROFILE_DIR" ] && [ -f "$DMS_CSS" ]; then
+        mkdir -p "$PROFILE_DIR/chrome"
+        $DRY_RUN_CMD ln -sf "$DMS_CSS" "$PROFILE_DIR/chrome/userChrome.css"
+      fi
+    done
+  '';
+
+  # Systemd service to re-link zen.css when DMS theme changes
   systemd.user.services.zen-browser-theme-sync = {
     Unit = {
       Description = "Sync DMS zen.css theme to Zen Browser chrome directory";
@@ -39,22 +51,21 @@
         set -euo pipefail
 
         DMS_CSS="$HOME/.config/DankMaterialShell/zen.css"
-        ZEN_CSS="$HOME/.zen/default/chrome/zen.css"
-        ZEN_PREFS="$HOME/.zen/default/prefs.js"
 
-        while true; do
+        for PROFILE_DIR in \
+          "$(find "$HOME/.zen" -maxdepth 1 -type d -name "*.Default Profile" 2>/dev/null | head -n 1)" \
+          "$(find "$HOME/.config/zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)" \
+          "$(find "$HOME/.var/app/app.zen_browser.zen/.zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)"; do
+
+          [ -z "$PROFILE_DIR" ] && continue
+
           if [ -f "$DMS_CSS" ]; then
-            ln -sf "$DMS_CSS" "$ZEN_CSS"
+            mkdir -p "$PROFILE_DIR/chrome"
+            ln -sf "$DMS_CSS" "$PROFILE_DIR/chrome/userChrome.css"
           fi
-
-          # Enable userChrome.css if not already set
-          if [ -f "$ZEN_PREFS" ]; then
-            grep -q "toolkit.legacyUserProfileCustomizations.stylesheets" "$ZEN_PREFS" 2>/dev/null \
-              || echo 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' >> "$ZEN_PREFS"
-          fi
-
-          sleep 60
         done
+
+        sleep 60
       ''}";
 
       Restart = "always";
