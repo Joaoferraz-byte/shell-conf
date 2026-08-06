@@ -10,7 +10,7 @@
       local config = wezterm.config_builder()
 
       -- Configuração básica
-      config.font = wezterm.font('JetBrains Mono')
+      config.font = wezterm.font('JetBrainsMono Nerd Font')
       config.font_size = 11.0
       config.window_background_opacity = 0.85
       config.hide_tab_bar_if_only_one_tab = true
@@ -21,6 +21,14 @@
         top = 10,
         bottom = 10,
       }
+
+      -- Fallback fonts for missing glyphs
+      config.font = wezterm.font_with_fallback({
+        { family = 'JetBrainsMono Nerd Font' },
+        { family = 'FiraCode Nerd Font' },
+        { family = 'Symbols Nerd Font' },
+        'monospace',
+      })
 
       -- DMS Matugen gera o tema em ~/.config/wezterm/colors/dank-theme.toml
       -- WezTerm procura automaticamente no diretório colors/
