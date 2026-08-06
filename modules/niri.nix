@@ -55,7 +55,8 @@
       ];
 
       binds = {
-        # Workspace navigation (DMS does not provide these)
+        # ─── Workspace Navigation ─────────────────────────────────────────
+        # (DMS does not provide these)
         "Mod+1".action.focus-workspace = 1;
         "Mod+2".action.focus-workspace = 2;
         "Mod+3".action.focus-workspace = 3;
@@ -76,7 +77,8 @@
         "Mod+Shift+8".action.move-column-to-workspace = 8;
         "Mod+Shift+9".action.move-column-to-workspace = 9;
 
-        # Application shortcuts (complementary to DMS defaults)
+        # ─── Application Shortcuts ────────────────────────────────────────
+        # (Complementary to DMS defaults)
         "Mod+W".action.spawn = "zen-beta";
         "Mod+E".action.spawn = "nautilus";
         "Mod+O".action.spawn = "zennotes";
@@ -84,13 +86,14 @@
         "Mod+Return".action.spawn = "wezterm";
         "Mod+C".action.close-window = { };
 
-        # Window focus
+        # ─── Window Focus ─────────────────────────────────────────────────
         "Mod+Left".action.focus-column-left = { };
         "Mod+Right".action.focus-column-right = { };
         "Mod+Up".action.focus-window-up = { };
         "Mod+Down".action.focus-window-down = { };
 
-        # Mouse scroll on window selection (with cooldown to avoid over-scrolling)
+        # ─── Mouse Scroll on Window Selection ─────────────────────────────
+        # (With cooldown to avoid over-scrolling)
         "Mod+WheelScrollDown" = {
           action.focus-column-right = { };
           cooldown-ms = 150;
@@ -100,17 +103,42 @@
           cooldown-ms = 150;
         };
 
-        # Window sizing
-        # Super+F: maximize column to cover the full workspace width (not fullscreen)
+        # ─── Window Sizing ────────────────────────────────────────────────
         "Mod+F" = {
           action.maximize-column = { };
           hotkey-overlay.title = "Maximize Column";
         };
-        # Super+Shift+F: fullscreen the focused window
         "Mod+Shift+F" = {
           action.fullscreen-window = { };
           hotkey-overlay.title = "Fullscreen Window";
         };
+
+        # ─── Screenshot Keybinds ──────────────────────────────────────────
+        # Super+Shift+S: Interactive region selection with annotation
+        "Mod+Shift+S" = {
+          action.screenshot = {
+            screenshot-path = "$HOME/Pictures/Screenshots/region-%Y-%m-%d-%H%M%S.png";
+          };
+          hotkey-overlay.title = "Screenshot Region";
+        };
+
+        # Super+S: Fullscreen capture
+        "Mod+S" = {
+          action.screenshot = {
+            screenshot-path = "$HOME/Pictures/Screenshots/fullscreen-%Y-%m-%d-%H%M%S.png";
+          };
+          hotkey-overlay.title = "Screenshot Fullscreen";
+        };
+
+        # Super+Ctrl+S: Active window capture
+        "Mod+Ctrl+S" = {
+          action.screenshot-window = {
+            screenshot-path = "$HOME/Pictures/Screenshots/window-%Y-%m-%d-%H%M%S.png";
+          };
+          hotkey-overlay.title = "Screenshot Window";
+        };
+
+        # ─── Wallpaper ────────────────────────────────────────────────────
         "Mod+Shift+W".action.spawn = [
           "dms"
           "ipc"
@@ -120,4 +148,9 @@
       };
     };
   };
+
+  # Ensure screenshot directory exists
+  home.activation.setupScreenshots = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    $DRY_RUN_CMD mkdir -p "${config.home.homeDirectory}/Pictures/Screenshots"
+  '';
 }
