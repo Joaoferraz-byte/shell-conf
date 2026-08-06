@@ -22,7 +22,7 @@
     "pixelate",
     "portal"
   ],
-  "wallpaperCyclingEnabled": false,
+  "wallpaperCyclingEnabled": true,
   "wallpaperCyclingMode": "interval",
   "wallpaperCyclingInterval": 300,
   "wallpaperCyclingTime": "06:00",
