@@ -114,27 +114,21 @@
         };
 
         # ─── Screenshot Keybinds ──────────────────────────────────────────
-        # Super+Shift+S: Interactive region selection with annotation
+        # Uses niri built-in screenshot UI (interactive region selection)
         "Mod+Shift+S" = {
-          action.screenshot = {
-            screenshot-path = "$HOME/Pictures/Screenshots/region-%Y-%m-%d-%H%M%S.png";
-          };
+          action.screenshot = { };
           hotkey-overlay.title = "Screenshot Region";
         };
 
-        # Super+S: Fullscreen capture
+        # Fullscreen capture via niri built-in action
         "Mod+S" = {
-          action.screenshot = {
-            screenshot-path = "$HOME/Pictures/Screenshots/fullscreen-%Y-%m-%d-%H%M%S.png";
-          };
+          action.screenshot-screen = { };
           hotkey-overlay.title = "Screenshot Fullscreen";
         };
 
-        # Super+Ctrl+S: Active window capture
+        # Active window capture via niri built-in action
         "Mod+Ctrl+S" = {
-          action.screenshot-window = {
-            screenshot-path = "$HOME/Pictures/Screenshots/window-%Y-%m-%d-%H%M%S.png";
-          };
+          action.screenshot-window = { };
           hotkey-overlay.title = "Screenshot Window";
         };
 
