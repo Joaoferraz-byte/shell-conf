@@ -2,71 +2,20 @@
 
 {
   # ─── Zen Browser + DMS Theme Integration ──────────────────────────────────
-  # DMS matugen generates ~/.config/DankMaterialShell/zen.css automatically.
-  # This module symlinks it to Zen Browser's chrome directory as userChrome.css
-  # and enables userChrome.css support via a custom prefs.js override.
+  # DMS matugen generates ~/.config/DankMaterialShell/zen.css at runtime.
+  # This module declares the preference and userChrome import declaratively
+  # via zen-browser-flake, replacing the previous imperative find/symlink/sync
+  # approach which used unstable profile patterns and a Restart=always daemon.
   #
-  # Supports: native install (~/.zen), Flatpak (~/.var/app/app.zen_browser.zen/.zen)
+  # The actual userChrome content and settings are configured in the consumer
+  # (nix-conf/home/livara/home.nix) using:
+  #   programs.zen-browser.profiles.default.settings
+  #   programs.zen-browser.profiles.default.userChrome
+  #
+  # Supports: native install (~/.config/zen)
 
-  # Write a custom prefs.js fragment that enables userChrome.css support
-  xdg.configFile."zen/default/user.js".text = ''
-    // DMS theme: enable userChrome.css for dynamic theming
-    user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
-  '';
-
-  # Activation script: handles the case where zen.css may not exist yet
-  # (DMS needs to run at least once to generate it). Also covers Flatpak path.
-  home.activation.linkZenBrowserTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    # Find Zen Browser profile directories and symlink zen.css
-    DMS_CSS="$HOME/.config/DankMaterialShell/zen.css"
-
-    for PROFILE_DIR in \
-      "$(find "$HOME/.zen" -maxdepth 1 -type d -name "*.Default Profile" 2>/dev/null | head -n 1)" \
-      "$(find "$HOME/.config/zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)" \
-      "$(find "$HOME/.var/app/app.zen_browser.zen/.zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)"; do
-
-      if [ -n "$PROFILE_DIR" ] && [ -f "$DMS_CSS" ]; then
-        mkdir -p "$PROFILE_DIR/chrome"
-        $DRY_RUN_CMD ln -sf "$DMS_CSS" "$PROFILE_DIR/chrome/userChrome.css"
-      fi
-    done
-  '';
-
-  # Systemd service to re-link zen.css when DMS theme changes
-  systemd.user.services.zen-browser-theme-sync = {
-    Unit = {
-      Description = "Sync DMS zen.css theme to Zen Browser chrome directory";
-    };
-
-    Service = {
-      ExecStart = "${pkgs.writeShellScript "zen-browser-theme-sync" ''
-        #!/bin/bash
-        set -euo pipefail
-
-        DMS_CSS="$HOME/.config/DankMaterialShell/zen.css"
-
-        for PROFILE_DIR in \
-          "$(find "$HOME/.zen" -maxdepth 1 -type d -name "*.Default Profile" 2>/dev/null | head -n 1)" \
-          "$(find "$HOME/.config/zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)" \
-          "$(find "$HOME/.var/app/app.zen_browser.zen/.zen" -maxdepth 1 -type d -name "*Default (release)" 2>/dev/null | head -n 1)"; do
-
-          [ -z "$PROFILE_DIR" ] && continue
-
-          if [ -f "$DMS_CSS" ]; then
-            mkdir -p "$PROFILE_DIR/chrome"
-            ln -sf "$DMS_CSS" "$PROFILE_DIR/chrome/userChrome.css"
-          fi
-        done
-
-        sleep 60
-      ''}";
-
-      Restart = "always";
-      RestartSec = 10;
-    };
-
-    Install = {
-      WantedBy = [ "default.target" ];
-    };
+  # Enable the preference declaratively so zen-browser-flake writes it to prefs.js
+  programs.zen-browser.profiles.default.settings = {
+    "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
   };
 }
