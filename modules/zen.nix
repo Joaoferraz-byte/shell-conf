@@ -14,13 +14,6 @@
     user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
   '';
 
-  # Symlink DMS-generated zen.css to Zen Browser chrome directory
-  # We use home.file to create the symlink declaratively.
-  # The symlink name must be userChrome.css (not zen.css) per Firefox/Zen convention.
-  home.file."zen/default/chrome/userChrome.css".source =
-    lib.mkIf (lib.pathExists "${config.home.homeDirectory}/.config/DankMaterialShell/zen.css")
-      "${config.home.homeDirectory}/.config/DankMaterialShell/zen.css";
-
   # Activation script: handles the case where zen.css may not exist yet
   # (DMS needs to run at least once to generate it). Also covers Flatpak path.
   home.activation.linkZenBrowserTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
