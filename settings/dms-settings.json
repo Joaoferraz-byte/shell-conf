@@ -46,8 +46,8 @@
   "modalAnimationSpeed": 1,
   "modalCustomAnimationDuration": 150,
   "enableRippleEffects": true,
-  "animationVariant": 0,
-  "motionEffect": 0,
+  "animationVariant": 1,
+  "motionEffect": 2,
   "m3ElevationEnabled": true,
   "m3ElevationIntensity": 12,
   "m3ElevationOpacity": 30,
@@ -82,7 +82,7 @@
   "selectedGpuIndex": 0,
   "enabledGpuPciIds": [],
   "showSystemTray": true,
-  "systemTrayIconTintMode": "none",
+  "systemTrayIconTintMode": "monochrome",
   "systemTrayIconTintSaturation": 50,
   "systemTrayIconTintStrength": 135,
   "showClock": true,
@@ -286,8 +286,8 @@
       "name": "Helium"
     },
     "zen-beta": {
-      "count": 2,
-      "lastUsed": 1785932564424,
+      "count": 5,
+      "lastUsed": 1785994993659,
       "name": "Zen Browser (Beta)"
     }
   },
@@ -627,7 +627,10 @@
         "weather"
       ],
       "rightWidgets": [
-        "notificationButton",
+        {
+          "id": "notificationButton",
+          "enabled": false
+        },
         "memUsage",
         {
           "id": "diskUsage",
@@ -644,7 +647,9 @@
         },
         {
           "id": "controlCenterButton",
-          "enabled": true
+          "enabled": true,
+          "showAudioIcon": false,
+          "showAudioPercent": false
         }
       ],
       "spacing": 7,
@@ -658,8 +663,8 @@
       "gothCornerRadiusOverride": false,
       "gothCornerRadiusValue": 12,
       "borderEnabled": false,
-      "borderColor": "surfaceText",
-      "borderOpacity": 1,
+      "borderColor": "secondary",
+      "borderOpacity": 0.15,
       "borderThickness": 1,
       "fontScale": 1,
       "autoHide": false,
@@ -670,8 +675,14 @@
       "popupGapsManual": 4,
       "widgetPadding": 12,
       "barInsetPadding": 9,
-      "shadowIntensity": 0,
-      "hoverPopouts": false
+      "shadowIntensity": 12,
+      "hoverPopouts": false,
+      "maximizeWidgetIcons": false,
+      "removeWidgetPadding": false,
+      "shadowOpacity": 54,
+      "shadowColorMode": "default",
+      "clickThrough": true,
+      "useOverlayLayer": false
     }
   ],
   "desktopClockEnabled": false,
