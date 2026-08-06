@@ -27,8 +27,6 @@
     # wallpaperCycling, wallpaperPath e outras preferências de sessão.
   };
 
-  # Screenshot directory
-  home.activation.setupScreenshots = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    $DRY_RUN_CMD mkdir -p "${config.home.homeDirectory}/Pictures/Screenshots"
-  '';
+  # Screenshot directory is handled by modules/niri.nix (setupScreenshots).
+  # Avoid duplicate activation entries that would conflict on home-manager switch.
 }
