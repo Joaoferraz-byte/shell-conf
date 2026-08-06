@@ -14,5 +14,6 @@
     ./niri.nix
     ./theme.nix
     ./wezterm.nix
+    ./zen.nix
   ];
 }
