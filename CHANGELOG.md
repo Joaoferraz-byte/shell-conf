@@ -10,6 +10,15 @@
 - **DMS Theme Conflict**: Removed forced Catppuccin GTK theme, let DMS matugen control it
 - **Cursor and Icon Integration**: Bibata cursor and kora icons now work correctly with DMS UI
 
+### Added
+- **Wallpaper Cycling Default Enabled**: `dms-session.json` now sets `wallpaperCyclingEnabled = true` by default (previously `false`)
+- **Manual Wallpaper Cycling Keybinds**: `Mod+Ctrl+Shift+W` (next wallpaper) and `Mod+Alt+Shift+W` (previous wallpaper) added to Niri
+- **Zen Browser DMS Preferences**: Added `zen.urlbar.behavior = float`, `zen.view.compact.hide-tabbar = false`, `zen.workspaces.continue-where-left-off = true`, smooth scrolling with `msdPhysics` inertia
+
+### Fixed
+- **Wallpaper Cycling Not Working**: Fixed `wallpaperCyclingEnabled` being set to `false` in the declarative `dms-session.json` (now `true`)
+- **Zen Browser Theme**: Nix-conf now uses runtime symlink via `home.activation` instead of `@import url("file://...")` which was blocked by Chrome CSP
+
 ## [Unreleased] - Integração WezTerm (2026-08-04)
 
 ### Added
