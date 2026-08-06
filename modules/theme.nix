@@ -1,18 +1,11 @@
 { config, pkgs, lib, ... }:
 
 {
-  # Catppuccin for GTK
+  # ─── GTK Theme ────────────────────────────────────────────────────────────
+  # Let DMS/matugen control the GTK theme dynamically.
+  # Only enforce icon and cursor themes declaratively.
   gtk = {
     enable = true;
-    theme = {
-      name = "catppuccin-mocha-lavender-standard";
-      package = pkgs.catppuccin-gtk.override {
-        accents = [ "lavender" ];
-        size = "standard";
-        tweaks = [ "rimless" ];
-        variant = "mocha";
-      };
-    };
     iconTheme = {
       name = "kora";
       package = pkgs.kora-icon-theme;
@@ -23,13 +16,13 @@
     };
   };
 
-  # Force cursor and icons via dconf for Wayland/Niri
+  # Force cursor and icons via dconf for Wayland/Niri.
+  # GTK theme is managed by DMS matugen dynamically.
   dconf.settings = {
     "org/gnome/desktop/interface" = {
       cursor-theme = "Bibata-Modern-Classic";
       cursor-size = 24;
       icon-theme = "kora";
-      gtk-theme = "catppuccin-mocha-lavender-standard";
       color-scheme = "prefer-dark";
     };
   };
