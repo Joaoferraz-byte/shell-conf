@@ -70,7 +70,11 @@
   "wifiDeviceOverride": "",
   "weatherHourlyDetailed": true,
   "hiddenApps": [],
-  "appOverrides": {},
+  "appOverrides": {
+    "zen-beta": {
+      "name": "Zen Browser"
+    }
+  },
   "searchAppActions": true,
   "vpnLastConnected": "",
   "lastPlayerIdentity": "Mozilla zen",
@@ -82,12 +86,16 @@
   "notepadLastMode": "",
   "launcherLastMode": "all",
   "launcherLastFileSearchType": "all",
-  "launcherLastQuery": "aud",
+  "launcherLastQuery": "",
   "launcherQueryHistory": [
-    "aud",
+    "ze",
+    "ve",
+    "vesk",
     "nvim",
-    "a",
+    "n",
     "zen",
+    "aud",
+    "a",
     "neo",
     "ay",
     "ta",
@@ -95,8 +103,7 @@
     "wallpap",
     "!",
     "gif hyprland",
-    "firef",
-    "vesk"
+    "firef"
   ],
   "appDrawerLastMode": "apps",
   "niriOverviewLastMode": "apps",
