@@ -1,5 +1,8 @@
 ## [Unreleased] - 2026-08-06
 
+### Fixed
+- **Wallpaper IPC Keybinds**: Use the documented DMS `wallpaper next` and `wallpaper prev` functions instead of the nonexistent `cycleNext` and `cyclePrevious` names.
+
 ### Added
 - **Niri Screenshot Keybinds**: Super+Shift+S (region), Super+S (fullscreen), Super+Ctrl+S (window)
 - **Zen Browser Matugen Integration**: Auto-syncs DMS theme to Zen Browser chrome

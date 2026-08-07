@@ -147,14 +147,14 @@
           "ipc"
           "call"
           "wallpaper"
-          "cycleNext"
+          "next"
         ];
         "Mod+Alt+Shift+W".action.spawn = [
           "dms"
           "ipc"
           "call"
           "wallpaper"
-          "cyclePrevious"
+          "prev"
         ];
       };
     };
