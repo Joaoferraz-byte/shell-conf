@@ -1,40 +1,40 @@
 # Shell Conf
 
-Este repositório atua como um intermediário (wrapper) para o **DankMaterialShell (DMS)** e **Niri**, fornecendo uma configuração pronta para uso e pré-otimizada para NixOS.
+This repository acts as an intermediary (wrapper) for **DankMaterialShell (DMS)** and **Niri**, providing a ready-to-use and pre-optimized configuration for NixOS.
 
-## Arquitetura
+## Architecture
 
-O `shell-conf` consome os flakes upstream do DMS e Niri e re-exporta os módulos com configurações "opinadas":
+`shell-conf` consumes upstream DMS and Niri flakes and re-exports modules with "opinionated" settings:
 
-- **DankMaterialShell**: Configurado com monitoramento de sistema, VPN, tema dinâmico (matugen) e integração nativa com Niri.
-- **Niri**: Configurado com atalhos de teclado complementares (Super+1..9 para workspaces, Super+W para Zen Browser), screenshot keybinds (Super+Shift+S, Super+S, Super+Ctrl+S), regras de janelas para arredondamento (radius 12) e variáveis de ambiente Wayland.
-- **Tema**: Tema GTK controlado dinamicamente pelo DMS matugen. Ícones `kora` e cursor `Bibata-Modern-Classic` são aplicados declarativamente via GTK e dconf.
-- **WezTerm**: Fonte JetBrainsMono Nerd Font com fallbacks, tema dinâmico via matugen (`dank-theme`).
-- **Zen Browser**: Integração automática do tema DMS via matugen, com symlink para userChrome.css.
+- **DankMaterialShell**: Configured with system monitoring, VPN, dynamic theme (matugen), and native Niri integration.
+- **Niri**: Configured with complementary keyboard shortcuts (Super+1..9 for workspaces, Super+W for Zen Browser), screenshot keybinds (Super+Shift+S, Super+S, Super+Ctrl+S), window rules for rounding (radius 12), and Wayland environment variables.
+- **Theme**: GTK theme dynamically controlled by DMS matugen. `kora` icons and `Bibata-Modern-Classic` cursor are applied declaratively via GTK and dconf.
+- **WezTerm**: JetBrainsMono Nerd Font with fallbacks, dynamic theme via matugen (`dank-theme`).
+- **Zen Browser**: Automatic DMS theme integration via matugen, with symlink to userChrome.css.
 
-## Módulos
+## Modules
 
-| Módulo | Responsabilidade |
+| Module | Responsibility |
 |---|---|
 | `dms.nix` | DankMaterialShell systemd, settings sync via inotifywait |
-| `niri.nix` | Atalhos de teclado, regras de janela, screenshots |
-| `theme.nix` | Ícones kora, cursor Bibata, cor escura |
-| `wezterm.nix` | Nerd Fonts, tema matugen, opacity |
+| `niri.nix` | Keyboard shortcuts, window rules, screenshots |
+| `theme.nix` | kora icons, Bibata cursor, dark mode |
+| `wezterm.nix` | Nerd Fonts, matugen theme, opacity |
 | `zen.nix` | Zen Browser theme sync via userChrome.css |
 
 ## Screenshot Keybinds
 
-| Atalho | Ação |
+| Shortcut | Action |
 |---|---|
-| Super+Shift+S | Screenshot de região selecionada |
-| Super+S | Screenshot de tela inteira |
-| Super+Ctrl+S | Screenshot da janela ativa |
+| Super+Shift+S | Selected region screenshot |
+| Super+S | Fullscreen screenshot |
+| Super+Ctrl+S | Active window screenshot |
 
-Todas as capturas são salvas em `~/Pictures/Screenshots/` com timestamp.
+All captures are saved in `~/Pictures/Screenshots/` with a timestamp.
 
-## Como usar no NixOS
+## How to use on NixOS
 
-Adicione ao seu `flake.nix`:
+Add to your `flake.nix`:
 
 ```nix
 inputs = {
@@ -45,7 +45,7 @@ inputs = {
 };
 ```
 
-No seu `configuration.nix` (Módulo de sistema):
+In your `configuration.nix` (System module):
 
 ```nix
 imports = [
@@ -53,7 +53,7 @@ imports = [
 ];
 ```
 
-No seu `home.nix` (Módulo do usuário):
+In your `home.nix` (User module):
 
 ```nix
 imports = [
