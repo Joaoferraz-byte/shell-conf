@@ -2,6 +2,7 @@
 
 ### Fixed
 - **Wallpaper IPC Keybinds**: Use the documented DMS `wallpaper next` and `wallpaper prev` functions instead of the nonexistent `cycleNext` and `cyclePrevious` names.
+- **Removable Media Automount**: Add a Home Manager `udiskie` service with explicit automount enabled, while the paired system `udisks2` service is declared in nix-conf.
 
 ### Added
 - **Niri Screenshot Keybinds**: Super+Shift+S (region), Super+S (fullscreen), Super+Ctrl+S (window)
