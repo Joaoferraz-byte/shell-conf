@@ -16,17 +16,10 @@
     enableCalendarEvents = true;
     enableClipboardPaste = true;
 
-    niri = {
-      enableKeybinds = true;
-      enableSpawn = false;
-      includes.enable = false;
-    };
 
     # settings e session são declarados pelo consumidor (nix-conf/home/livara/home.nix).
     # Não usar mkForce aqui para permitir que o Home Manager declare
     # wallpaperCycling, wallpaperPath e outras preferências de sessão.
   };
 
-  # Screenshot directory is handled by modules/niri.nix (setupScreenshots).
-  # Avoid duplicate activation entries that would conflict on home-manager switch.
 }
