@@ -13,9 +13,35 @@
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    caelestia-cli = {
+      url = "github:caelestia-dots/cli";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    caelestia-shell = {
+      url = "github:caelestia-dots/shell";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.caelestia-cli.follows = "";
+    };
+
+    m3shapes-src = {
+      url = "github:soramanew/m3shapes";
+      flake = false;
+    };
+
+
   };
 
-  outputs = { self, nixpkgs, dms, niri, ... }@inputs: {
+  outputs = { self, nixpkgs, dms, niri, caelestia-cli, caelestia-shell, m3shapes-src, ... }@inputs: let
+    caelestia-shell-package = { system, withCli }:
+      nixpkgs.legacyPackages.${system}.callPackage ./nix/default.nix {
+        rev = inputs.self.rev or "unknown";
+        caelestia-cli = caelestia-cli.packages.${system}.caelestia-cli;
+        m3shapes = m3shapes-src;
+        inherit withCli;
+      };
+  in {
     # NixOS module: DMS system components (power-profiles-daemon, accounts-daemon,
     # geoclue2, polkit) + Niri compositor
     nixosModules.dankMaterialShell = { ... }: {
@@ -39,5 +65,15 @@
     homeManagerModules.default = import ./modules/default.nix { inherit inputs; };
     homeManagerModules.dankMaterialShell = self.homeManagerModules.default;
     homeManagerModules.caelestia = import ./nix/hm-module.nix self;
+
+    # Caelestia Shell packages
+    packages.x86_64-linux = {
+      default = caelestia-shell-package { system = "x86_64-linux"; withCli = false; };
+      with-cli = caelestia-shell-package { system = "x86_64-linux"; withCli = true; };
+    };
+    packages.aarch64-linux = {
+      default = caelestia-shell-package { system = "aarch64-linux"; withCli = false; };
+      with-cli = caelestia-shell-package { system = "aarch64-linux"; withCli = true; };
+    };
   };
 }
