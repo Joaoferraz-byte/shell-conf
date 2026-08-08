@@ -19,6 +19,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    quickshell = {
+      url = "github:quickshell-mirror/quickshell/staging";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     caelestia-shell = {
       url = "github:caelestia-dots/shell";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -33,12 +38,13 @@
 
   };
 
-  outputs = { self, nixpkgs, dms, niri, caelestia-cli, caelestia-shell, m3shapes-src, ... }@inputs: let
+  outputs = { self, nixpkgs, dms, niri, caelestia-cli, caelestia-shell, m3shapes-src, quickshell, ... }@inputs: let
     caelestia-shell-package = { system, withCli }:
       nixpkgs.legacyPackages.${system}.callPackage ./nix/default.nix {
         rev = inputs.self.rev or "unknown";
         caelestia-cli = caelestia-cli.packages.${system}.caelestia-cli;
         m3shapes = m3shapes-src;
+        quickshell = quickshell.packages.${system}.default;
         inherit withCli;
       };
   in {
