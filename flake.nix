@@ -38,5 +38,6 @@
     # Home Manager module: DMS + Niri + theme
     homeManagerModules.default = import ./modules/default.nix { inherit inputs; };
     homeManagerModules.dankMaterialShell = self.homeManagerModules.default;
+    homeManagerModules.caelestia = import ./nix/hm-module.nix self;
   };
 }
