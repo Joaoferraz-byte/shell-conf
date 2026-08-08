@@ -11,7 +11,6 @@
     inputs.dms.homeModules.niri
 
     ./dms.nix
-    ./niri.nix
     ./theme.nix
     ./storage.nix
     ./wezterm.nix

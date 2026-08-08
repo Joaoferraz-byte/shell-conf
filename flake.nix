@@ -22,6 +22,7 @@
       imports = [
         dms.nixosModules.dank-material-shell
         niri.nixosModules.niri
+        ./modules/niri.nix
       ];
     };
     nixosModules.default = self.nixosModules.dankMaterialShell;
