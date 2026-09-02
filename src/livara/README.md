@@ -1,0 +1,13 @@
+# Livara user-support assets
+
+This directory contains application adapters, templates and small user-session helpers consumed by `shell-conf`'s `homeModules.support`. It is not a compositor, desktop shell, session manager or wallpaper service.
+
+Noctalia v5 owns the visible bar, launcher, panels, wallpaper, theme palette, native templates and shell IPC. The adapter scripts consume the palette rendered by Noctalia under `$XDG_STATE_HOME/livara/theme` and write only documented formats for applications without a native Noctalia template. All generated files are mutable runtime outputs and remain outside this source tree.
+
+Fastfetch uses the transparent cat asset from `src/livara/assets/fastfetch-cat.png`; the Noctalia bar's `control-center` button uses the supplied Japanese Kanji SVG from `noctalia-conf/assets/japanese-kanji.svg`. The theme adapter recolors only the cat's opaque pixels with the active `primary` role and keeps the high-resolution alpha edges intact. Fastfetch sends it through `kitty-direct` with an explicit 16×9 cell box, equal horizontal padding, and a four-row top offset: the 17-row text frame has center 8.5 while the 9-row logo has center 4.5, so the offset aligns both centers. The source content ratio is 1296/1518 ≈ 0.854, close to the terminal-cell-compensated 16×0.5/9 ≈ 0.889.
+
+The runtime contract is dark-first and wallpaper-derived. The Xournal++ adapter writes `palettes/livara.gpl` as a drawing palette only: `crust` and `mantle` are page-surface roles and are excluded, while equal RGB values are emitted once. It also rewrites the native `settings.xml` `colorPalette` property atomically. The `sync-livara-themes` entry point creates Foliate, Freesm Launcher, Heroic and Xournal++ contracts when their application profiles exist. The Livara profile installs cmus as a separate terminal music player; it does not require a theme bridge. The browser adapter links only the Noctalia-generated Firefox CSS into Firefox profiles. Nixvim consumes its palette directly, while Zen Browser CSS, userChrome, profiles, containers and session stores are owned by the declarative `nix-conf`/Noctalia integration.
+
+The tablet status helper reports the physical MTM-1106/T501 USB device and stable external tablet symlinks. Hardware enablement, udev rules, drivers, portals, audio policy and power services remain owned by `nix-conf` and their feature repositories.
+
+The package does not install a second shell process, a second palette generator, a compositor, a wallpaper daemon or an idle daemon. Keyboard bindings and Noctalia IPC calls remain in the declarative Niri module of `nix-conf`.

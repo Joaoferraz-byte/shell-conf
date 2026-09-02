@@ -1,0 +1,527 @@
+    #!/usr/bin/env bash
+    set -Eeuo pipefail
+
+    XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+    XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+    THEME_DIR="${LIVARA_THEME_ROOT:-$XDG_STATE_HOME/livara/theme}"
+    LOG_DIR="$XDG_STATE_HOME/livara/logs"
+    LOG_FILE="$LOG_DIR/theme-sync.log"
+    FOLIATE_CONFIG_HOME="$XDG_CONFIG_HOME/com.github.johnfactotum.Foliate"
+    FOLIATE_FLATPAK_HOME="$HOME/.var/app/com.github.johnfactotum.Foliate/config/com.github.johnfactotum.Foliate"
+    VESKTOP_CONFIG_HOME="$XDG_CONFIG_HOME/vesktop"
+    VESKTOP_FLATPAK_HOME="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
+    XOURNAL_PALETTE_NAME="livara.gpl"
+    FASTFETCH_CAT_SOURCE="${LIVARA_FASTFETCH_CAT_PNG:-$HOME/.local/share/livara/assets/fastfetch-cat.png}"
+    FASTFETCH_CAT_OUTPUT="$THEME_DIR/fastfetch-cat.png"
+    FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
+    # NixVim/Home Manager exposes the generated Lua module under lua/.
+    NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
+    FREESM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/FreesmLauncher"
+    FREESM_FLATPAK_HOME="$HOME/.var/app/org.freesmlauncher.FreesmLauncher/data/FreesmLauncher"
+    mkdir -p "$THEME_DIR" "$LOG_DIR"
+    log() { printf '[%s] %s\n' "$(date --iso-8601=seconds)" "$*" | tee -a "$LOG_FILE"; }
+
+    # The application adapters below consume each ecosystem's documented
+    # format. Matugen owns the shared palette, while this script only writes
+    # formats that the target application actually consumes.
+    if [[ ! -s "$THEME_DIR/palette.json" ]]; then
+      install -m 0644 "${LIVARA_DEFAULT_PALETTE:-$THEME_DIR/bootstrap.json}" "$THEME_DIR/palette.json"
+      log "installed the emergency Livara fallback palette"
+    fi
+    [[ -s "$THEME_DIR/palette.light.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.light.json"
+    [[ -s "$THEME_DIR/palette.dark.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.dark.json"
+
+    json_color() {
+      local key="$1"
+      local fallback="${2:-base}"
+      # palette.dark.json is the single dark-mode source produced from the
+      # current Noctalia wallpaper. palette.json remains only a compatibility copy.
+      jq -r --arg key "$key" --arg fallback "$fallback" '.[$key] // .[$fallback] // .base // "#111318"' "$THEME_DIR/palette.dark.json"
+    }
+
+    hex_to_rgb() {
+      local hex="${1#\#}"
+      [[ "${#hex}" == 6 ]] || hex=000000
+      printf '%d %d %d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+    }
+
+    write_atomic() {
+      local target="$1"
+      local tmp="${target}.tmp.$$"
+      mkdir -p "$(dirname "$target")"
+      cat > "$tmp"
+      chmod 0644 "$tmp"
+      mv -f "$tmp" "$target"
+      }
+
+    sync_fastfetch_cat() {
+      [[ -s "$FASTFETCH_CAT_SOURCE" ]] || {
+        log "Fastfetch cat source not available: $FASTFETCH_CAT_SOURCE"
+        return 0
+      }
+      command -v convert >/dev/null 2>&1 || {
+        log "Fastfetch cat skipped: ImageMagick convert is unavailable"
+        return 0
+      }
+
+      local color source_hash signature current_signature
+      local png_tmp="$FASTFETCH_CAT_OUTPUT.tmp.$$"
+      local state_tmp="$FASTFETCH_CAT_STATE.tmp.$$"
+      color="$(json_color primary blue)"
+      [[ "$color" =~ ^#[[:xdigit:]]{6}$ ]] || color="#7bb7ff"
+      source_hash="$(sha256sum "$FASTFETCH_CAT_SOURCE" | cut -d' ' -f1)"
+      signature="$color $source_hash"
+      current_signature=""
+      [[ -s "$FASTFETCH_CAT_STATE" ]] && current_signature="$(<"$FASTFETCH_CAT_STATE")"
+      if [[ -s "$FASTFETCH_CAT_OUTPUT" && "$current_signature" == "$signature" ]]; then
+        return 0
+      fi
+      if ! convert "$FASTFETCH_CAT_SOURCE" -alpha on -channel RGB -fill "$color" -colorize 100% +channel -strip "PNG32:$png_tmp" >/dev/null 2>&1; then
+        rm -f "$png_tmp" "$state_tmp"
+        log "Fastfetch cat colorization failed"
+        return 0
+      fi
+      chmod 0644 "$png_tmp"
+      printf '%s\n' "$signature" > "$state_tmp"
+      chmod 0644 "$state_tmp"
+      mv -f "$png_tmp" "$FASTFETCH_CAT_OUTPUT"
+      mv -f "$state_tmp" "$FASTFETCH_CAT_STATE"
+      log "Fastfetch cat synchronized: $FASTFETCH_CAT_OUTPUT"
+    }
+
+    sync_fastfetch_cat
+
+    sync_foliate_theme_root() {
+      local root="$1"
+      [[ -n "$root" ]] || return 0
+      local theme="$root/themes/livara.json"
+      mkdir -p "$(dirname "$theme")"
+      write_atomic "$theme" <<EOF
+{
+  "label": "Livara",
+  "light": {
+    "fg": "$(json_color text)",
+    "bg": "$(json_color base)",
+    "link": "$(json_color blue)"
+  },
+  "dark": {
+    "fg": "$(json_color text)",
+    "bg": "$(json_color base)",
+    "link": "$(json_color blue)"
+  }
+}
+EOF
+    }
+
+    sync_foliate_theme_root "$FOLIATE_CONFIG_HOME"
+    [[ -d "$HOME/.var/app/com.github.johnfactotum.Foliate" ]] && sync_foliate_theme_root "$FOLIATE_FLATPAK_HOME"
+
+    # Foliate is a GTK4/libadwaita application, but its reader appearance is
+    # an application-level JSON theme consumed by the WebKit reader. The
+    # selection key belongs to Foliate's GSettings schema
+    # com.github.johnfactotum.Foliate (relocatable child path viewer/view,
+    # key 'theme'). Native and Flatpak installations have separate settings
+    # backends, so never query the host schema on behalf of the Flatpak sandbox.
+    #
+    # On NixOS the Foliate GSettings schema is typically NOT installed in the
+    # host XDG_DATA_DIRS (it lives inside the Foliate package or Flatpak
+    # runtime), so `gsettings` will fail with "No such schema". Use `dconf`
+    # instead, which writes directly to the dconf database without requiring
+    # any schema to be installed. For the Flatpak sandbox, GSettings uses a
+    # keyfile backend at ~/.var/app/.../config/glib-2.0/settings/keyfile;
+    # write to it directly since the sandbox is not running during activation.
+    foliate_dconf_path="/com/github/johnfactotum/Foliate/viewer/view/theme"
+    foliate_keyfile_section="com/github/johnfactotum/Foliate/viewer/view"
+    sync_foliate_theme_selection() {
+      local selected=false
+
+      # Native: write directly to the dconf database. dconf does not need
+      # the GSettings schema to be installed on the host.
+      if command -v dconf >/dev/null 2>&1; then
+        if dconf write "$foliate_dconf_path" "'livara.json'" >/dev/null 2>&1; then
+          log "Foliate native reader theme selected: livara.json"
+          selected=true
+        else
+          log "Foliate native reader theme generated; dconf write failed"
+        fi
+      fi
+
+      # Flatpak: GSettings uses a keyfile backend inside the sandbox. The
+      # keyfile is at ~/.var/app/.../config/glib-2.0/settings/keyfile and
+      # uses dconf-style paths as section headers. Write to it directly so
+      # the setting persists even when the Flatpak is not running.
+      if [[ "$selected" != true ]] &&
+         [[ -d "$HOME/.var/app/com.github.johnfactotum.Foliate" ]]; then
+        local keyfile="$HOME/.var/app/com.github.johnfactotum.Foliate/config/glib-2.0/settings/keyfile"
+        mkdir -p "$(dirname "$keyfile")"
+        touch "$keyfile"
+        # Rewrite the keyfile: replace any existing theme= line in the
+        # target section, or add the section + key if absent. GVariant
+        # strings are single-quoted.
+        awk -v section="$foliate_keyfile_section" '
+          BEGIN { in_section = 0; found = 0 }
+          /^\[/ {
+            if (in_section && !found) { print "theme='\''livara.json'\''"; found = 1 }
+            in_section = ($0 == "[" section "]")
+          }
+          in_section && /^theme=/ { print "theme='\''livara.json'\''"; found = 1; next }
+          { print }
+          END { if (in_section && !found) { print "theme='\''livara.json'\''"; found = 1 } }
+        ' "$keyfile" > "$keyfile.tmp.$$"
+        # Ensure the section exists even if it was not present originally.
+        if ! grep -q "^\[$foliate_keyfile_section\]$" "$keyfile.tmp.$$"; then
+          printf '\n[%s]\ntheme='\''livara.json'\''\n' "$foliate_keyfile_section" >> "$keyfile.tmp.$$"
+        fi
+        mv -f "$keyfile.tmp.$$" "$keyfile"
+        chmod 0644 "$keyfile"
+        log "Foliate Flatpak reader theme selected: livara.json"
+        selected=true
+      fi
+
+      if [[ "$selected" != true ]]; then
+        log "Foliate reader JSON theme generated; no native dconf or Flatpak keyfile backend available"
+      fi
+    }
+    sync_foliate_theme_selection
+
+    # Okular follows KDE's color-scheme preference, not qt6ct's palette alone.
+    # Noctalia owns the generated .colors file; this adapter selects it in the KDE
+    # config without rewriting unrelated KDE application preferences.
+    sync_kde_color_scheme() {
+      local kdeglobals="$XDG_CONFIG_HOME/kdeglobals"
+      local scheme_dir="${XDG_DATA_HOME:-$HOME/.local/share}/color-schemes"
+      local scheme=""
+      if [[ -s "$scheme_dir/DankMatugenDark.colors" ]]; then
+        scheme="DankMatugenDark"
+      elif [[ -s "$scheme_dir/DankMatugen.colors" ]]; then
+        scheme="DankMatugen"
+      fi
+      [[ -n "$scheme" ]] || {
+        log "KDE color scheme not selected: Noctalia .colors file is not generated yet"
+        return 0
+      }
+
+      mkdir -p "$(dirname "$kdeglobals")"
+      if [[ -f "$kdeglobals" ]]; then
+        if grep -q '^\[General\]$' "$kdeglobals"; then
+          if sed -n '/^\[General\]$/,/^\[/p' "$kdeglobals" | grep -q '^ColorScheme='; then
+            sed -i "/^\[General\]$/,/^\[/ s/^ColorScheme=.*/ColorScheme=$scheme/" "$kdeglobals"
+          else
+            sed -i "/^\[General\]$/a ColorScheme=$scheme" "$kdeglobals"
+          fi
+        else
+          printf '\n[General]\nColorScheme=%s\n' "$scheme" >> "$kdeglobals"
+        fi
+      else
+        printf '[General]\nColorScheme=%s\n' "$scheme" > "$kdeglobals"
+      fi
+      log "KDE color scheme selected: $scheme"
+    }
+    sync_kde_color_scheme
+
+    sync_freesm_theme_root() {
+      local root="$1"
+      [[ -n "$root" ]] || return 0
+      local theme_root="$root/themes/livara"
+      local manifest="$theme_root/theme.json"
+      local qss="$theme_root/themeStyle.css"
+      mkdir -p "$theme_root"
+
+      write_atomic "$manifest" <<EOF
+{
+  "name": "Livara",
+  "widgets": "Fusion",
+  "qssFilePath": "themeStyle.css",
+  "colors": {
+    "Window": "$(json_color base)",
+    "WindowText": "$(json_color text)",
+    "Base": "$(json_color base)",
+    "AlternateBase": "$(json_color mantle)",
+    "ToolTipBase": "$(json_color mantle)",
+    "ToolTipText": "$(json_color text)",
+    "Text": "$(json_color text)",
+    "Button": "$(json_color surface0)",
+    "ButtonText": "$(json_color text)",
+    "BrightText": "$(json_color red)",
+    "Link": "$(json_color blue)",
+    "Highlight": "$(json_color blue)",
+    "HighlightedText": "$(json_color crust)",
+    "fadeColor": "$(json_color base)",
+    "fadeAmount": 0.5
+  },
+  "logColors": {
+    "Launcher": "$(json_color mauve)",
+    "Error": "$(json_color red)",
+    "Warning": "$(json_color yellow)",
+    "Debug": "$(json_color green)",
+    "FatalHighlight": "$(json_color red)",
+    "Fatal": "$(json_color crust)"
+  }
+}
+EOF
+      write_atomic "$qss" <<EOF
+/* Livara Freesm Launcher theme; generated from the active wallpaper. */
+QWidget { background-color: $(json_color base); color: $(json_color text); }
+QToolTip { background-color: $(json_color mantle); color: $(json_color text); border: 1px solid $(json_color blue); }
+QPushButton, QComboBox, QSpinBox, QDoubleSpinBox { background-color: $(json_color surface0); color: $(json_color text); border: 1px solid $(json_color overlay0); border-radius: 4px; padding: 4px 8px; }
+QPushButton:hover, QComboBox:hover, QSpinBox:hover, QDoubleSpinBox:hover { background-color: $(json_color surface1); border-color: $(json_color blue); }
+QPushButton:pressed, QPushButton:checked, QAbstractButton:checked { background-color: $(json_color blue); color: $(json_color crust); }
+QLineEdit, QTextEdit, QPlainTextEdit, QListView, QTreeView, QTableView { background-color: $(json_color surface0); color: $(json_color text); border: 1px solid $(json_color overlay0); selection-background-color: $(json_color blue); selection-color: $(json_color crust); }
+QListView::item:hover, QTreeView::item:hover, QTableView::item:hover { background-color: $(json_color surface1); }
+QListView::item:selected, QTreeView::item:selected, QTableView::item:selected { background-color: $(json_color blue); color: $(json_color crust); }
+QHeaderView::section { background-color: $(json_color mantle); color: $(json_color text); border: 1px solid $(json_color overlay0); padding: 4px; }
+QGroupBox { border: 1px solid $(json_color overlay0); margin-top: 8px; padding-top: 8px; }
+QSlider::groove:horizontal, QProgressBar { background-color: $(json_color surface0); border: 1px solid $(json_color overlay0); }
+QSlider::handle:horizontal, QProgressBar::chunk { background-color: $(json_color blue); }
+QScrollBar:vertical, QScrollBar:horizontal { background-color: $(json_color mantle); }
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal { background-color: $(json_color overlay0); border-radius: 4px; }
+QCheckBox::indicator:checked, QRadioButton::indicator:checked { background-color: $(json_color blue); border: 1px solid $(json_color sapphire); }
+EOF
+
+      # Prism/Freesm reads ApplicationTheme from its launcher-root INI and
+      # reloads it only after restart. Prefer the canonical Prism filename;
+      # otherwise update an existing launcher config without touching unrelated
+      # INI files. A missing config is created only for a canonical Prism root.
+      local config=""
+      if [[ "${root##*/}" == "PrismLauncher" ]]; then
+        config="$root/prismlauncher.cfg"
+        if [[ ! -e "$config" ]]; then
+          write_atomic "$config" <<CFG
+[General]
+ApplicationTheme=livara
+CFG
+        fi
+      else
+        while IFS= read -r -d "" candidate; do
+          if grep -q '^ApplicationTheme=' "$candidate"; then
+            config="$candidate"
+            break
+          fi
+        done < <(find "$root" -maxdepth 1 -type f \( -name '*.cfg' -o -name '*.ini' \) -print0 2>/dev/null)
+      fi
+      if [[ -n "$config" ]]; then
+        if grep -q '^ApplicationTheme=' "$config"; then
+          sed -i 's/^ApplicationTheme=.*/ApplicationTheme=livara/' "$config"
+        elif grep -q '^\[General\]$' "$config"; then
+          sed -i '/^\[General\]$/a ApplicationTheme=livara' "$config"
+        fi
+      fi
+    }
+
+    sync_freesm_theme_root "$FREESM_DATA_HOME"
+    [[ -d "$HOME/.var/app/org.freesmlauncher.FreesmLauncher" ]] && sync_freesm_theme_root "$FREESM_FLATPAK_HOME"
+
+    sync_xournal_theme() {
+      local root="$1"
+      local palette="$root/palettes/$XOURNAL_PALETTE_NAME"
+      local palette_tmp="$palette.tmp.$$"
+      mkdir -p "$(dirname "$palette")"
+      {
+        local seen=""
+
+        add_unique_color() {
+          local rgb
+          rgb="$(hex_to_rgb "$(json_color "$1" "${3:-base}")")"
+          if [[ "|$seen|" == *"|$rgb|"* ]]; then
+            return 0
+          fi
+          seen="${seen:+$seen|}$rgb"
+          printf '%s %s\n' "$rgb" "$2"
+        }
+
+        printf '%s\n' 'GIMP Palette' 'Name: Livara' 'Columns: 4' '#'
+        # GPL has no aliases: keep the first semantic role for equal RGB values.
+        # Surface roles such as crust/mantle are intentionally excluded: they
+        # describe the black page/background, not useful pen colors. Keeping
+        # only contrast-bearing roles prevents a dark swatch from becoming a
+        # misleading toolbar choice while preserving deterministic order.
+        add_unique_color text Text
+        add_unique_color primary Primary
+        add_unique_color primary_container 'Primary Container'
+        add_unique_color secondary Secondary
+        add_unique_color tertiary Tertiary
+        add_unique_color error Error
+        add_unique_color red Alert
+        add_unique_color green Success
+        add_unique_color blue Link
+        add_unique_color teal Teal
+        add_unique_color yellow Warning
+        add_unique_color peach Accent
+        add_unique_color mauve Emphasis
+      } | write_atomic "$palette_tmp"
+
+      if grep -Eq '[[:space:]](Crust|Mantle)$' "$palette_tmp"; then
+        rm -f "$palette_tmp"
+        log "Xournal palette rejected: surface role leaked into drawing colors"
+        return 1
+      fi
+      if ! awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) duplicate = 1 } END { exit duplicate }' "$palette_tmp"; then
+        rm -f "$palette_tmp"
+        log "Xournal palette rejected: duplicate RGB entries"
+        return 1
+      fi
+      mv -f "$palette_tmp" "$palette"
+
+      local settings="$root/settings.xml"
+      if [[ ! -e "$settings" ]]; then
+        write_atomic "$settings" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<settings>
+  <property name="colorPalette" value="$palette"/>
+</settings>
+EOF
+        return 0
+      fi
+      [[ -f "$settings" && ! -L "$settings" ]] || return 0
+      local settings_tmp="$settings.tmp.$$"
+      awk -v palette="$palette" '
+        BEGIN { updated = 0 }
+        /<property[[:space:]]+name="colorPalette"/ {
+          printf "  <property name=\"colorPalette\" value=\"%s\"/>\n", palette
+          updated = 1
+          next
+        }
+        /<\/settings>/ && !updated {
+          printf "  <property name=\"colorPalette\" value=\"%s\"/>\n", palette
+          updated = 1
+        }
+        { print }
+      ' "$settings" > "$settings_tmp"
+      mv -f "$settings_tmp" "$settings"
+    }
+
+    if [[ -s "$THEME_DIR/palette.json" ]]; then
+      sync_xournal_theme "$XDG_CONFIG_HOME/xournalpp"
+      [[ -d "$HOME/.var/app/com.github.xournalpp.xournalpp" ]] && sync_xournal_theme "$HOME/.var/app/com.github.xournalpp.xournalpp/config/xournalpp"
+    fi
+
+    sync_vesktop_theme_root() {
+      local root="$1"
+      local source_css="$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css"
+      [[ -s "$source_css" ]] || source_css="$VESKTOP_FLATPAK_HOME/themes/noctalia-material.theme.css"
+      [[ -n "$root" && -d "$root" && -s "$source_css" ]] || return 0
+      local themes_dir="$root/themes"
+      local css="$themes_dir/noctalia-material.theme.css"
+      mkdir -p "$themes_dir"
+      if [[ "$source_css" != "$css" ]]; then
+        cp -f "$source_css" "$css"
+      fi
+      rm -f "$themes_dir/dank-discord.css"
+
+      local settings="$root/settings/settings.json"
+      local tmp="$settings.tmp.$$"
+      mkdir -p "$(dirname "$settings")"
+      if [[ -f "$settings" ]]; then
+        jq '.enabledThemes = (((.enabledThemes // []) - ["dank-discord.css"] + ["noctalia-material.theme.css"]) | unique)' "$settings" > "$tmp"
+      else
+        jq -n '{enabledThemes: ["noctalia-material.theme.css"]}' > "$tmp"
+      fi
+      chmod 0644 "$tmp"
+      mv -f "$tmp" "$settings"
+      log "Official Noctalia Discord theme enabled: $css"
+    }
+
+    # Noctalia owns the generated CSS; this adapter selects it in Vencord
+    # and mirrors the same file into an existing Vesktop Flatpak data root.
+    sync_vesktop_theme_root "$VESKTOP_CONFIG_HOME"
+    [[ -d "$HOME/.var/app/dev.vencord.Vesktop" ]] && sync_vesktop_theme_root "$VESKTOP_FLATPAK_HOME"
+
+    # Noctalia owns the WezTerm template. The external adapter intentionally
+    # does not overwrite or reload the consumer-owned configuration.
+
+    foliate_root="$FOLIATE_CONFIG_HOME"
+    [[ -d "$FOLIATE_FLATPAK_HOME" ]] && foliate_root="$FOLIATE_FLATPAK_HOME"
+    freesm_root="$FREESM_DATA_HOME"
+    [[ -d "$FREESM_FLATPAK_HOME" ]] && freesm_root="$FREESM_FLATPAK_HOME"
+    xournal_root="$XDG_CONFIG_HOME/xournalpp"
+    [[ -d "$HOME/.var/app/com.github.xournalpp.xournalpp/config/xournalpp" ]] && xournal_root="$HOME/.var/app/com.github.xournalpp.xournalpp/config/xournalpp"
+
+    noctalia_applied=false
+    [[ -s "$THEME_DIR/palette.dark.json" ]] && noctalia_applied=true
+
+    nvim_applied=false
+    [[ -s "$NVIM_THEME_PATH" ]] && nvim_applied=true
+
+    foliate_applied=false
+    # Verify via dconf (native) or keyfile (Flatpak). dconf read does not
+    # need the GSettings schema to be installed on the host.
+    if [[ -s "$foliate_root/themes/livara.json" ]]; then
+      if command -v dconf >/dev/null 2>&1 &&
+         [[ "$(dconf read "$foliate_dconf_path" 2>/dev/null || true)" == "'livara.json'" ]]; then
+        foliate_applied=true
+      fi
+      if [[ "$foliate_applied" != true ]] &&
+         [[ -f "$HOME/.var/app/com.github.johnfactotum.Foliate/config/glib-2.0/settings/keyfile" ]]; then
+        foliate_keyfile="$HOME/.var/app/com.github.johnfactotum.Foliate/config/glib-2.0/settings/keyfile"
+        if awk -v section="$foliate_keyfile_section" '
+          BEGIN { in_section = 0 }
+          /^\[/ { in_section = ($0 == "[" section "]") }
+          in_section && /^theme='\''livara.json'\''$/ { found = 1; exit }
+          END { exit !found }
+        ' "$foliate_keyfile" 2>/dev/null; then
+          foliate_applied=true
+        fi
+      fi
+    fi
+
+    kde_applied=false
+    if [[ -s "${XDG_DATA_HOME:-$HOME/.local/share}/color-schemes/DankMatugenDark.colors" ||
+          -s "${XDG_DATA_HOME:-$HOME/.local/share}/color-schemes/DankMatugen.colors" ]] &&
+       grep -q '^ColorScheme=DankMatugen\(Dark\)\?$' "$XDG_CONFIG_HOME/kdeglobals" 2>/dev/null; then
+      kde_applied=true
+    fi
+
+    freesm_applied=false
+    if [[ -s "$freesm_root/themes/livara/theme.json" && -s "$freesm_root/themes/livara/themeStyle.css" ]]; then
+      while IFS= read -r -d "" config; do
+        if grep -q '^ApplicationTheme=livara$' "$config"; then
+          freesm_applied=true
+          break
+        fi
+      done < <(find "$freesm_root" -maxdepth 2 -type f \( -name '*.cfg' -o -name '*.ini' \) -print0 2>/dev/null)
+    fi
+
+    xournal_applied=false
+    if [[ -s "$xournal_root/palettes/livara.gpl" ]] &&
+       grep -q 'name="colorPalette"' "$xournal_root/settings.xml" 2>/dev/null; then
+      xournal_applied=true
+    fi
+
+    fastfetch_applied=false
+    [[ -s "$FASTFETCH_CAT_OUTPUT" ]] && fastfetch_applied=true
+
+    vesktop_applied=false
+    for vesktop_root in "$VESKTOP_CONFIG_HOME" "$VESKTOP_FLATPAK_HOME"; do
+      if [[ -s "$vesktop_root/themes/noctalia-material.theme.css" && -s "$vesktop_root/settings/settings.json" ]] &&
+         jq -e --arg theme "noctalia-material.theme.css" '((.enabledThemes // []) | index($theme)) != null' "$vesktop_root/settings/settings.json" >/dev/null 2>&1; then
+        vesktop_applied=true
+        break
+      fi
+    done
+
+    # The overview distinguishes generated files from confirmed activation.
+    # A file can exist while an app still needs a restart or a selected theme.
+    write_atomic "$THEME_DIR/applied-applications.json" <<EOF
+{
+  "generatedFrom": "Matugen application contracts",
+  "applications": [
+    {"name":"Noctalia template contracts","contract":"Noctalia v5 templates (GTK/Qt/Firefox/Zen/WezTerm/Kitty)","path":"$THEME_DIR/palette.dark.json","applied":$noctalia_applied,"activation":"Noctalia palette template generated"},
+    {"name":"Neovim/NixVim","contract":"matugen_colors.lua + NixVim transparent highlight policy","path":"$NVIM_THEME_PATH","applied":$nvim_applied,"activation":"palette file generated and watched by NixVim"},
+    {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
+    {"name":"KDE/Okular","contract":"Noctalia .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
+    {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
+    {"name":"Xournal++","contract":"palettes/livara.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/livara.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
+    {"name":"Fastfetch","contract":"Noctalia primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
+    {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"}
+  ]
+}
+EOF
+
+    applied_count="$(jq '[.applications[] | select(.applied == true)] | length' "$THEME_DIR/applied-applications.json")"
+    total_count="$(jq '.applications | length' "$THEME_DIR/applied-applications.json")"
+    if [[ "$applied_count" == "$total_count" ]]; then
+      log "theme adapters synchronized: $applied_count/$total_count active contracts (reload is application-specific)"
+    else
+      inactive_contracts="$(jq -r '[.applications[] | select(.applied != true) | .name] | join(", ")' "$THEME_DIR/applied-applications.json")"
+      log "theme adapters generated with activation gaps: $applied_count/$total_count active contracts; inactive: $inactive_contracts"
+    fi
