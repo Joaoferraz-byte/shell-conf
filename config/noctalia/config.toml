@@ -203,6 +203,12 @@ transition_duration = 1500
 transition_on_startup = true
 directory = "~/Wallpapers"
 
+[wallpaper.automation]
+enabled = true
+interval_seconds = 1500
+order = "random"
+recursive = false
+
 [lockscreen]
 enabled = true
 blurred_desktop = false
