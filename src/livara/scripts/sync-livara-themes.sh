@@ -14,6 +14,14 @@
     FASTFETCH_CAT_SOURCE="${LIVARA_FASTFETCH_CAT_PNG:-$HOME/.local/share/livara/assets/fastfetch-cat.png}"
     FASTFETCH_CAT_OUTPUT="$THEME_DIR/fastfetch-cat.png"
     FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
+    INTELLIJ_SCHEME="$THEME_DIR/intellij/Matugen-Dark.icls"
+    INTELLIJ_CONFIG_ROOTS=(
+      "$XDG_CONFIG_HOME/JetBrains"
+      "$XDG_CONFIG_HOME/Google/AndroidStudio"
+    )
+    TELEGRAM_THEME_DIR="$THEME_DIR/telegram"
+    HYDRA_THEME_DIR="$THEME_DIR/hydra/Livara"
+    MATUGEN_CONFIG="$XDG_CONFIG_HOME/matugen/config.toml"
     # NixVim/Home Manager exposes the generated Lua module under lua/.
     NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
     FREESM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/FreesmLauncher"
@@ -90,6 +98,132 @@
     }
 
     sync_fastfetch_cat
+
+    sync_intellij_scheme() {
+      [[ -s "$MATUGEN_CONFIG" ]] || return 0
+      command -v matugen >/dev/null 2>&1 || {
+        log "IntelliJ scheme skipped: Matugen is unavailable"
+        return 0
+      }
+      local primary
+      primary="$(json_color primary blue)"
+      [[ "$primary" =~ ^#[[:xdigit:]]{6}$ ]] || primary="#7bb7ff"
+      mkdir -p "$(dirname "$INTELLIJ_SCHEME")"
+      if ! matugen color hex "$primary" -m dark >/dev/null 2>&1; then
+        log "IntelliJ scheme generation failed"
+        return 0
+      fi
+      log "IntelliJ scheme generated: $INTELLIJ_SCHEME"
+    }
+
+    link_intellij_scheme() {
+      [[ -s "$INTELLIJ_SCHEME" ]] || return 0
+      local config_root
+      for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
+        [[ -d "$config_root" ]] || continue
+        while IFS= read -r -d "" colors_dir; do
+          local target="$colors_dir/Matugen-Dark.icls"
+          if [[ -L "$target" ]]; then
+            local current
+            current="$(readlink -f "$target" 2>/dev/null || true)"
+            [[ "$current" == "$INTELLIJ_SCHEME" ]] && continue
+            rm -f "$target"
+          elif [[ -e "$target" ]]; then
+            continue
+          fi
+          ln -s "$INTELLIJ_SCHEME" "$target"
+        done < <(find "$config_root" -type d -name colors -print0 2>/dev/null)
+      done
+    }
+
+    sync_intellij_scheme
+    link_intellij_scheme
+
+    sync_telegram_theme() {
+      local colors_file="$TELEGRAM_THEME_DIR/colors.tdesktop-theme"
+      local archive="$TELEGRAM_THEME_DIR/Livara.tdesktop-theme"
+      local staging="$TELEGRAM_THEME_DIR/.staging.$$"
+      mkdir -p "$TELEGRAM_THEME_DIR"
+      write_atomic "$colors_file" <<EOF
+windowFg: $(json_color text);
+windowBg: $(json_color base);
+windowBgOver: $(json_color surface0);
+windowBgRipple: $(json_color surface1);
+windowFgOver: $(json_color text);
+windowSubTextFg: $(json_color subtext0);
+windowSubTextFgOver: $(json_color text);
+windowBoldFg: $(json_color text);
+windowBgActive: $(json_color blue);
+windowFgActive: $(json_color crust);
+windowActiveTextFg: $(json_color blue);
+activeButtonBg: $(json_color blue);
+activeButtonBgOver: $(json_color sapphire);
+activeButtonFg: $(json_color crust);
+lightButtonBg: $(json_color surface0);
+lightButtonBgOver: $(json_color surface1);
+lightButtonFg: $(json_color blue);
+attentionButtonFg: $(json_color red);
+menuBg: $(json_color mantle);
+menuBgOver: $(json_color surface1);
+menuFgDisabled: $(json_color overlay0);
+placeholderFg: $(json_color subtext0);
+placeholderFgActive: $(json_color text);
+inputBorderFg: $(json_color overlay0);
+filterInputBorderFg: $(json_color overlay1);
+filterInputInactiveBg: $(json_color surface0);
+sliderBgInactive: $(json_color surface1);
+sliderBgActive: $(json_color blue);
+tooltipBg: $(json_color mantle);
+tooltipFg: $(json_color text);
+titleBg: $(json_color mantle);
+titleBgActive: $(json_color surface0);
+titleButtonCloseBgOver: $(json_color red);
+boxBg: $(json_color mantle);
+boxTextFg: $(json_color text);
+EOF
+      rm -rf "$staging"
+      mkdir -p "$staging"
+      cp "$colors_file" "$staging/colors.tdesktop-theme"
+      if command -v zip >/dev/null 2>&1; then
+        (cd "$staging" && zip -q -X "$archive" colors.tdesktop-theme)
+        rm -rf "$staging"
+        log "Telegram Desktop theme generated: $archive"
+      else
+        rm -rf "$staging"
+        log "Telegram Desktop theme colors generated; zip is unavailable"
+      fi
+    }
+
+    sync_hydra_theme() {
+      mkdir -p "$HYDRA_THEME_DIR"
+      write_atomic "$HYDRA_THEME_DIR/theme.css" <<EOF
+:root {
+  --livara-background: $(json_color base);
+  --livara-surface: $(json_color surface0);
+  --livara-surface-raised: $(json_color surface1);
+  --livara-text: $(json_color text);
+  --livara-muted: $(json_color subtext0);
+  --livara-primary: $(json_color blue);
+  --livara-secondary: $(json_color teal);
+  --livara-error: $(json_color red);
+}
+
+html, body, #root { background: var(--livara-background) !important; color: var(--livara-text) !important; }
+button, input, select, textarea, [role="button"] { background: var(--livara-surface) !important; color: var(--livara-text) !important; border-color: $(json_color overlay0) !important; }
+button:hover, [role="button"]:hover { background: var(--livara-surface-raised) !important; border-color: var(--livara-primary) !important; }
+a, [data-state="active"], .active { color: var(--livara-primary) !important; }
+.error, [data-variant="error"] { color: var(--livara-error) !important; }
+EOF
+      write_atomic "$HYDRA_THEME_DIR/README.txt" <<EOF
+Livara Hydra theme generated from the active Noctalia palette.
+
+Hydra theme files are repository-backed. Copy theme.css into a theme directory and submit it through the official hydra-themes workflow if publication is desired.
+EOF
+      log "Hydra theme source generated: $HYDRA_THEME_DIR"
+    }
+
+    sync_telegram_theme
+    sync_hydra_theme
 
     sync_foliate_theme_root() {
       local root="$1"
@@ -498,6 +632,20 @@ EOF
         break
       fi
     done
+    intellij_applied=false
+    for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
+      if [[ -s "$INTELLIJ_SCHEME" && -d "$config_root" ]] &&
+         find "$config_root" -type l -path '*/colors/Matugen-Dark.icls' -print -quit 2>/dev/null | grep -q .; then
+        intellij_applied=true
+        break
+      fi
+    done
+
+    telegram_applied=false
+    [[ -s "$TELEGRAM_THEME_DIR/Livara.tdesktop-theme" ]] && telegram_applied=true
+
+    hydra_applied=false
+    [[ -s "$HYDRA_THEME_DIR/theme.css" ]] && hydra_applied=true
 
     # The overview distinguishes generated files from confirmed activation.
     # A file can exist while an app still needs a restart or a selected theme.
@@ -512,7 +660,10 @@ EOF
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
     {"name":"Xournal++","contract":"palettes/livara.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/livara.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
     {"name":"Fastfetch","contract":"Noctalia primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
-    {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"}
+    {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"},
+    {"name":"IntelliJ IDEA and Android Studio","contract":"Matugen generated .icls + JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":$intellij_applied,"activation":"colors directories discovered and linked"},
+    {"name":"Telegram Desktop","contract":"Matugen-generated ZIP .tdesktop-theme for manual import","path":"$TELEGRAM_THEME_DIR/Livara.tdesktop-theme","applied":$telegram_applied,"activation":"theme package generated; import remains user-controlled"},
+    {"name":"Hydra Launcher","contract":"Matugen-generated theme.css source for official hydra-themes workflow","path":"$HYDRA_THEME_DIR/theme.css","applied":$hydra_applied,"activation":"local source generated; store publication remains user-controlled"}
   ]
 }
 EOF

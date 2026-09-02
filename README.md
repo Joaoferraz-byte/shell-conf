@@ -1,36 +1,30 @@
-# Livara shell integration
+# Livara shell support
 
-This repository owns shell-independent user support and the curated Noctalia integration for the Livara desktop. `noctalia-conf` owns the local Noctalia runtime contract; this repository consumes that runtime and owns the user-facing policy around its configuration, templates, plugins, palette adapters, application integrations, and helper programs.
+This repository is the intermediary integration layer for the Livara desktop. It imports the complete customized Noctalia module from `noctalia-conf` and connects that shell to session helpers, application adapters, GTK preferences, browser profiles and the host-specific Home Manager composition.
 
 ## Ownership model
 
 | Responsibility | Owner | Interface |
 | --- | --- | --- |
-| Host, hardware, drivers, services, Niri, PipeWire, and system capabilities | `nix-conf` | NixOS and Home Manager modules |
-| Upstream Noctalia package and local runtime policy | `noctalia-conf` | `packages.default`, `homeModules.default` |
-| Noctalia TOML, user templates, reviewed plugin sources, and visual policy | This repository | `programs.noctalia`, `config/noctalia`, and `plugins/*` |
-| Application adapters and shell-independent user support | This repository | `homeModules.support` |
+| Host, hardware, drivers, services, Niri, PipeWire and system capabilities | `nix-conf` | NixOS and Home Manager modules |
+| Noctalia runtime, settings, wallpaper policy, templates, plugins and shell assets | `noctalia-conf` | `packages.default`, `homeModules.default` |
+| Session helpers, application adapters and shell-independent support | This repository | `homeModules.support` |
 | NixVim configuration and editor workflow | `vim-conf` | NixVim module consuming generated palette data |
+| Markdown notes and source material | `Vault` | Versioned files and user data |
 
-The exported `homeModules.support` imports the runtime module from `noctalia-conf`, enables exactly one Noctalia process through the Niri-owned startup path, materializes the curated configuration and reviewed plugin sources, and provides application adapters. It does not write compositor configuration or start a second shell lifecycle.
-
-## Noctalia integration
-
-The curated configuration is stored under `config/noctalia/config.toml`. Its template paths are resolved during evaluation and its mutable settings remain under the Noctalia state directory. Plugins are stored under `plugins/` and installed as Home Manager data files. Community templates remain pinned as a flake input and are not fetched during activation.
-
-The generated Niri include is a visual bridge only: compositor policy stays in `nix-conf`, while the Noctalia palette supplies colors. The two repositories share the same border-width contract and the integration check rejects drift.
+The exported `homeModules.support` imports `noctalia-conf.homeModules.default`. It does not define `programs.noctalia.settings`, install Noctalia plugins, copy Noctalia templates, or start a second shell lifecycle. Niri starts the single Noctalia process through its declarative session edge in `nix-conf`.
 
 ## Shell-independent support
 
-The module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The Vault repository owns Markdown notes, `vim-conf` owns the editor, and Niri remains owned by `nix-conf`.
+The module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The generated palette is consumed as runtime state under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store.
 
 ## Validation
 
-Run `nix flake check --no-build --no-update-lock-file --all-systems` in this repository and in `nix-conf`. Validate shell scripts with `bash -n` and `shellcheck`, inspect the generated Noctalia TOML and plugin manifests, and verify on hardware that Niri starts one Noctalia process, the wallpaper palette updates, and the application adapters remain outside the Nix store's mutable state.
+Run `nix flake check --no-build --no-update-lock-file --all-systems` in this repository, `noctalia-conf` and `nix-conf`. Validate shell scripts with `bash -n` and `shellcheck`, validate the Noctalia TOML through the Noctalia check in `noctalia-conf`, and verify on hardware that Niri starts one Noctalia process, manual wallpaper selection updates the palette, and application adapters remain outside the store's mutable state.
 
 ## References
 
 [1]: https://docs.noctalia.dev/noctalia/ "Noctalia v5 documentation"
-[2]: https://docs.noctalia.dev/noctalia/configuration/ "Noctalia v5 configuration"
-[3]: https://docs.noctalia.dev/noctalia/compositor-settings/niri/ "Noctalia v5 Niri integration"
-[4]: https://github.com/noctalia-dev/official-plugins "Official Noctalia plugins"
+[2]: https://docs.noctalia.dev/noctalia/getting-started/nixos/ "Noctalia v5 NixOS and Home Manager"
+[3]: https://docs.noctalia.dev/noctalia/theming/app-theming/ "Noctalia v5 application theming"
+[4]: https://github.com/noctalia-dev/official-plugins "Noctalia official plugins"

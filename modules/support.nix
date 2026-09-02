@@ -1,16 +1,6 @@
-{ config, lib, pkgs, desktopProfile ? { }, noctaliaRuntime, noctaliaCommunityTemplates, ... }:
+{ config, lib, pkgs, desktopProfile ? { }, noctaliaRuntime, ... }:
 let
   source = ../src/livara;
-  noctaliaConfig = ../config/noctalia;
-  noctaliaPlugins = ../plugins;
-  batteryOnBar = (desktopProfile.monitorProfile or null) == "latitude";
-  barEnd = if batteryOnBar
-    then ''end = ["media", "bar", "recorder", "notifications", "battery", "session"]''
-    else ''end = ["media", "bar", "recorder", "notifications", "session"]'';
-  noctaliaSettings = pkgs.writeText "noctalia-config.toml" (builtins.replaceStrings
-    [ "@NOCTALIA_PALETTE_TEMPLATE@" "@NOCTALIA_NVIM_TEMPLATE@" "@NOCTALIA_FIREFOX_TEMPLATE@" "@NOCTALIA_ZEN_TEMPLATE@" "@NOCTALIA_CONTROL_CENTER_ICON@" "@NOCTALIA_DISCORD_TEMPLATE@" "@NOCTALIA_HEROIC_TEMPLATE@" "@NOCTALIA_PRISM_TEMPLATE@" "@NOCTALIA_NIRI_TEMPLATE@" "end = [\"media\", \"bar\", \"recorder\", \"notifications\", \"session\"]" ]
-    [ "${noctaliaConfig}/templates/livara-palette.json" "${noctaliaConfig}/templates/nvim-base16.lua" "${noctaliaConfig}/templates/firefox.css" "${noctaliaConfig}/templates/zen-userchrome.css" "${../assets/japanese-kanji.svg}" "${noctaliaCommunityTemplates}/discord/discord-material.css" "${noctaliaCommunityTemplates}/heroiclauncher/heroic.css" "${noctaliaCommunityTemplates}/prismlauncher/prismlauncher.json" "${noctaliaConfig}/templates/niri.kdl" barEnd ]
-    (builtins.readFile (noctaliaConfig + "/config.toml")));
   themeRoot = "${config.xdg.stateHome}/livara/theme";
   weztermDpi = if (desktopProfile.monitorProfile or "myMachine") == "latitude" then
     "config.dpi = 96"
@@ -23,7 +13,7 @@ let
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
-    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq procps wezterm flatpak dconf ];
+    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps wezterm flatpak dconf zip ];
     text = builtins.readFile syncSource;
   };
 
@@ -107,23 +97,6 @@ let
 in
 {
   imports = [ noctaliaRuntime.homeModules.default ];
-
-  programs.noctalia = {
-    enable = true;
-    systemd.enable = false;
-    checkConfig = true;
-    settings = noctaliaSettings;
-  };
-
-  xdg.dataFile = {
-    "noctalia/plugins/cat".source = noctaliaPlugins + "/cat";
-    "noctalia/plugins/screen_recorder".source = noctaliaPlugins + "/screen_recorder";
-    "noctalia/plugins/timer".source = noctaliaPlugins + "/timer";
-    "noctalia/plugins/screen_toolkit".source = noctaliaPlugins + "/screen_toolkit";
-    "noctalia/plugins/gamer_mode".source = noctaliaPlugins + "/gamer_mode";
-    "noctalia/plugins/prismlauncher_instances".source = noctaliaPlugins + "/prismlauncher_instances";
-    "noctalia/plugins/bitwarden".source = noctaliaPlugins + "/bitwarden";
-  };
 
   home.packages = [
     pkgs.jq
@@ -250,6 +223,10 @@ in
       "Freesm Launcher"
       "Heroic/Prism: Noctalia templates pinados"
       "Xournal++"
+      "IntelliJ IDEA and Android Studio: generated Matugen ICLS"
+      "Telegram Desktop: generated tdesktop-theme import"
+      "Hydra Launcher: generated theme.css for upstream submission"
+      "Spotify/Spicetify: declarative Livara theme and pinned Adblockify"
     ];
   };
 

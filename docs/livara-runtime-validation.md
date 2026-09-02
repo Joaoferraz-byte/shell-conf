@@ -74,12 +74,16 @@ After selecting another wallpaper through Noctalia, the generated `matugen_color
 find "${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme/browser" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.config/vesktop/themes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.config/xournalpp/palettes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
+find "$THEME_ROOT/telegram" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
+find "$THEME_ROOT/hydra/Livara" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Noctalia.toml ~/.config/nvim/lua/matugen_colors.lua; do
   test -s "$file" && printf 'ok %s\n' "$file" || printf 'missing %s\n' "$file"
 done
 ```
 
 Firefox profiles may link `userChrome.css` to the Noctalia-generated Firefox output through the shell bridge. Zen Browser `userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf`/Noctalia integration and must be validated under each of `~/.config/zen/{personal,school,programming,hobby}`. Native GTK, Qt, Kitty and WezTerm files are owned by Noctalia templates; `shell-conf` must not overwrite those outputs with a static theme.
+
+The theme adapter should report Telegram Desktop as generated when `telegram/Livara.tdesktop-theme` exists; selecting it is intentionally manual. Hydra should report `hydra/Livara/theme.css` as generated; publishing it requires the official `hydra-themes` workflow. IntelliJ IDEA and Android Studio should discover a `Matugen-Dark.icls` link under their versioned `colors` directories. Spotify should be provided by the Home Manager `programs.spicetify` module, not by cmus or an imperative player setup.
 
 ## Niri and input
 

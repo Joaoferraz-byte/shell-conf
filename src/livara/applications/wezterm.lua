@@ -1,23 +1,12 @@
--- WezTerm configuration for niri.
---
--- Forces XWayland (enable_wayland = false) to work around WezTerm's
--- Wayland/niri sizing bugs (#7886, #4708, #6472): on native Wayland
--- WezTerm ignores niri's default-column-width and opens at 80 columns,
--- shifting the viewport.  Through XWayland niri sizes the window like
--- any other X11 client.  The Noctalia-generated color scheme
--- (~/.config/wezterm/colors/Noctalia.toml) is loaded by name.
-
 local wezterm = require("wezterm")
 local config = wezterm.config_builder()
 
-config.enable_wayland = false
 -- Host-specific DPI is inserted by the Home Manager support module.
 -- @LIVARA_WEZTERM_DPI@
 -- Fastfetch uses the Kitty graphics protocol for the dynamic Matugen-colored cat PNG.
 config.enable_kitty_graphics = true
 config.adjust_window_size_when_changing_font_size = false
--- Let niri choose the window geometry; snapping to cell increments can make
--- the first XWayland configure event appear to have a different scale.
+-- Let niri choose the window geometry.
 config.use_resize_increments = false
 config.window_decorations = "RESIZE"
 config.window_close_confirmation = "NeverPrompt"
