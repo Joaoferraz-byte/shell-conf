@@ -93,7 +93,7 @@
       };
 
       flake.homeModules = rec {
-        support = moduleArgs:
+        support = moduleArgs@{ ... }:
           import ./modules/support.nix (moduleArgs // {
             inherit noctaliaRuntime;
             noctaliaCommunityTemplates = communityTemplates;
