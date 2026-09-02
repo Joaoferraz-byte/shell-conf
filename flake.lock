@@ -94,11 +94,11 @@
         "noctalia": "noctalia"
       },
       "locked": {
-        "lastModified": 1788350340,
-        "narHash": "sha256-EXeR2IPKmUtrzxI5Z0Lo7+WlZuKZwkkeQ+ESsM7bt2Y=",
+        "lastModified": 1788350843,
+        "narHash": "sha256-Wyd2MhWQ93wT0U2BcMhFroUU5vYnh9XZFqOXNTXSgeY=",
         "owner": "Joaoferraz-byte",
         "repo": "noctalia-conf",
-        "rev": "1acf2220d5ee745e3aedfe92b74da7e7c6d13d78",
+        "rev": "6acc2fdb8c4bdc6694961a01c21e23c0d407d5a9",
         "type": "github"
       },
       "original": {
