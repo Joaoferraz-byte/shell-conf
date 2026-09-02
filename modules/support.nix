@@ -21,17 +21,10 @@ let
     [ weztermDpi ]
     (builtins.readFile (source + "/applications/wezterm.lua")));
   syncSource = source + "/scripts/sync-livara-themes.sh";
-  browserSyncSource = source + "/scripts/sync-noctalia-browser-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
     runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq procps wezterm flatpak dconf ];
     text = builtins.readFile syncSource;
-  };
-
-  syncNoctaliaBrowserThemes = pkgs.writeShellApplication {
-    name = "sync-noctalia-browser-themes";
-    runtimeInputs = with pkgs; [ bash coreutils findutils gnugrep gnused ];
-    text = builtins.readFile browserSyncSource;
   };
 
 
@@ -135,7 +128,6 @@ in
   home.packages = [
     pkgs.jq
     syncThemes
-    syncNoctaliaBrowserThemes
     tabletStatus
     xournalNewNote
     dailyNote
@@ -207,7 +199,6 @@ in
 
   xdg.configFile."wezterm/wezterm.lua".source = weztermConfig;
   home.file.".local/bin/sync-livara-themes".source = "${syncThemes}/bin/sync-livara-themes";
-  home.file.".local/bin/sync-noctalia-browser-themes".source = "${syncNoctaliaBrowserThemes}/bin/sync-noctalia-browser-themes";
   home.file.".local/share/livara/bootstrap.json".source = bootstrapPalette;
   home.file.".local/share/livara/assets/fastfetch-cat.png".source = fastfetchCatSource;
   home.file.".local/share/livara/scripts/open-zen.sh".source = source + "/scripts/open-zen.sh";
@@ -231,13 +222,6 @@ in
     mimeType = [ "text/html" "x-scheme-handler/http" "x-scheme-handler/https" ];
     startupNotify = true;
   };
-
-
-  home.activation.syncNoctaliaBrowserThemes = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    $DRY_RUN_CMD "${syncNoctaliaBrowserThemes}/bin/sync-noctalia-browser-themes" || true
-  '';
-
-
   xdg.configFile."gtk-3.0/settings.ini".text = ''
     [Settings]
     gtk-icon-theme-name=Livara-Kora
