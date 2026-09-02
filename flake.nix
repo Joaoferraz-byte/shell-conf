@@ -93,11 +93,11 @@
       };
 
       flake.homeModules = rec {
-        support = moduleArgs@{ ... }:
-          import ./modules/support.nix (moduleArgs // {
-            inherit noctaliaRuntime;
+        support = { config, lib, pkgs, desktopProfile ? { }, ... }:
+          import ./modules/support.nix {
+            inherit config lib pkgs desktopProfile noctaliaRuntime;
             noctaliaCommunityTemplates = communityTemplates;
-          });
+          };
         default = support;
       };
     };
