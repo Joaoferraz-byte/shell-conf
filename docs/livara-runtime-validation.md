@@ -75,7 +75,8 @@ find "${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme/browser" -maxdepth 1 -t
 find ~/.config/vesktop/themes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.config/xournalpp/palettes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find "$THEME_ROOT/telegram" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find "$THEME_ROOT/hydra/Livara" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
+find "$THEME_ROOT/hydra-export/themes" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
+find "${XDG_CONFIG_HOME:-$HOME/.config}/spicetify/Themes/Livara" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Noctalia.toml ~/.config/nvim/lua/matugen_colors.lua; do
   test -s "$file" && printf 'ok %s\n' "$file" || printf 'missing %s\n' "$file"
 done
@@ -83,7 +84,7 @@ done
 
 Firefox profiles may link `userChrome.css` to the Noctalia-generated Firefox output through the shell bridge. Zen Browser `userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf`/Noctalia integration and must be validated under each of `~/.config/zen/{personal,school,programming,hobby}`. Native GTK, Qt, Kitty and WezTerm files are owned by Noctalia templates; `shell-conf` must not overwrite those outputs with a static theme.
 
-The theme adapter should report Telegram Desktop as generated when `telegram/Livara.tdesktop-theme` exists; selecting it is intentionally manual. Hydra should report `hydra/Livara/theme.css` as generated; publishing it requires the official `hydra-themes` workflow. IntelliJ IDEA and Android Studio should discover a `Matugen-Dark.icls` link under their versioned `colors` directories. Spotify should be provided by the Home Manager `programs.spicetify` module, not by cmus or an imperative player setup.
+The theme adapter should report Telegram Desktop as generated when `telegram/Livara.tdesktop-theme` exists; selecting it is intentionally manual. Hydra should report `hydra-export/themes/<name>-<friend-code>/theme.css` as generated and should mark submission readiness only when a personal friend code and a valid screenshot are present. IntelliJ IDEA and Android Studio should discover a `Matugen-Dark.icls` link under their versioned `colors` directories. Spotify should expose a Noctalia-generated `Themes/Livara/color.ini`; its serialized apply hook requires a writable Spicetify installation, while the Home Manager `programs.spicetify` package remains the immutable fallback.
 
 ## Niri and input
 
@@ -124,3 +125,23 @@ A live session should open the NixOS repository without asking for a key. This c
 ## Matugen/NixVim path contract
 
 NixVim/Home Manager generates the editable palette module at `~/.config/nvim/lua/matugen_colors.lua`. The theme synchronization script must write to that exact path; writing to `~/.config/nvim/matugen_colors.lua` leaves the editor using a stale or missing palette. The shell validator checks both the producer path and the absence of the legacy root-level path.
+
+## Application state and false-positive checks
+
+The generated report at `$THEME_ROOT/applied-applications.json` distinguishes `generated`, `available`, `installed`, `submissionReady` and `applied`. A generated file is not evidence that an application selected or reloaded it. In particular, Telegram Desktop remains `generated=true, applied=false` until the `.tdesktop-theme` archive is imported through Telegram's theme UI; IntelliJ IDEA and Android Studio remain available/installed but not applied because their UI/editor selections are controlled by the IDE; Hydra remains generated and optionally submission-ready but is not marked applied because selection and publication are controlled by the launcher and its repository workflow.
+
+Spicetify is the only one of these adapters that can confirm activation non-interactively. The adapter selects `current_theme=Livara`, runs `spicetify -q apply --no-restart`, and marks `applied=true` only when the command succeeds and `config-xpui.ini` exists. A failed or unwritable runtime leaves the theme marked generated but not applied.
+
+```bash
+THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
+jq '.applications[] | {name, generated, available, installed, submissionReady, applied}' "$THEME_ROOT/applied-applications.json"
+printf '\n--- Spicetify ---\n'
+spicetify config current_theme 2>/dev/null || true
+test -s "${XDG_CONFIG_HOME:-$HOME/.config}/spicetify/Themes/Livara/color.ini"
+printf '\n--- Telegram import package ---\n'
+unzip -l "$THEME_ROOT/telegram/Livara.tdesktop-theme" 2>/dev/null || true
+printf '\n--- IDE availability ---\n'
+find "${XDG_CONFIG_HOME:-$HOME/.config}/JetBrains" "${XDG_CONFIG_HOME:-$HOME/.config}/Google" -path '*/colors/Matugen-Dark.icls' -print 2>/dev/null
+```
+
+The CSS adapter can theme Spotify's web content, including the main view and web topbar selectors. It cannot control a native Wayland/X11 titlebar drawn outside Spotify's web UI; a remaining white system decoration must be diagnosed through compositor/window-decoration settings rather than by adding more Spicetify selectors.

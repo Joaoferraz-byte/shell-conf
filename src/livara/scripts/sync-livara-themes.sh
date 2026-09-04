@@ -16,11 +16,29 @@
     FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
     INTELLIJ_SCHEME="$THEME_DIR/intellij/Matugen-Dark.icls"
     INTELLIJ_CONFIG_ROOTS=(
+      "${IDEA_CONFIG_PATH:-}"
       "$XDG_CONFIG_HOME/JetBrains"
-      "$XDG_CONFIG_HOME/Google/AndroidStudio"
+      "$XDG_CONFIG_HOME/Google"
     )
+    INTELLIJ_DATA_ROOTS=(
+      "${IDEA_DATA_PATH:-}"
+      "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains"
+      "${XDG_DATA_HOME:-$HOME/.local/share}/Google"
+    )
+    INTELLIJ_THEME_PLUGIN="${LIVARA_IDE_THEME_PLUGIN:-}"
+    HYDRA_THEME_NAME="${LIVARA_HYDRA_THEME_NAME:-Livara}"
+    HYDRA_FRIEND_CODE="${LIVARA_HYDRA_FRIEND_CODE:-}"
+    case "$HYDRA_THEME_NAME" in
+      ""|*/*|*\\*) HYDRA_THEME_NAME="Livara" ;;
+    esac
+    [[ "$HYDRA_FRIEND_CODE" =~ ^[[:alnum:]]+$ ]] || HYDRA_FRIEND_CODE=""
+    HYDRA_THEME_ID="$HYDRA_THEME_NAME-${HYDRA_FRIEND_CODE:-local}"
     TELEGRAM_THEME_DIR="$THEME_DIR/telegram"
-    HYDRA_THEME_DIR="$THEME_DIR/hydra/Livara"
+    HYDRA_THEME_DIR="$THEME_DIR/hydra-export/themes/$HYDRA_THEME_ID"
+    HYDRA_SCREENSHOT_SOURCE="${LIVARA_HYDRA_SCREENSHOT:-}"
+    HYDRA_SCREENSHOT="$HYDRA_THEME_DIR/screenshot.png"
+    SPICETIFY_THEME_PATH="$XDG_CONFIG_HOME/spicetify/Themes/Livara/color.ini"
+    SPICETIFY_CONFIG_PATH="$XDG_CONFIG_HOME/spicetify/config-xpui.ini"
     MATUGEN_CONFIG="$XDG_CONFIG_HOME/matugen/config.toml"
     # NixVim/Home Manager exposes the generated Lua module under lua/.
     NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
@@ -113,31 +131,121 @@
         log "IntelliJ scheme generation failed"
         return 0
       fi
+      if [[ ! -s "$INTELLIJ_SCHEME" ]] || ! grep -qE '^<scheme[[:space:]]+name=' "$INTELLIJ_SCHEME"; then
+        log "IntelliJ scheme rejected because the generated file is not a valid scheme"
+        return 0
+      fi
       log "IntelliJ scheme generated: $INTELLIJ_SCHEME"
     }
 
+    intellij_linked=false
+    android_studio_linked=false
+    intellij_ui_theme_installed=false
+    android_studio_ui_theme_installed=false
+
     link_intellij_scheme() {
       [[ -s "$INTELLIJ_SCHEME" ]] || return 0
-      local config_root
+      local config_root product_root product_name colors_dir target current
       for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
-        [[ -d "$config_root" ]] || continue
-        while IFS= read -r -d "" colors_dir; do
-          local target="$colors_dir/Matugen-Dark.icls"
+        [[ -n "$config_root" && -d "$config_root" ]] || continue
+        while IFS= read -r -d "" product_root; do
+          product_name="$(basename "$product_root")"
+          colors_dir="$product_root/colors"
+          mkdir -p "$colors_dir"
+          target="$colors_dir/Matugen-Dark.icls"
           if [[ -L "$target" ]]; then
-            local current
             current="$(readlink -f "$target" 2>/dev/null || true)"
-            [[ "$current" == "$INTELLIJ_SCHEME" ]] && continue
-            rm -f "$target"
+            if [[ "$current" != "$INTELLIJ_SCHEME" ]]; then
+              rm -f "$target"
+            fi
           elif [[ -e "$target" ]]; then
             continue
           fi
-          ln -s "$INTELLIJ_SCHEME" "$target"
-        done < <(find "$config_root" -type d -name colors -print0 2>/dev/null)
+          if [[ ! -e "$target" ]]; then
+            ln -s "$INTELLIJ_SCHEME" "$target"
+          fi
+          case "$product_name" in
+            IntelliJIdea*) intellij_linked=true ;;
+            AndroidStudio*) android_studio_linked=true ;;
+          esac
+        done < <(if [[ "$config_root" == */IntelliJIdea* || "$config_root" == */AndroidStudio* ]]; then printf '%s\0' "$config_root"; else find "$config_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null; fi)
+      done
+    }
+
+    install_intellij_ui_theme() {
+      [[ -d "$INTELLIJ_THEME_PLUGIN" && -s "$INTELLIJ_THEME_PLUGIN/META-INF/plugin.xml" ]] || {
+        log "IDE UI theme skipped: LIVARA_IDE_THEME_PLUGIN is unavailable"
+        return 0
+      }
+      local theme_plugin="$THEME_DIR/intellij/LivaraTheme"
+      mkdir -p "$theme_plugin/META-INF" "$theme_plugin/theme"
+      cp -f "$INTELLIJ_THEME_PLUGIN/META-INF/plugin.xml" "$theme_plugin/META-INF/plugin.xml"
+      write_atomic "$theme_plugin/theme/Livara.theme.json" <<EOF
+{
+  "name": "Livara Dark",
+  "dark": true,
+  "author": "Joaoferraz-byte",
+  "editorScheme": "Matugen-Dark",
+  "ui": { "*": {
+    "Panel.background": "$(json_color base)",
+    "ToolWindow.background": "$(json_color mantle)",
+    "EditorTabs.background": "$(json_color mantle)",
+    "EditorTabs.selectedBackground": "$(json_color surface0)",
+    "TabbedPane.background": "$(json_color mantle)",
+    "TabbedPane.selectedBackground": "$(json_color surface0)",
+    "Button.background": "$(json_color surface0)",
+    "Button.hoverBackground": "$(json_color surface1)",
+    "Button.foreground": "$(json_color text)",
+    "Label.foreground": "$(json_color text)",
+    "TextField.background": "$(json_color surface0)",
+    "TextField.foreground": "$(json_color text)",
+    "List.background": "$(json_color base)",
+    "List.foreground": "$(json_color text)",
+    "Tree.background": "$(json_color base)",
+    "Tree.foreground": "$(json_color text)",
+    "Link.activeForeground": "$(json_color blue)",
+    "ProgressBar.foreground": "$(json_color blue)",
+    "ProgressBar.background": "$(json_color surface1)",
+    "Component.focusColor": "$(json_color blue)",
+    "Borders.color": "$(json_color surface1)",
+    "ScrollBar.thumbColor": "$(json_color overlay0)"
+  } }
+}
+EOF
+      if ! jq -e '.name == "Livara Dark" and .dark == true and (.ui | type == "object")' "$theme_plugin/theme/Livara.theme.json" >/dev/null 2>&1; then
+        log "IDE UI theme rejected because the generated JSON is invalid"
+        return 0
+      fi
+      local data_root product_root product_name plugins_dir target current
+      for data_root in "${INTELLIJ_DATA_ROOTS[@]}"; do
+        [[ -n "$data_root" && -d "$data_root" ]] || continue
+        while IFS= read -r -d "" product_root; do
+          product_name="$(basename "$product_root")"
+          plugins_dir="$product_root/plugins"
+          target="$plugins_dir/LivaraTheme"
+          mkdir -p "$plugins_dir"
+          if [[ -L "$target" ]]; then
+            current="$(readlink -f "$target" 2>/dev/null || true)"
+            [[ "$current" == "$theme_plugin" ]] || rm -f "$target"
+          elif [[ -e "$target" ]]; then
+            continue
+          fi
+          [[ -e "$target" ]] || ln -s "$theme_plugin" "$target"
+          case "$product_name" in
+            IntelliJIdea*) intellij_ui_theme_installed=true ;;
+            AndroidStudio*) android_studio_ui_theme_installed=true ;;
+          esac
+        done < <(if [[ "$data_root" == */IntelliJIdea* || "$data_root" == */AndroidStudio* ]]; then
+          printf '%s\0' "$data_root"
+        else
+          find "$data_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null
+        fi)
       done
     }
 
     sync_intellij_scheme
     link_intellij_scheme
+    install_intellij_ui_theme
 
     sync_telegram_theme() {
       local colors_file="$TELEGRAM_THEME_DIR/colors.tdesktop-theme"
@@ -196,6 +304,24 @@ EOF
 
     sync_hydra_theme() {
       mkdir -p "$HYDRA_THEME_DIR"
+      local screenshot_name="screenshot.png"
+      rm -f "$HYDRA_THEME_DIR"/screenshot.*
+      if [[ -n "$HYDRA_SCREENSHOT_SOURCE" ]]; then
+        if [[ ! -s "$HYDRA_SCREENSHOT_SOURCE" ]]; then
+          log "Hydra screenshot skipped because the configured file is missing: $HYDRA_SCREENSHOT_SOURCE"
+        else
+          local screenshot_extension="${HYDRA_SCREENSHOT_SOURCE##*.}"
+          screenshot_extension="${screenshot_extension,,}"
+          case "$screenshot_extension" in
+            png|webp|jpg|jpeg|avif|heic|heif)
+              screenshot_name="screenshot.$screenshot_extension"
+              HYDRA_SCREENSHOT="$HYDRA_THEME_DIR/$screenshot_name"
+              cp -f "$HYDRA_SCREENSHOT_SOURCE" "$HYDRA_SCREENSHOT"
+              ;;
+            *) log "Hydra screenshot skipped because its extension is unsupported: $HYDRA_SCREENSHOT_SOURCE" ;;
+          esac
+        fi
+      fi
       write_atomic "$HYDRA_THEME_DIR/theme.css" <<EOF
 :root {
   --livara-background: $(json_color base);
@@ -217,13 +343,46 @@ EOF
       write_atomic "$HYDRA_THEME_DIR/README.txt" <<EOF
 Livara Hydra theme generated from the active Noctalia palette.
 
-Hydra theme files are repository-backed. Copy theme.css into a theme directory and submit it through the official hydra-themes workflow if publication is desired.
+Theme directory: $HYDRA_THEME_ID
+CSS file: theme.css
+Screenshot file: $screenshot_name
+Friend code configured: $([[ -n "$HYDRA_FRIEND_CODE" ]] && printf true || printf false)
+Submission readiness: $([[ -n "$HYDRA_FRIEND_CODE" && -s "$HYDRA_SCREENSHOT" ]] && printf true || printf false)
 EOF
-      log "Hydra theme source generated: $HYDRA_THEME_DIR"
+      if [[ -n "$HYDRA_FRIEND_CODE" && -s "$HYDRA_SCREENSHOT" ]]; then
+        log "Hydra theme export ready for review: $HYDRA_THEME_DIR"
+      else
+        log "Hydra theme source generated; friend code and screenshot are still required: $HYDRA_THEME_DIR"
+      fi
     }
 
     sync_telegram_theme
     sync_hydra_theme
+
+    sync_spicetify_theme() {
+      [[ -s "$SPICETIFY_THEME_PATH" ]] || return 0
+      command -v spicetify >/dev/null 2>&1 || {
+        log "Spicetify theme generated; CLI is unavailable"
+        return 0
+      }
+      if ! spicetify config current_theme Livara >/dev/null 2>&1; then
+        log "Spicetify theme generated; current_theme could not be selected"
+        return 0
+      fi
+      if ! spicetify -q apply --no-restart >/dev/null 2>&1; then
+        log "Spicetify theme selected but runtime apply failed"
+        return 0
+      fi
+      [[ -s "$SPICETIFY_CONFIG_PATH" ]] || {
+        log "Spicetify apply returned success but config-xpui.ini is missing"
+        return 0
+      }
+      spicetify_applied=true
+      log "Spicetify Livara theme applied"
+    }
+
+    spicetify_applied=false
+    sync_spicetify_theme
 
     sync_foliate_theme_root() {
       local root="$1"
@@ -576,6 +735,11 @@ EOF
     nvim_applied=false
     [[ -s "$NVIM_THEME_PATH" ]] && nvim_applied=true
 
+    spicetify_generated=false
+    [[ -s "$SPICETIFY_THEME_PATH" ]] && spicetify_generated=true
+
+    spicetify_applied="${spicetify_applied:-false}"
+
     foliate_applied=false
     # Verify via dconf (native) or keyfile (Flatpak). dconf read does not
     # need the GSettings schema to be installed on the host.
@@ -632,20 +796,15 @@ EOF
         break
       fi
     done
-    intellij_applied=false
-    for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
-      if [[ -s "$INTELLIJ_SCHEME" && -d "$config_root" ]] &&
-         find "$config_root" -type l -path '*/colors/Matugen-Dark.icls' -print -quit 2>/dev/null | grep -q .; then
-        intellij_applied=true
-        break
-      fi
-    done
+    telegram_generated=false
+    [[ -s "$TELEGRAM_THEME_DIR/Livara.tdesktop-theme" ]] && telegram_generated=true
 
-    telegram_applied=false
-    [[ -s "$TELEGRAM_THEME_DIR/Livara.tdesktop-theme" ]] && telegram_applied=true
+    hydra_generated=false
+    [[ -s "$HYDRA_THEME_DIR/theme.css" ]] && hydra_generated=true
 
+    hydra_submission_ready=false
+    [[ -n "$HYDRA_FRIEND_CODE" && -s "$HYDRA_SCREENSHOT" ]] && hydra_submission_ready=true
     hydra_applied=false
-    [[ -s "$HYDRA_THEME_DIR/theme.css" ]] && hydra_applied=true
 
     # The overview distinguishes generated files from confirmed activation.
     # A file can exist while an app still needs a restart or a selected theme.
@@ -655,15 +814,19 @@ EOF
   "applications": [
     {"name":"Noctalia template contracts","contract":"Noctalia v5 templates (GTK/Qt/Firefox/Zen/WezTerm/Kitty)","path":"$THEME_DIR/palette.dark.json","applied":$noctalia_applied,"activation":"Noctalia palette template generated"},
     {"name":"Neovim/NixVim","contract":"matugen_colors.lua + NixVim transparent highlight policy","path":"$NVIM_THEME_PATH","applied":$nvim_applied,"activation":"palette file generated and watched by NixVim"},
+    {"name":"Spotify via Spicetify","contract":"Noctalia-generated Livara color.ini + serialized Spicetify apply hook","path":"$SPICETIFY_THEME_PATH","applied":$spicetify_applied,"generated":$spicetify_generated,"activation":"runtime apply requires a writable Spicetify installation"},
     {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
     {"name":"KDE/Okular","contract":"Noctalia .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
     {"name":"Xournal++","contract":"palettes/livara.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/livara.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
     {"name":"Fastfetch","contract":"Noctalia primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
     {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"},
-    {"name":"IntelliJ IDEA and Android Studio","contract":"Matugen generated .icls + JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":$intellij_applied,"activation":"colors directories discovered and linked"},
-    {"name":"Telegram Desktop","contract":"Matugen-generated ZIP .tdesktop-theme for manual import","path":"$TELEGRAM_THEME_DIR/Livara.tdesktop-theme","applied":$telegram_applied,"activation":"theme package generated; import remains user-controlled"},
-    {"name":"Hydra Launcher","contract":"Matugen-generated theme.css source for official hydra-themes workflow","path":"$HYDRA_THEME_DIR/theme.css","applied":$hydra_applied,"activation":"local source generated; store publication remains user-controlled"}
+    {"name":"IntelliJ IDEA editor scheme","contract":"Matugen generated .icls + versioned JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$intellij_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
+    {"name":"IntelliJ IDEA UI theme","contract":"Livara Theme plugin + versioned JetBrains plugins directory symlink","path":"$THEME_DIR/intellij/LivaraTheme","applied":false,"installed":$intellij_ui_theme_installed,"activation":"UI theme plugin is installed; selection remains IDE-controlled"},
+    {"name":"Android Studio editor scheme","contract":"Matugen generated .icls + versioned Google colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$android_studio_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
+    {"name":"Android Studio UI theme","contract":"Livara Theme plugin + versioned Google plugins directory symlink","path":"$THEME_DIR/intellij/LivaraTheme","applied":false,"installed":$android_studio_ui_theme_installed,"activation":"UI theme plugin is installed; selection remains IDE-controlled"},
+    {"name":"Telegram Desktop","contract":"Matugen-generated ZIP .tdesktop-theme for manual import","path":"$TELEGRAM_THEME_DIR/Livara.tdesktop-theme","applied":false,"generated":$telegram_generated,"activation":"theme package generated; import remains user-controlled"},
+    {"name":"Hydra Launcher","contract":"Noctalia-generated theme.css staged under official hydra-themes folder layout","path":"$HYDRA_THEME_DIR/theme.css","applied":$hydra_applied,"generated":$hydra_generated,"submissionReady":$hydra_submission_ready,"activation":"local export generated; selection, friend code, screenshot, fork and review remain user-controlled"}
   ]
 }
 EOF
