@@ -4,7 +4,8 @@ A paleta ativa do Noctalia é a fonte de verdade. Os adaptadores abaixo transfor
 
 | Aplicação | Fundo principal | Superfície | Texto | Acento | Aplicação |
 | --- | --- | --- | --- | --- | --- |
-| IntelliJ IDEA / Android Studio | `background` | `surface_container` | `on_background` | `primary` | O arquivo `Matugen-Dark.icls` é gerado e ligado aos diretórios versionados `colors` encontrados em JetBrains e Google. |
+| IntelliJ IDEA / Android Studio editor | `background` | `surface_container` | `on_background` | `primary` | O arquivo `Matugen-Dark.icls` é gerado e ligado aos diretórios versionados `colors` encontrados em JetBrains e Google. |
+| IntelliJ IDEA / Android Studio UI | `base` | `surface0`/`surface1` | `text` | `blue` | O plugin `Livara Theme` é instalado nos diretórios versionados `plugins`; ele fornece o `Livara Dark` para janelas, tool windows e controles. |
 | Spotify via Spicetify | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue` | O template Noctalia grava `Themes/Livara/color.ini` e executa uma aplicação serializada; o esquema Nix permanece como fallback de build. |
 | Telegram Desktop | `base` | `surface0`/`mantle` | `text`/`subtext0` | `blue` | O sincronizador gera `Livara.tdesktop-theme`, um ZIP importável em Telegram Desktop. A importação é manual. |
 | Hydra Launcher | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue`/`teal` | O sincronizador gera `hydra-export/themes/<name>-<friend-code>/theme.css`; screenshot, código pessoal e publicação continuam controlados pelo usuário. |
@@ -35,7 +36,7 @@ These are five **application-format examples** of one Noctalia palette, not five
 
 ## External application boundaries
 
-IntelliJ IDEA and Android Studio can consume an imported `.icls` color scheme. The adapter places it under each existing versioned `colors` directory and leaves selection to the IDE. Telegram Desktop accepts a `.tdesktop-theme` package, but selecting/importing it is an account/application action and is not automated. Hydra themes are repository-backed; the generated CSS is staged in the official folder layout, but the screenshot, friend-code validation, fork, pull request and publication are not automated.
+IntelliJ IDEA and Android Studio have two independent theme contracts. The adapter places the generated `.icls` editor color scheme under each existing versioned `colors` directory and installs the `Livara Theme` plugin under each versioned `plugins` directory. The IDE still controls final selection of the editor scheme and UI theme; this avoids rewriting user settings while making both themes available. Telegram Desktop accepts a `.tdesktop-theme` package, but selecting/importing it is an account/application action and is not automated. Hydra themes are repository-backed; the generated CSS is staged in the official folder layout, but the screenshot, friend-code validation, fork, pull request and publication are not automated.
 
 ## References
 
