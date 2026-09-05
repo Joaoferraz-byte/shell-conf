@@ -10,7 +10,7 @@
     FOLIATE_FLATPAK_HOME="$HOME/.var/app/com.github.johnfactotum.Foliate/config/com.github.johnfactotum.Foliate"
     VESKTOP_CONFIG_HOME="$XDG_CONFIG_HOME/vesktop"
     VESKTOP_FLATPAK_HOME="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
-    XOURNAL_PALETTE_NAME="livara.gpl"
+    XOURNAL_PALETTE_NAME="tokyonight.gpl"
     FASTFETCH_CAT_SOURCE="${LIVARA_FASTFETCH_CAT_PNG:-$HOME/.local/share/livara/assets/fastfetch-cat.png}"
     FASTFETCH_CAT_OUTPUT="$THEME_DIR/fastfetch-cat.png"
     FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
@@ -69,6 +69,12 @@
       local hex="${1#\#}"
       [[ "${#hex}" == 6 ]] || hex=000000
       printf '%d %d %d' "0x${hex:0:2}" "0x${hex:2:2}" "0x${hex:4:2}"
+    }
+
+    hex_to_argb_decimal() {
+      local hex="${1#\#}"
+      [[ "${#hex}" == 6 ]] || hex=000000
+      printf '%u' "$((16#FF${hex}))"
     }
 
     write_atomic() {
@@ -622,7 +628,7 @@ CFG
           printf '%s %s\n' "$rgb" "$2"
         }
 
-        printf '%s\n' 'GIMP Palette' 'Name: Livara' 'Columns: 4' '#'
+        printf '%s\n' 'GIMP Palette' 'Name: Tokyo Night' 'Columns: 4' '#'
         # GPL has no aliases: keep the first semantic role for equal RGB values.
         # Surface roles such as crust/mantle are intentionally excluded: they
         # describe the black page/background, not useful pen colors. Keeping
@@ -666,6 +672,11 @@ EOF
         return 0
       fi
       [[ -f "$settings" && ! -L "$settings" ]] || return 0
+      local canvas_color page_color line_color selection_color
+      canvas_color="$(json_color mantle)"
+      page_color="$(json_color base)"
+      line_color="$(json_color overlay0)"
+      selection_color="$(json_color blue)"
       local settings_tmp="$settings.tmp.$$"
       awk -v palette="$palette" '
         BEGIN { updated = 0 }
@@ -680,6 +691,13 @@ EOF
         }
         { print }
       ' "$settings" > "$settings_tmp"
+      sed -i \
+        -e "s|<property name=\"backgroundColor\" value=\"[^\"]*\"/>|<property name=\"backgroundColor\" value=\"$(hex_to_argb_decimal "$canvas_color")\"/>|" \
+        -e "s|<property name=\"selectionBorderColor\" value=\"[^\"]*\"/>|<property name=\"selectionBorderColor\" value=\"$(hex_to_argb_decimal "$selection_color")\"/>|" \
+        -e "s|backgroundTypeConfig=[^&]*&#10;||g" \
+        -e "s|backgroundType=graph\&#10;|backgroundType=graph\&#10;backgroundTypeConfig=f1=$line_color,af1=$line_color\&#10;|" \
+        -e "s|backgroundColor=#[[:xdigit:]]*|backgroundColor=$page_color|" \
+        "$settings_tmp"
       mv -f "$settings_tmp" "$settings"
     }
 
@@ -780,7 +798,7 @@ EOF
     fi
 
     xournal_applied=false
-    if [[ -s "$xournal_root/palettes/livara.gpl" ]] &&
+    if [[ -s "$xournal_root/palettes/tokyonight.gpl" ]] &&
        grep -q 'name="colorPalette"' "$xournal_root/settings.xml" 2>/dev/null; then
       xournal_applied=true
     fi
@@ -818,7 +836,7 @@ EOF
     {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
     {"name":"KDE/Okular","contract":"Noctalia .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
-    {"name":"Xournal++","contract":"palettes/livara.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/livara.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
+    {"name":"Xournal++","contract":"palettes/tokyonight.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/tokyonight.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
     {"name":"Fastfetch","contract":"Noctalia primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
     {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"},
     {"name":"IntelliJ IDEA editor scheme","contract":"Matugen generated .icls + versioned JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$intellij_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},

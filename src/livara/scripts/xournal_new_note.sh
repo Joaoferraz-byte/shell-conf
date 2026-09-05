@@ -17,9 +17,9 @@ if [[ -e "$note" ]]; then
   exec xournalpp "$note"
 fi
 
-# Prefer the versioned Vault template when Home Manager provides one.
-# Fall back to the live Xournal++ settings when no template asset is configured.
-if [[ -n "${XOURNAL_TEMPLATE_PATH:-}" && -r "${XOURNAL_TEMPLATE_PATH}" ]]; then
+# A static Vault template is opt-in. By default, read the live settings so new
+# notes follow the current Noctalia palette and page template.
+if [[ "${XOURNAL_USE_STATIC_TEMPLATE:-0}" == "1" && -n "${XOURNAL_TEMPLATE_PATH:-}" && -r "${XOURNAL_TEMPLATE_PATH}" ]]; then
   cp "${XOURNAL_TEMPLATE_PATH}" "$note"
   exec xournalpp "$note"
 fi

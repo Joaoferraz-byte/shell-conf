@@ -9,7 +9,7 @@ trap 'rm -rf "$root"' EXIT
 config_home="$root/config"
 state_home="$root/state"
 bin_dir="$root/bin"
-mkdir -p "$config_home/JetBrains/IntelliJIdea2026.1" "$config_home/Google/AndroidStudio2025.1" "$root/data/JetBrains/IntelliJIdea2026.1" "$root/data/Google/AndroidStudio2025.1" "$config_home/matugen" "$config_home/spicetify/Themes/Livara" "$bin_dir" "$state_home/livara/theme"
+mkdir -p "$config_home/JetBrains/IntelliJIdea2026.1" "$config_home/Google/AndroidStudio2025.1" "$root/data/JetBrains/IntelliJIdea2026.1" "$root/data/Google/AndroidStudio2025.1" "$config_home/matugen" "$config_home/spicetify/Themes/Livara" "$config_home/xournalpp" "$bin_dir" "$state_home/livara/theme"
 cat > "$state_home/livara/theme/bootstrap.json" <<'EOF'
 {"base":"#111318","primary":"#7bb7ff","surface0":"#1a2029","surface1":"#242b36","text":"#eef2f7","subtext0":"#b2bdca","blue":"#7bb7ff","teal":"#70d7c3","red":"#f0878a","sapphire":"#9bc9ff","crust":"#07090d","mantle":"#0b0d12","overlay0":"#596575","overlay1":"#6d7a8b"}
 EOF
@@ -17,6 +17,13 @@ cat > "$config_home/matugen/config.toml" <<'EOF'
 [config]
 EOF
 printf '%s\n' 'main = 111318' > "$config_home/spicetify/Themes/Livara/color.ini"
+cat > "$config_home/xournalpp/settings.xml" <<'EOF'
+<settings>
+  <property name="backgroundColor" value="4278190080"/>
+  <property name="selectionBorderColor" value="4278190080"/>
+  <property name="pageTemplate" value="xoj/template&#10;backgroundType=graph&#10;backgroundColor=#000000&#10;"/>
+</settings>
+EOF
 cat > "$bin_dir/matugen" <<'EOF'
 #!/usr/bin/env bash
 set -Eeuo pipefail
@@ -56,6 +63,10 @@ bash "$sync_script" dark >/dev/null
 [[ -L "$config_home/Google/AndroidStudio2025.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$root/data/JetBrains/IntelliJIdea2026.1/plugins/LivaraTheme" ]]
 [[ -L "$root/data/Google/AndroidStudio2025.1/plugins/LivaraTheme" ]]
+[[ -s "$config_home/xournalpp/palettes/tokyonight.gpl" ]]
+grep -q '^Name: Tokyo Night$' "$config_home/xournalpp/palettes/tokyonight.gpl"
+grep -q 'tokyonight.gpl' "$config_home/xournalpp/settings.xml"
+grep -q 'backgroundTypeConfig=f1=#596575,af1=#596575' "$config_home/xournalpp/settings.xml"
 [[ -s "$state_home/livara/theme/hydra-export/themes/Livara-local/theme.css" ]]
 jq -e '.applications[] | select(.name == "Spotify via Spicetify" and .generated == true and .applied == true)' "$state_home/livara/theme/applied-applications.json" >/dev/null
 jq -e '.applications[] | select(.name == "Telegram Desktop" and .generated == true and .applied == false)' "$state_home/livara/theme/applied-applications.json" >/dev/null

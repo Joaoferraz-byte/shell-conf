@@ -102,6 +102,35 @@ in
     reloadZen
   ];
 
+  systemd.user.services.livara-theme-sync = {
+    Unit = {
+      Description = "Synchronize the active Noctalia palette with application themes";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      Type = "oneshot";
+      ExecStart = "${syncThemes}/bin/sync-livara-themes";
+      Environment = {
+        LIVARA_THEME_ROOT = themeRoot;
+        LIVARA_DEFAULT_PALETTE = "${themeRoot}/bootstrap.json";
+        LIVARA_IDE_THEME_PLUGIN = config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or "";
+      };
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
+  systemd.user.paths.livara-theme-sync = {
+    Unit = {
+      Description = "Watch the Noctalia palette for application theme updates";
+    };
+    Path = {
+      PathChanged = "${themeRoot}/palette.dark.json";
+      Unit = "livara-theme-sync.service";
+    };
+    Install.WantedBy = [ "graphical-session.target" ];
+  };
+
   programs.fastfetch = {
     enable = true;
     settings = {
@@ -159,7 +188,6 @@ in
     LIVARA_DAILY_TEMPLATE = "${config.home.homeDirectory}/Vault/06 - Config/templates/00 - Daily Note.md";
     LIVARA_IMAGE_DIR = "${config.home.homeDirectory}/Vault/00 - Black Box/Assets/Images";
     XOURNAL_VAULT_DIR = "${config.home.homeDirectory}/Vault/04 - Xournal++";
-    XOURNAL_TEMPLATE_PATH = "${config.home.homeDirectory}/Vault/06 - Config/templates/Xournalpp.xopp";
     LIVARA_FASTFETCH_CAT_PNG = "${config.home.homeDirectory}/.local/share/livara/assets/fastfetch-cat.png";
   };
 
