@@ -111,11 +111,11 @@ in
     Service = {
       Type = "oneshot";
       ExecStart = "${syncThemes}/bin/sync-livara-themes";
-      Environment = {
-        LIVARA_THEME_ROOT = themeRoot;
-        LIVARA_DEFAULT_PALETTE = "${themeRoot}/bootstrap.json";
-        LIVARA_IDE_THEME_PLUGIN = config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or "";
-      };
+      Environment = [
+        "LIVARA_THEME_ROOT=${themeRoot}"
+        "LIVARA_DEFAULT_PALETTE=${themeRoot}/bootstrap.json"
+        "LIVARA_IDE_THEME_PLUGIN=${config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or ""}"
+      ];
     };
     Install.WantedBy = [ "graphical-session.target" ];
   };
