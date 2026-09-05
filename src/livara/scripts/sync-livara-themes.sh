@@ -37,8 +37,10 @@
     HYDRA_THEME_DIR="$THEME_DIR/hydra-export/themes/$HYDRA_THEME_ID"
     HYDRA_SCREENSHOT_SOURCE="${LIVARA_HYDRA_SCREENSHOT:-}"
     HYDRA_SCREENSHOT="$HYDRA_THEME_DIR/screenshot.png"
-    SPICETIFY_THEME_PATH="$XDG_CONFIG_HOME/spicetify/Themes/Livara/color.ini"
-    SPICETIFY_CONFIG_PATH="$XDG_CONFIG_HOME/spicetify/config-xpui.ini"
+    NUCLEAR_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/com.nuclearplayer"
+    NUCLEAR_THEME_DIR="$NUCLEAR_DATA_HOME/themes"
+    NUCLEAR_THEME_PATH="$NUCLEAR_THEME_DIR/Livara.json"
+    NUCLEAR_SETTINGS_PATH="$NUCLEAR_DATA_HOME/settings.json"
     MATUGEN_CONFIG="$XDG_CONFIG_HOME/matugen/config.toml"
     # NixVim/Home Manager exposes the generated Lua module under lua/.
     NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
@@ -191,8 +193,12 @@
   "name": "Livara Dark",
   "dark": true,
   "author": "Joaoferraz-byte",
-  "editorScheme": "Matugen-Dark",
-  "ui": { "*": {
+  "editorScheme": "/theme/Matugen-Dark.xml",
+  "ui": {
+    "*": {
+      "background": "$(json_color base)",
+      "foreground": "$(json_color text)"
+    },
     "Panel.background": "$(json_color base)",
     "ToolWindow.background": "$(json_color mantle)",
     "EditorTabs.background": "$(json_color mantle)",
@@ -215,36 +221,61 @@
     "Component.focusColor": "$(json_color blue)",
     "Borders.color": "$(json_color surface1)",
     "ScrollBar.thumbColor": "$(json_color overlay0)"
-  } }
+  }
 }
 EOF
+      [[ -s "$INTELLIJ_SCHEME" ]] && cp -f "$INTELLIJ_SCHEME" "$theme_plugin/theme/Matugen-Dark.xml"
       if ! jq -e '.name == "Livara Dark" and .dark == true and (.ui | type == "object")' "$theme_plugin/theme/Livara.theme.json" >/dev/null 2>&1; then
         log "IDE UI theme rejected because the generated JSON is invalid"
         return 0
       fi
       local data_root product_root product_name plugins_dir target current
+      install_theme_plugin() {
+        product_root="$1"
+        product_name="$(basename "$product_root")"
+        plugins_dir="$product_root"
+        target="$plugins_dir/LivaraTheme"
+        mkdir -p "$plugins_dir"
+        if [[ -L "$target" ]]; then
+          current="$(readlink -f "$target" 2>/dev/null || true)"
+          [[ "$current" == "$theme_plugin" ]] || rm -f "$target"
+        elif [[ -e "$target" ]]; then
+          return 0
+        fi
+        [[ -e "$target" ]] || ln -s "$theme_plugin" "$target"
+        case "$product_name" in
+          IntelliJIdea*) intellij_ui_theme_installed=true ;;
+          AndroidStudio*) android_studio_ui_theme_installed=true ;;
+        esac
+      }
+
       for data_root in "${INTELLIJ_DATA_ROOTS[@]}"; do
         [[ -n "$data_root" && -d "$data_root" ]] || continue
         while IFS= read -r -d "" product_root; do
-          product_name="$(basename "$product_root")"
-          plugins_dir="$product_root/plugins"
-          target="$plugins_dir/LivaraTheme"
-          mkdir -p "$plugins_dir"
-          if [[ -L "$target" ]]; then
-            current="$(readlink -f "$target" 2>/dev/null || true)"
-            [[ "$current" == "$theme_plugin" ]] || rm -f "$target"
-          elif [[ -e "$target" ]]; then
-            continue
-          fi
-          [[ -e "$target" ]] || ln -s "$theme_plugin" "$target"
-          case "$product_name" in
-            IntelliJIdea*) intellij_ui_theme_installed=true ;;
-            AndroidStudio*) android_studio_ui_theme_installed=true ;;
-          esac
+          install_theme_plugin "$product_root"
         done < <(if [[ "$data_root" == */IntelliJIdea* || "$data_root" == */AndroidStudio* ]]; then
           printf '%s\0' "$data_root"
         else
           find "$data_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null
+        fi)
+      done
+
+      for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
+        [[ -d "$config_root" ]] || continue
+        while IFS= read -r -d "" product_root; do
+          product_name="$(basename "$product_root")"
+          case "$config_root" in
+            "$XDG_CONFIG_HOME/JetBrains"|"$XDG_CONFIG_HOME/JetBrains"/*)
+              install_theme_plugin "$XDG_DATA_HOME/JetBrains/$product_name"
+              ;;
+            "$XDG_CONFIG_HOME/Google"|"$XDG_CONFIG_HOME/Google"/*)
+              install_theme_plugin "$XDG_DATA_HOME/Google/$product_name"
+              ;;
+          esac
+        done < <(if [[ "$config_root" == */IntelliJIdea* || "$config_root" == */AndroidStudio* ]]; then
+          printf '%s\0' "$config_root"
+        else
+          find "$config_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null
         fi)
       done
     }
@@ -365,30 +396,61 @@ EOF
     sync_telegram_theme
     sync_hydra_theme
 
-    sync_spicetify_theme() {
-      [[ -s "$SPICETIFY_THEME_PATH" ]] || return 0
-      command -v spicetify >/dev/null 2>&1 || {
-        log "Spicetify theme generated; CLI is unavailable"
-        return 0
-      }
-      if ! spicetify config current_theme Livara >/dev/null 2>&1; then
-        log "Spicetify theme generated; current_theme could not be selected"
-        return 0
+    sync_nuclear_theme() {
+      mkdir -p "$(dirname "$NUCLEAR_THEME_PATH")"
+      write_atomic "$NUCLEAR_THEME_PATH" <<EOF
+{
+  "version": 2,
+  "name": "Livara",
+  "dark": {
+    "background": "$(json_color base)",
+    "foreground": "$(json_color text)",
+    "muted": "$(json_color mantle)",
+    "muted-foreground": "$(json_color subtext0)",
+    "card": "$(json_color surface0)",
+    "card-foreground": "$(json_color text)",
+    "popover": "$(json_color surface0)",
+    "popover-foreground": "$(json_color text)",
+    "input": "$(json_color surface1)",
+    "input-foreground": "$(json_color text)",
+    "primary": "$(json_color blue)",
+    "primary-foreground": "$(json_color base)",
+    "topbar": "$(json_color mantle)",
+    "topbar-foreground": "$(json_color text)",
+    "bottombar": "$(json_color mantle)",
+    "bottombar-foreground": "$(json_color text)",
+    "border": "$(json_color overlay0)",
+    "ring": "$(json_color blue)",
+    "radius-md": "8px",
+    "radius-lg": "12px"
+  }
+}
+EOF
+      jq -e '.version == 2 and .name == "Livara" and (.dark | type == "object")' "$NUCLEAR_THEME_PATH" >/dev/null
+      local nuclear_settings_tmp="$NUCLEAR_SETTINGS_PATH.tmp.$$"
+      if pgrep -x nuclear >/dev/null 2>&1 || pgrep -x Nuclear >/dev/null 2>&1; then
+        log "Nuclear is running; active theme state was not rewritten"
+      else
+        if [[ -s "$NUCLEAR_SETTINGS_PATH" ]] && ! jq -e 'type == "object"' "$NUCLEAR_SETTINGS_PATH" >/dev/null 2>&1; then
+          log "Nuclear settings are invalid; active theme state was not rewritten"
+        else
+          if [[ -s "$NUCLEAR_SETTINGS_PATH" ]]; then
+            jq --arg theme_path "themes/Livara.json" \
+              '."core.theme.active.type" = "advanced" | ."core.theme.active.id" = $theme_path' \
+              "$NUCLEAR_SETTINGS_PATH" > "$nuclear_settings_tmp"
+          else
+            jq -n --arg theme_path "themes/Livara.json" \
+              '{"core.theme.active.type":"advanced","core.theme.active.id":$theme_path}' \
+              > "$nuclear_settings_tmp"
+          fi
+          chmod 0644 "$nuclear_settings_tmp"
+          mv -f "$nuclear_settings_tmp" "$NUCLEAR_SETTINGS_PATH"
+          log "Nuclear Livara theme selected through its JSON settings store"
+        fi
       fi
-      if ! spicetify -q apply --no-restart >/dev/null 2>&1; then
-        log "Spicetify theme selected but runtime apply failed"
-        return 0
-      fi
-      [[ -s "$SPICETIFY_CONFIG_PATH" ]] || {
-        log "Spicetify apply returned success but config-xpui.ini is missing"
-        return 0
-      }
-      spicetify_applied=true
-      log "Spicetify Livara theme applied"
     }
 
-    spicetify_applied=false
-    sync_spicetify_theme
+    sync_nuclear_theme
 
     sync_foliate_theme_root() {
       local root="$1"
@@ -672,10 +734,8 @@ EOF
         return 0
       fi
       [[ -f "$settings" && ! -L "$settings" ]] || return 0
-      local canvas_color page_color line_color selection_color
+      local canvas_color selection_color
       canvas_color="$(json_color mantle)"
-      page_color="$(json_color base)"
-      line_color="$(json_color overlay0)"
       selection_color="$(json_color blue)"
       local settings_tmp="$settings.tmp.$$"
       awk -v palette="$palette" '
@@ -691,12 +751,14 @@ EOF
         }
         { print }
       ' "$settings" > "$settings_tmp"
+      local canvas_argb selection_argb
+      canvas_argb="$(hex_to_argb_decimal "$canvas_color")"
+      selection_argb="$(hex_to_argb_decimal "$selection_color")"
       sed -i \
-        -e "s|<property name=\"backgroundColor\" value=\"[^\"]*\"/>|<property name=\"backgroundColor\" value=\"$(hex_to_argb_decimal "$canvas_color")\"/>|" \
-        -e "s|<property name=\"selectionBorderColor\" value=\"[^\"]*\"/>|<property name=\"selectionBorderColor\" value=\"$(hex_to_argb_decimal "$selection_color")\"/>|" \
-        -e "s|backgroundTypeConfig=[^&]*&#10;||g" \
-        -e "s|backgroundType=graph\&#10;|backgroundType=graph\&#10;backgroundTypeConfig=f1=$line_color,af1=$line_color\&#10;|" \
-        -e "s|backgroundColor=#[[:xdigit:]]*|backgroundColor=$page_color|" \
+        -e "s|<property name=\"backgroundColor\" value=\"[^\"]*\"/>|<property name=\"backgroundColor\" value=\"$canvas_argb\"/>|" \
+        -e "s|<property name=\"selectionBorderColor\" value=\"[^\"]*\"/>|<property name=\"selectionBorderColor\" value=\"$selection_argb\"/>|" \
+        -e 's|<property name="menubarVisible" value="[^"]*"/>|<property name="menubarVisible" value="true"/>|' \
+        -e 's|<property name="defaultViewModeAttributes" value="[^"]*"/>|<property name="defaultViewModeAttributes" value="showMenubar,showToolbar,showSidebar"/>|' \
         "$settings_tmp"
       mv -f "$settings_tmp" "$settings"
     }
@@ -753,10 +815,14 @@ EOF
     nvim_applied=false
     [[ -s "$NVIM_THEME_PATH" ]] && nvim_applied=true
 
-    spicetify_generated=false
-    [[ -s "$SPICETIFY_THEME_PATH" ]] && spicetify_generated=true
-
-    spicetify_applied="${spicetify_applied:-false}"
+    nuclear_selected=false
+    if [[ -s "$NUCLEAR_SETTINGS_PATH" ]] && jq -e \
+      --arg relative_path "themes/Livara.json" \
+      --arg absolute_path "$NUCLEAR_THEME_PATH" \
+      '."core.theme.active.type" == "advanced" and (."core.theme.active.id" == $relative_path or ."core.theme.active.id" == $absolute_path)' \
+      "$NUCLEAR_SETTINGS_PATH" >/dev/null 2>&1; then
+      nuclear_selected=true
+    fi
 
     foliate_applied=false
     # Verify via dconf (native) or keyfile (Flatpak). dconf read does not
@@ -832,7 +898,7 @@ EOF
   "applications": [
     {"name":"Noctalia template contracts","contract":"Noctalia v5 templates (GTK/Qt/Firefox/Zen/WezTerm/Kitty)","path":"$THEME_DIR/palette.dark.json","applied":$noctalia_applied,"activation":"Noctalia palette template generated"},
     {"name":"Neovim/NixVim","contract":"matugen_colors.lua + NixVim transparent highlight policy","path":"$NVIM_THEME_PATH","applied":$nvim_applied,"activation":"palette file generated and watched by NixVim"},
-    {"name":"Spotify via Spicetify","contract":"Noctalia-generated Livara color.ini + serialized Spicetify apply hook","path":"$SPICETIFY_THEME_PATH","applied":$spicetify_applied,"generated":$spicetify_generated,"activation":"runtime apply requires a writable Spicetify installation"},
+    {"name":"Nuclear Music Player","contract":"Nuclear v2 advanced theme JSON generated from the active Noctalia palette","path":"$NUCLEAR_THEME_PATH","applied":$nuclear_selected,"generated":true,"activation":"selection is owned by Nuclear settings; edits reload live after Livara is selected"},
     {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
     {"name":"KDE/Okular","contract":"Noctalia .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
@@ -844,7 +910,7 @@ EOF
     {"name":"Android Studio editor scheme","contract":"Matugen generated .icls + versioned Google colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$android_studio_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
     {"name":"Android Studio UI theme","contract":"Livara Theme plugin + versioned Google plugins directory symlink","path":"$THEME_DIR/intellij/LivaraTheme","applied":false,"installed":$android_studio_ui_theme_installed,"activation":"UI theme plugin is installed; selection remains IDE-controlled"},
     {"name":"Telegram Desktop","contract":"Matugen-generated ZIP .tdesktop-theme for manual import","path":"$TELEGRAM_THEME_DIR/Livara.tdesktop-theme","applied":false,"generated":$telegram_generated,"activation":"theme package generated; import remains user-controlled"},
-    {"name":"Hydra Launcher","contract":"Noctalia-generated theme.css staged under official hydra-themes folder layout","path":"$HYDRA_THEME_DIR/theme.css","applied":$hydra_applied,"generated":$hydra_generated,"submissionReady":$hydra_submission_ready,"activation":"local export generated; selection, friend code, screenshot, fork and review remain user-controlled"}
+    {"name":"Hydra Launcher","contract":"theme.css export in official hydra-themes publication layout","path":"$HYDRA_THEME_DIR/theme.css","applied":$hydra_applied,"generated":$hydra_generated,"submissionReady":$hydra_submission_ready,"activation":"database import is intentionally a separate local operation; export remains reviewable"}
   ]
 }
 EOF

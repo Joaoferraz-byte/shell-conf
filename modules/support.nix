@@ -247,7 +247,7 @@ in
       "IntelliJ IDEA and Android Studio: generated Matugen ICLS"
       "Telegram Desktop: generated tdesktop-theme import"
       "Hydra Launcher: generated theme.css for upstream submission"
-      "Spotify/Spicetify: Noctalia dynamic color.ini with Nix fallback and pinned Adblockify"
+      "Nuclear Music Player: Noctalia-generated v2 advanced theme JSON"
     ];
   };
 

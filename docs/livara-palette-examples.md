@@ -5,8 +5,8 @@ A paleta ativa do Noctalia é a fonte de verdade. Os adaptadores abaixo transfor
 | Aplicação | Fundo principal | Superfície | Texto | Acento | Aplicação |
 | --- | --- | --- | --- | --- | --- |
 | IntelliJ IDEA / Android Studio editor | `background` | `surface_container` | `on_background` | `primary` | O arquivo `Matugen-Dark.icls` é gerado e ligado aos diretórios versionados `colors` encontrados em JetBrains e Google. |
-| IntelliJ IDEA / Android Studio UI | `base` | `surface0`/`surface1` | `text` | `blue` | O plugin `Livara Theme` é instalado nos diretórios versionados `plugins`; ele fornece o `Livara Dark` para janelas, tool windows e controles. |
-| Spotify via Spicetify | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue` | O template Noctalia grava `Themes/Livara/color.ini` e executa uma aplicação serializada; o esquema Nix permanece como fallback de build. |
+| IntelliJ IDEA / Android Studio UI | `base` | `surface0`/`surface1` | `text` | `blue` | O plugin local `Livara Theme` é instalado diretamente no `idea.plugins.path` de cada produto e fornece o `Livara Dark`. |
+| Nuclear Music Player | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue` | O sincronizador grava `themes/Livara.json` e seleciona `core.theme.active.id=themes/Livara.json` no settings store quando o aplicativo está fechado; o watcher recarrega mudanças de paleta. |
 | Telegram Desktop | `base` | `surface0`/`mantle` | `text`/`subtext0` | `blue` | O sincronizador gera `Livara.tdesktop-theme`, um ZIP importável em Telegram Desktop. A importação é manual. |
 | Hydra Launcher | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue`/`teal` | O sincronizador gera `hydra-export/themes/<name>-<friend-code>/theme.css`; screenshot, código pessoal e publicação continuam controlados pelo usuário. |
 | Neovim/NixVim | `background` | `surface_container` | `on_background` | `primary` | O template `nvim-base16.lua` produz as cores Lua observadas pelo editor e preserva transparência para o wallpaper. |
@@ -30,19 +30,18 @@ teal       = #70d7c3
 red        = #f0878a
 ```
 
-For Spicetify, the same values become `main=111318`, `card=1A2029`, `text=EEF2F7`, `subtext=B2BDCA`, `button=7BB7FF`, `notification=254634` and `notification-error=512D34` in the Noctalia-generated `color.ini`; the Nix `customColorScheme` remains a bootstrap fallback. For Telegram Desktop, `windowBg` uses `base`, `windowFg` uses `text`, `menuBg` uses `mantle`, `lightButtonBg` uses `surface0` and `activeButtonBg` uses `blue`. For Hydra, the CSS variables `--livara-background`, `--livara-surface`, `--livara-surface-raised`, `--livara-text`, `--livara-muted`, `--livara-primary` and `--livara-error` use exactly the same semantic roles.
+For Nuclear, the same values become `background=base`, `card=surface0`, `foreground=text`, `muted-foreground=subtext0`, `primary=blue` and `border=overlay0` in the v2 advanced-theme JSON. For Telegram Desktop, `windowBg` uses `base`, `windowFg` uses `text`, `menuBg` uses `mantle`, `lightButtonBg` uses `surface0` and `activeButtonBg` uses `blue`. For Hydra, the CSS variables `--livara-background`, `--livara-surface`, `--livara-surface-raised`, `--livara-text`, `--livara-muted`, `--livara-primary` and `--livara-error` use exactly the same semantic roles.
 
-These are five **application-format examples** of one Noctalia palette, not five manually invented palettes. When Noctalia changes wallpaper, its templates and the serialized Spicetify hook regenerate file-based contracts from the active palette; the immutable Spicetify-Nix package remains a stable fallback and cannot be mutated in the Nix store.
+These are application-format examples of one Noctalia palette, not manually invented palettes. When Noctalia changes wallpaper, the adapters regenerate file-based contracts from the active palette, while mutable application-owned stores are changed only through their documented JSON or UI contracts.
 
 ## External application boundaries
 
-IntelliJ IDEA and Android Studio have two independent theme contracts. The adapter places the generated `.icls` editor color scheme under each existing versioned `colors` directory and installs the `Livara Theme` plugin under each versioned `plugins` directory. The IDE still controls final selection of the editor scheme and UI theme; this avoids rewriting user settings while making both themes available. Telegram Desktop accepts a `.tdesktop-theme` package, but selecting/importing it is an account/application action and is not automated. Hydra themes are repository-backed; the generated CSS is staged in the official folder layout, but the screenshot, friend-code validation, fork, pull request and publication are not automated.
+IntelliJ IDEA and Android Studio have two independent theme contracts. The adapter places the generated `.icls` editor color scheme under each versioned `colors` directory and installs the `Livara Theme` plugin under the corresponding product data directory, including a product discovered through its configuration root. The IDE still controls final selection of the editor scheme and UI theme. Telegram Desktop accepts a `.tdesktop-theme` package, but selecting/importing it is an account/application action and is not automated. Hydra themes are repository-backed; the generated CSS is staged in the official folder layout, while importing into its private ClassicLevel database remains a separate local operation because no declarative import API exists.
 
 ## References
 
 1. [JetBrains color schemes](https://www.jetbrains.com/help/idea/configuring-colors-and-fonts.html)
 2. [Telegram custom cloud themes](https://core.telegram.org/themes)
 3. [Hydra Themes repository](https://github.com/hydralauncher/hydra-themes)
-4. [Spicetify-Nix module](https://wiki.nixos.org/wiki/Spicetify-Nix)
-5. [Noctalia Spicetify community template](https://github.com/noctalia-dev/community-templates/tree/main/spicetify)
-6. [Hydra custom themes](https://docs.hydralauncher.gg/documentation/10/hydra-custom-themes-10)
+4. [Nuclear advanced themes](https://docs.nuclearplayer.com/nuclear/theming/themes-advanced.md)
+5. [Hydra custom themes](https://docs.hydralauncher.gg/documentation/10/hydra-custom-themes-10)
