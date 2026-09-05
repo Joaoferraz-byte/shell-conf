@@ -2,14 +2,7 @@
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
-  weztermDpi = if (desktopProfile.monitorProfile or "myMachine") == "latitude" then
-    "config.dpi = 96"
-  else
-    "-- config.dpi is intentionally autodetected on this host";
-  weztermConfig = pkgs.writeText "wezterm.lua" (builtins.replaceStrings
-    [ "-- @LIVARA_WEZTERM_DPI@" ]
-    [ weztermDpi ]
-    (builtins.readFile (source + "/applications/wezterm.lua")));
+  weztermConfig = pkgs.writeText "wezterm.lua" (builtins.readFile (source + "/applications/wezterm.lua"));
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";

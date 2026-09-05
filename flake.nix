@@ -37,6 +37,9 @@
             bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
             bash -n ${self}/src/livara/scripts/xournal_new_note.sh
             bash -n ${self}/tests/test-theme-contracts.sh
+            if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
+              exit 1
+            fi
             touch "$out"
           '';
         };
