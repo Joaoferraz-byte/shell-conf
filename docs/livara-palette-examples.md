@@ -5,8 +5,8 @@ A paleta ativa do Noctalia é a fonte de verdade. Os adaptadores abaixo transfor
 | Aplicação | Fundo principal | Superfície | Texto | Acento | Aplicação |
 | --- | --- | --- | --- | --- | --- |
 | IntelliJ IDEA / Android Studio editor | `background` | `surface_container` | `on_background` | `primary` | O arquivo `Matugen-Dark.icls` é gerado e ligado aos diretórios versionados `colors` encontrados em JetBrains e Google. |
-| IntelliJ IDEA / Android Studio UI | `base` | `surface0`/`surface1` | `text` | `blue` | O plugin local `Livara Theme` é instalado diretamente no `idea.plugins.path` de cada produto e fornece o `Livara Dark`. |
-| Nuclear Music Player | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue` | O sincronizador grava `themes/Livara.json`, seleciona esse ID relativo em `core.theme.active.id` e ativa `core.theme.dark` quando executado em modo dark; o watcher recarrega mudanças de paleta. |
+| IntelliJ IDEA / Android Studio UI | `base` | `surface0`/`surface1` | `text` | `blue` | O plugin local `Livara Theme` é instalado diretamente na raiz de plugins do produto descoberta pelo adaptador e fornece o `Livara Dark`. |
+| Nuclear Music Player | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue` | O sincronizador grava `themes/Livara.json`, seleciona esse ID relativo em `core.theme.active.id` e grava `core.theme.dark` explicitamente em cada modo; o watcher recarrega mudanças de paleta. |
 | Hydra Launcher | `base` | `surface0`/`surface1` | `text`/`subtext0` | `blue`/`teal` | O sincronizador gera `~/.config/Hydra/themes/<name>-<friend-code>/theme.css` e espelha `hydra-export/themes/<name>-<friend-code>/theme.css`; a seleção exige o fluxo Create/Edit do Hydra, enquanto screenshot, código pessoal e publicação continuam controlados pelo usuário. |
 | Neovim/NixVim | `background` | `surface_container` | `on_background` | `primary` | O template `nvim-base16.lua` produz as cores Lua observadas pelo editor e preserva transparência para o wallpaper. |
 
@@ -35,7 +35,7 @@ These are application-format examples of one Noctalia palette, not manually inve
 
 ## External application boundaries
 
-IntelliJ IDEA and Android Studio have two independent theme contracts. The adapter places the generated `.icls` editor color scheme under each versioned `colors` directory and installs the `Livara Theme` plugin under the corresponding product data directory, including a product discovered through its configuration root. The IDE still controls final selection of the editor scheme and UI theme; appearing in Plugins is expected for a JetBrains UI theme. Hydra themes are repository-backed; the generated CSS is staged in both the launcher's native user-data theme directory and the official publication layout, while the Settings > Appearance list remains backed by a private LevelDB database and is not mutated by the adapter because no declarative import API exists.
+IntelliJ IDEA and Android Studio have two independent theme contracts. The adapter places the generated `.icls` editor color scheme under each versioned `colors` directory and installs the `Livara Theme` plugin in the corresponding product plugin root, including a product discovered through its configuration root. The IDE still controls final selection of the editor scheme and UI theme; appearing in Plugins is expected for a JetBrains UI theme. The adapter rewrites the Nuclear dark-mode flag in both directions and avoids rewriting Nuclear settings while the official process name is running. Hydra themes are repository-backed; the generated CSS is staged in both the launcher's native user-data theme directory and the official publication layout, while the Settings > Appearance list remains backed by a private LevelDB database and is not mutated by the adapter because no declarative import API exists.
 
 ## References
 

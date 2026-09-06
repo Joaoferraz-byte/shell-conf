@@ -26,6 +26,7 @@
       "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains"
       "${XDG_DATA_HOME:-$HOME/.local/share}/Google"
     )
+    ANDROID_STUDIO_DATA_PATH="${ANDROID_STUDIO_DATA_PATH:-$XDG_DATA_HOME/Google}"
     INTELLIJ_THEME_PLUGIN="${LIVARA_IDE_THEME_PLUGIN:-}"
     HYDRA_THEME_NAME="${LIVARA_HYDRA_THEME_NAME:-Livara}"
     HYDRA_FRIEND_CODE="${LIVARA_HYDRA_FRIEND_CODE:-}"
@@ -259,12 +260,12 @@ EOF
         return 0
       }
       install_theme_plugin() {
-        local product_root product_name plugins_dir target current
+        local product_root product_name plugin_root target current
         product_root="$1"
         product_name="$(basename "$product_root")"
-        plugins_dir="$product_root/plugins"
-        target="$plugins_dir/LivaraTheme"
-        mkdir -p "$plugins_dir"
+        plugin_root="$product_root"
+        target="$plugin_root/LivaraTheme"
+        mkdir -p "$plugin_root"
         if [[ -L "$target" ]]; then
           current="$(readlink -f "$target" 2>/dev/null || true)"
           [[ "$current" == "$theme_plugin" ]] || rm -f "$target"
@@ -326,17 +327,20 @@ EOF
       for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
         [[ -d "$config_root" ]] || continue
         while IFS= read -r -d "" product_root; do
+          local plugin_product_root
           product_name="$(basename "$product_root")"
-          case "$config_root" in
-            "$XDG_CONFIG_HOME/JetBrains"|"$XDG_CONFIG_HOME/JetBrains"/*)
-              install_theme_plugin "$XDG_DATA_HOME/JetBrains/$product_name"
-              select_theme_in_config "$product_root"
+          case "$product_name" in
+            IntelliJIdea*)
+              plugin_product_root="${IDEA_DATA_PATH:-$XDG_DATA_HOME/JetBrains}/$product_name"
               ;;
-            "$XDG_CONFIG_HOME/Google"|"$XDG_CONFIG_HOME/Google"/*)
-              install_theme_plugin "$XDG_DATA_HOME/Google/$product_name"
-              select_theme_in_config "$product_root"
+            AndroidStudio*)
+              plugin_product_root="$ANDROID_STUDIO_DATA_PATH/$product_name"
               ;;
           esac
+          if [[ -n "${plugin_product_root:-}" ]]; then
+            install_theme_plugin "$plugin_product_root"
+            [[ -e "$plugin_product_root/LivaraTheme" ]] && select_theme_in_config "$product_root"
+          fi
         done < <(if [[ "$config_root" == */IntelliJIdea* || "$config_root" == */AndroidStudio* ]]; then
           printf '%s\0' "$config_root"
         else
@@ -452,7 +456,7 @@ EOF
 }
 EOF
       jq -e '.version == 2 and .name == "Livara" and (.dark | type == "object")' "$theme_path" >/dev/null
-      if pgrep -x nuclear >/dev/null 2>&1 || pgrep -x Nuclear >/dev/null 2>&1 || pgrep -x com.nuclearplayer.Nuclear >/dev/null 2>&1; then
+      if pgrep -x nuclear >/dev/null 2>&1 || pgrep -x Nuclear >/dev/null 2>&1 || pgrep -x nuclear-music-player >/dev/null 2>&1 || pgrep -x com.nuclearplayer.Nuclear >/dev/null 2>&1; then
         log "Nuclear is running; active theme state was not rewritten: $data_home"
         return 0
       fi
@@ -463,11 +467,11 @@ EOF
       local settings_tmp="$settings_path.tmp.$$"
       if [[ -s "$settings_path" ]]; then
         jq --arg theme_path "$NUCLEAR_THEME_ID" --arg dark_mode "$NUCLEAR_DARK_MODE" \
-          '."core.theme.active.type" = "advanced" | ."core.theme.active.id" = $theme_path | if $dark_mode == "dark" then ."core.theme.dark" = true else . end' \
+          '."core.theme.active.type" = "advanced" | ."core.theme.active.id" = $theme_path | ."core.theme.dark" = ($dark_mode == "dark")' \
           "$settings_path" > "$settings_tmp"
       else
         jq -n --arg theme_path "$NUCLEAR_THEME_ID" --arg dark_mode "$NUCLEAR_DARK_MODE" \
-          '{"core.theme.active.type":"advanced","core.theme.active.id":$theme_path} + (if $dark_mode == "dark" then {"core.theme.dark":true} else {} end)' \
+          '{"core.theme.active.type":"advanced","core.theme.active.id":$theme_path,"core.theme.dark":($dark_mode == "dark")}' \
           > "$settings_tmp"
       fi
       chmod 0644 "$settings_tmp"
@@ -949,9 +953,9 @@ EOF
     {"name":"Fastfetch","contract":"Noctalia primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
     {"name":"Vesktop","contract":"Noctalia Discord template + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/noctalia-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"},
     {"name":"IntelliJ IDEA editor scheme","contract":"Matugen generated .icls + versioned JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$intellij_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
-    {"name":"IntelliJ IDEA UI theme","contract":"Livara Theme plugin + versioned JetBrains plugins directory symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$intellij_ui_theme_applied,"installed":$intellij_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
+    {"name":"IntelliJ IDEA UI theme","contract":"Livara Theme plugin + JetBrains product plugin-root symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$intellij_ui_theme_applied,"installed":$intellij_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
     {"name":"Android Studio editor scheme","contract":"Matugen generated .icls + versioned Google colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$android_studio_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
-    {"name":"Android Studio UI theme","contract":"Livara Theme plugin + versioned Google plugins directory symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$android_studio_ui_theme_applied,"installed":$android_studio_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
+    {"name":"Android Studio UI theme","contract":"Livara Theme plugin + Google product plugin-root symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$android_studio_ui_theme_applied,"installed":$android_studio_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
     {"name":"Hydra Launcher","contract":"theme.css export plus official hydra-themes publication layout","path":"$HYDRA_THEME_DIR/theme.css","exportPath":"$HYDRA_THEME_EXPORT_DIR/theme.css","applied":$hydra_applied,"generated":$hydra_generated,"registered":false,"activated":false,"submissionReady":$hydra_submission_ready,"activationRequired":true,"activation":"Hydra's Appearance list is LevelDB-owned; use Create/Edit and paste the generated CSS"}
   ]
 }

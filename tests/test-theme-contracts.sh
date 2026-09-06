@@ -61,8 +61,8 @@ EOF
 bash "$sync_script" dark >/dev/null
 [[ -L "$config_home/JetBrains/IntelliJIdea2026.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$config_home/Google/AndroidStudio2025.1/colors/Matugen-Dark.icls" ]]
-[[ -L "$root/data/JetBrains/IntelliJIdea2026.1/plugins/LivaraTheme" ]]
-[[ -L "$root/data/Google/AndroidStudio2025.1/plugins/LivaraTheme" ]]
+[[ -L "$root/data/JetBrains/IntelliJIdea2026.1/LivaraTheme" ]]
+[[ -L "$root/data/Google/AndroidStudio2025.1/LivaraTheme" ]]
 [[ -s "$config_home/xournalpp/palettes/tokyonight.gpl" ]]
 grep -q '^Name: Tokyo Night$' "$config_home/xournalpp/palettes/tokyonight.gpl"
 grep -q 'tokyonight.gpl' "$config_home/xournalpp/settings.xml"
@@ -76,6 +76,14 @@ grep -q 'name="defaultViewModeAttributes" value="showToolbar,showSidebar"' "$con
 grep -q 'Settings > Appearance' "$config_home/Hydra/themes/Livara-local/README.txt"
 jq -e '.applications[] | select(.name == "Nuclear Music Player" and .generated == true and .applied == true)' "$state_home/livara/theme/applied-applications.json" >/dev/null
 jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "themes/Livara.json" and ."core.theme.dark" == true' "$root/data/com.nuclearplayer/settings.json" >/dev/null
+rm -f "$root/data/com.nuclearplayer/settings.json"
+bash "$sync_script" light >/dev/null
+jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "themes/Livara.json" and ."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
+printf '%s\n' 'light mode contract passed'
+jq -e '."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
+bash "$sync_script" dark >/dev/null
+jq -e '."core.theme.dark" == true' "$root/data/com.nuclearplayer/settings.json" >/dev/null
+printf '%s\n' 'dark/light transition contract passed'
 jq -e '.applications[] | select(.name == "IntelliJ IDEA UI theme" and .installed == true and .applied == true)' "$state_home/livara/theme/applied-applications.json" >/dev/null
 grep -q 'themeId="livara"' "$config_home/JetBrains/IntelliJIdea2026.1/options/laf.xml"
 grep -q 'themeId="livara"' "$config_home/Google/AndroidStudio2025.1/options/laf.xml"
