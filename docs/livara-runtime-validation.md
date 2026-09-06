@@ -74,9 +74,8 @@ After selecting another wallpaper through Noctalia, the generated `matugen_color
 find "${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme/browser" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.config/vesktop/themes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.config/xournalpp/palettes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find "$THEME_ROOT/telegram" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find "$THEME_ROOT/hydra-export/themes" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
-find ~/.local/share/com.nuclearplayer/themes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
+find ~/.local/share/com.nuclearplayer/themes "$HOME/.var/app/com.nuclearplayer.Nuclear/data/com.nuclearplayer/themes" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.local/share/JetBrains ~/.local/share/Google -path '*/LivaraTheme/META-INF/plugin.xml' -print 2>/dev/null
 for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Noctalia.toml ~/.config/nvim/lua/matugen_colors.lua; do
   test -s "$file" && printf 'ok %s\n' "$file" || printf 'missing %s\n' "$file"
@@ -85,7 +84,7 @@ done
 
 Firefox profiles may link `userChrome.css` to the Noctalia-generated Firefox output through the shell bridge. Zen Browser `userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf`/Noctalia integration and must be validated under each of `~/.config/zen/{personal,school,programming,hobby}`. Native GTK, Qt, Kitty and WezTerm files are owned by Noctalia templates; `shell-conf` must not overwrite those outputs with a static theme.
 
-The theme adapter should report Telegram Desktop as generated when `telegram/Livara.tdesktop-theme` exists; selecting it is intentionally manual. Hydra should report `hydra-export/themes/<name>-<friend-code>/theme.css` as generated and should mark submission readiness only when a personal friend code and a valid screenshot are present; the live launcher selection remains owned by Hydra's ClassicLevel database and is not rewritten by the adapter. Nuclear should expose `themes/Livara.json` and persist `core.theme.active.type=advanced` with `core.theme.active.id=themes/Livara.json` only while Nuclear is closed; the application watcher reloads subsequent atomic file changes. IntelliJ IDEA and Android Studio should discover both a `Matugen-Dark.icls` link under their versioned `colors` directories and a `LivaraTheme` directory under the product's documented plugins directory.
+Hydra should report `$XDG_CONFIG_HOME/Hydra/themes/<name>-<friend-code>/theme.css` and the mirrored `hydra-export/themes/<name>-<friend-code>/theme.css` as generated and should mark submission readiness only when a personal friend code and a valid screenshot are present; the live launcher selection remains owned by Hydra's LevelDB database and is not rewritten by the adapter. Nuclear should expose `themes/Livara.json` in every existing native or Flatpak AppData root and persist `core.theme.active.type=advanced` with `core.theme.active.id=themes/Livara.json` only while Nuclear is closed; the dark invocation also persists `core.theme.dark=true`, and the application watcher reloads subsequent atomic file changes. IntelliJ IDEA and Android Studio should discover both a `Matugen-Dark.icls` link under their versioned `colors` directories and a `LivaraTheme` directory under the product's documented plugins directory.
 
 ## Niri and input
 
@@ -129,15 +128,13 @@ NixVim/Home Manager generates the editable palette module at `~/.config/nvim/lua
 
 ## Application state and false-positive checks
 
-The generated report at `$THEME_ROOT/applied-applications.json` distinguishes `generated`, `available`, `installed`, `submissionReady` and `applied`. A generated file is not evidence that an application selected or reloaded it. Telegram Desktop remains `generated=true, applied=false` until the archive is imported through Telegram's theme UI. Nuclear is `applied=true` only when its own JSON settings store points to the relative advanced-theme path. IntelliJ IDEA and Android Studio expose available editor schemes and installed UI plugins, while the IDE keeps the final appearance selection. Hydra remains generated and optionally submission-ready because its live selection is stored in the launcher's private ClassicLevel database rather than in the export tree.
+The generated report at `$THEME_ROOT/applied-applications.json` distinguishes `generated`, `available`, `installed`, `submissionReady`, `activationRequired` and `applied`. A generated file is not evidence that an application selected or reloaded it. Nuclear is `applied=true` only when its own JSON settings store points to the relative AppData id `themes/Livara.json`. IntelliJ IDEA and Android Studio expose available editor schemes and installed UI plugins, while the IDE keeps the final appearance selection. Hydra has generated CSS in `$XDG_CONFIG_HOME/Hydra/themes/<theme-id>` and in the publication export, but remains `applied=false` and `activationRequired=true` because its live selection is stored in the launcher's private LevelDB database rather than in the theme directory.
 
 ```bash
 THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
-jq '.applications[] | {name, generated, available, installed, submissionReady, applied}' "$THEME_ROOT/applied-applications.json"
+jq '.applications[] | {name, generated, available, installed, submissionReady, activationRequired, applied}' "$THEME_ROOT/applied-applications.json"
 printf '\n--- Nuclear selection ---\n'
 jq '{type: ."core.theme.active.type", id: ."core.theme.active.id"}' ~/.local/share/com.nuclearplayer/settings.json 2>/dev/null || true
-printf '\n--- Telegram import package ---\n'
-unzip -l "$THEME_ROOT/telegram/Livara.tdesktop-theme" 2>/dev/null || true
 printf '\n--- IDE availability ---\n'
 find "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains" "${XDG_DATA_HOME:-$HOME/.local/share}/Google" -type f \( -path '*/colors/Matugen-Dark.icls' -o -path '*/LivaraTheme/META-INF/plugin.xml' \) -print 2>/dev/null
 ```

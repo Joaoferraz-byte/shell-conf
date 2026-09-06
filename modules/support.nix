@@ -6,7 +6,7 @@ let
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
-    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps wezterm flatpak dconf zip ];
+    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps util-linux wezterm flatpak dconf ];
     text = builtins.readFile syncSource;
   };
 
@@ -112,6 +112,9 @@ in
       Type = "oneshot";
       ExecStart = "${syncThemes}/bin/sync-livara-themes";
       Environment = [
+        "XDG_CONFIG_HOME=${config.xdg.configHome}"
+        "XDG_DATA_HOME=${config.xdg.dataHome}"
+        "XDG_STATE_HOME=${config.xdg.stateHome}"
         "LIVARA_THEME_ROOT=${themeRoot}"
         "LIVARA_DEFAULT_PALETTE=${themeRoot}/bootstrap.json"
         "LIVARA_IDE_THEME_PLUGIN=${config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or ""}"
@@ -245,8 +248,7 @@ in
       "Heroic/Prism: Noctalia templates pinados"
       "Xournal++"
       "IntelliJ IDEA and Android Studio: generated Matugen ICLS"
-      "Telegram Desktop: generated tdesktop-theme import"
-      "Hydra Launcher: generated theme.css for upstream submission"
+      "Hydra Launcher: generated theme.css for the supported Create/Edit flow and upstream submission"
       "Nuclear Music Player: Noctalia-generated v2 advanced theme JSON"
     ];
   };

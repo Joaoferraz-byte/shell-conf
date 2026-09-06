@@ -20,7 +20,7 @@
       perSystem = { pkgs, ... }: {
         packages.default = pkgs.runCommand "livara-shell-support" { } ''
           mkdir -p "$out/share/livara"
-          cp -R --no-preserve=mode "${./src/livara}/." "$out/share/livara/"
+          cp -R --preserve=mode "${./src/livara}/." "$out/share/livara/"
         '';
 
         devShells.default = pkgs.mkShell {
@@ -28,7 +28,9 @@
         };
 
         checks = {
-          support-scripts = pkgs.runCommand "livara-support-script-check" { } ''
+          support-scripts = pkgs.runCommand "livara-support-script-check" {
+            nativeBuildInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused jq procps util-linux ];
+          } ''
             bash -n ${self}/src/livara/scripts/daily_note.sh
             bash -n ${self}/src/livara/scripts/open-nixos-nvim.sh
             bash -n ${self}/src/livara/scripts/open-zen.sh
@@ -37,6 +39,7 @@
             bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
             bash -n ${self}/src/livara/scripts/xournal_new_note.sh
             bash -n ${self}/tests/test-theme-contracts.sh
+            bash ${self}/tests/test-theme-contracts.sh
             if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
               exit 1
             fi

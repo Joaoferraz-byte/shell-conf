@@ -133,9 +133,8 @@ else
     nuclear_data="$(dirname "$(dirname "$nuclear_theme")")"
     nuclear_settings="$nuclear_data/settings.json"
     if [[ -s "$nuclear_settings" ]] && jq -e \
-      --arg relative_path 'themes/Livara.json' \
-      --arg absolute_path "$nuclear_theme" \
-      '."core.theme.active.type" == "advanced" and (."core.theme.active.id" == $relative_path or ."core.theme.active.id" == $absolute_path)' \
+      --arg theme_id 'themes/Livara.json' \
+      '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == $theme_id' \
       "$nuclear_settings" >/dev/null 2>&1; then
       pass "Nuclear active theme points to Livara: $nuclear_settings"
     else
