@@ -253,7 +253,7 @@ EOF
         log "IDE UI theme rejected because the generated JSON is invalid"
         return 0
       fi
-      local data_root product_root product_name plugins_dir target current theme_id
+      local data_root product_root product_name target current theme_id
       theme_id="$(sed -n 's/.*themeProvider[[:space:]]\+id="\([^"]*\)".*/\1/p' "$theme_plugin/META-INF/plugin.xml" | head -n1)"
       [[ -n "$theme_id" ]] || {
         log "IDE UI theme rejected because plugin.xml has no themeProvider id"
