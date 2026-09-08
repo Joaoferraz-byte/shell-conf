@@ -110,8 +110,9 @@ else
       && pass 'UI theme schema is valid' || fail "UI theme schema is invalid: $plugin"
     [[ -s "$plugin/theme/Matugen-Dark.xml" ]] && pass 'editor scheme is bundled' || fail "editor scheme is missing: $plugin"
     contains 'idea-version' "$plugin_xml" && pass 'plugin compatibility is declared' || fail "idea-version is missing: $plugin_xml"
-    nested="$(dirname "$plugin")/plugins/LivaraTheme"
-    [[ ! -e "$nested" ]] && pass 'legacy nested plugin installation is absent' || fail "legacy nested plugin installation found: $nested"
+    product_root="$(dirname "$plugin")"
+    legacy_nested="$product_root/plugins/LivaraTheme"
+    [[ ! -e "$legacy_nested" ]] && pass 'legacy nested plugin installation is absent' || fail "legacy nested plugin installation found: $legacy_nested"
   done
 fi
 
