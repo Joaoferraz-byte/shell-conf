@@ -35,7 +35,6 @@
             bash -n ${self}/src/livara/scripts/open-nixos-nvim.sh
             bash -n ${self}/src/livara/scripts/open-zen.sh
             bash -n ${self}/src/livara/scripts/reload-zen.sh
-            bash -n ${self}/src/livara/scripts/screen-recording-toggle.sh
             bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
             bash -n ${self}/src/livara/scripts/xournal_new_note.sh
             bash -n ${self}/tests/test-theme-contracts.sh

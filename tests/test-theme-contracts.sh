@@ -65,6 +65,8 @@ bash "$sync_script" dark >/dev/null
 [[ -L "$root/data/Google/AndroidStudio2025.1/LivaraTheme" ]]
 [[ -s "$config_home/xournalpp/palettes/tokyonight.gpl" ]]
 grep -q '^Name: Tokyo Night$' "$config_home/xournalpp/palettes/tokyonight.gpl"
+! grep -Eiq '[[:space:]](Primary|Primary Container|Secondary|Tertiary|Error|Crust|Mantle)$' "$config_home/xournalpp/palettes/tokyonight.gpl"
+awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) exit 1 }' "$config_home/xournalpp/palettes/tokyonight.gpl"
 grep -q 'tokyonight.gpl' "$config_home/xournalpp/settings.xml"
 ! grep -q 'backgroundTypeConfig=f1=' "$config_home/xournalpp/settings.xml"
 grep -q 'backgroundColor=#000000' "$config_home/xournalpp/settings.xml"

@@ -739,28 +739,26 @@ CFG
 
         printf '%s\n' 'GIMP Palette' 'Name: Tokyo Night' 'Columns: 4' '#'
         # GPL has no aliases: keep the first semantic role for equal RGB values.
-        # Surface roles such as crust/mantle are intentionally excluded: they
-        # describe the black page/background, not useful pen colors. Keeping
-        # only contrast-bearing roles prevents a dark swatch from becoming a
-        # misleading toolbar choice while preserving deterministic order.
+        # Material roles are application-surface semantics, not drawing colors;
+        # wallpaper-derived primary/container/secondary/tertiary roles often
+        # collapse to the same RGB value. Keep stable drawing roles only and
+        # let the RGB guard below enforce the contract for future palettes.
         add_unique_color text Text
-        add_unique_color primary Primary
-        add_unique_color primary_container 'Primary Container'
-        add_unique_color secondary Secondary
-        add_unique_color tertiary Tertiary
-        add_unique_color error Error
-        add_unique_color red Alert
-        add_unique_color green Success
-        add_unique_color blue Link
+        add_unique_color subtext0 Muted
+        add_unique_color overlay1 Outline
+        add_unique_color blue Blue
+        add_unique_color sapphire Sapphire
         add_unique_color teal Teal
-        add_unique_color yellow Warning
-        add_unique_color peach Accent
-        add_unique_color mauve Emphasis
+        add_unique_color green Green
+        add_unique_color yellow Yellow
+        add_unique_color peach Orange
+        add_unique_color mauve Purple
+        add_unique_color red Red
       } | write_atomic "$palette_tmp"
 
-      if grep -Eq '[[:space:]](Crust|Mantle)$' "$palette_tmp"; then
+      if grep -Eiq '[[:space:]](Primary|Primary Container|Secondary|Tertiary|Error|Crust|Mantle)$' "$palette_tmp"; then
         rm -f "$palette_tmp"
-        log "Xournal palette rejected: surface role leaked into drawing colors"
+        log "Xournal palette rejected: application role leaked into drawing colors"
         return 1
       fi
       if ! awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) duplicate = 1 } END { exit duplicate }' "$palette_tmp"; then

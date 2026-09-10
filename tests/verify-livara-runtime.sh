@@ -85,6 +85,11 @@ else
     elif [[ -e "$palette" ]]; then
       fail "Xournal++ palette contains duplicate RGB entries: $palette"
     fi
+    if [[ -s "$palette" ]] && grep -Eiq '[[:space:]](Primary|Primary Container|Secondary|Tertiary|Error|Crust|Mantle)$' "$palette"; then
+      fail "Xournal++ palette contains a Material/surface role: $palette"
+    elif [[ -s "$palette" ]]; then
+      pass "Xournal++ palette contains drawing roles only: $palette"
+    fi
   done
 fi
 

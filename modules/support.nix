@@ -59,26 +59,6 @@ let
     text = builtins.readFile (source + "/scripts/daily_note.sh");
   };
 
-  screenRecordingCore = pkgs.writeShellApplication {
-    name = "livara-screen-recording-toggle";
-    runtimeInputs = with pkgs; [ coreutils gpu-screen-recorder libnotify procps util-linux ];
-    text = builtins.readFile (source + "/scripts/screen-recording-toggle.sh");
-  };
-
-  toggleScreenRecording = pkgs.writeShellApplication {
-    name = "livara-toggle-screen-recording";
-    text = ''
-      exec ${screenRecordingCore}/bin/livara-screen-recording-toggle audio "$@"
-    '';
-  };
-
-  toggleScreenRecordingSilent = pkgs.writeShellApplication {
-    name = "livara-toggle-screen-recording-silent";
-    text = ''
-      exec ${screenRecordingCore}/bin/livara-screen-recording-toggle silent "$@"
-    '';
-  };
-
   reloadZen = pkgs.writeShellApplication {
     name = "reload-zen";
     runtimeInputs = with pkgs; [ bash coreutils libnotify procps ];
@@ -97,8 +77,6 @@ in
     tabletStatus
     xournalNewNote
     dailyNote
-    toggleScreenRecording
-    toggleScreenRecordingSilent
     reloadZen
   ];
 
@@ -199,8 +177,6 @@ in
   home.file.".local/share/livara/bootstrap.json".source = bootstrapPalette;
   home.file.".local/share/livara/assets/fastfetch-cat.png".source = fastfetchCatSource;
   home.file.".local/share/livara/scripts/open-zen.sh".source = source + "/scripts/open-zen.sh";
-  home.file.".local/share/livara/scripts/toggle-screen-recording.sh".source = "${toggleScreenRecording}/bin/livara-toggle-screen-recording";
-  home.file.".local/share/livara/scripts/toggle-screen-recording-silent.sh".source = "${toggleScreenRecordingSilent}/bin/livara-toggle-screen-recording-silent";
   home.file.".local/bin/reload-zen".source = "${reloadZen}/bin/reload-zen";
   home.file.".local/share/livara/scripts/open-nixos-nvim.sh".source = source + "/scripts/open-nixos-nvim.sh";
   home.file.".local/share/livara/scripts/xournal_new_note.sh".source = source + "/scripts/xournal_new_note.sh";

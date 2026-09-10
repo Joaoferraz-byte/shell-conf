@@ -31,7 +31,7 @@ find "${XDG_CONFIG_HOME:-$HOME/.config}/noctalia" -maxdepth 2 -type f -printf '%
 find "${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins" -maxdepth 3 -type f -printf '%P\n' 2>/dev/null | sort
 ```
 
-The enabled plugins should include `dotnetrob/cat`, `noctalia/timer` and `noctalia/screen_recorder`. Plugin source files are store-backed; only plugin settings and runtime state are mutable.
+The enabled plugins should include `dotnetrob/cat`, `noctalia/timer` and `alexander/screen-toolkit`. The Screen Toolkit should own the bar widget, capture actions and recorder state; plugin source files are store-backed, while only plugin settings and runtime state are mutable.
 
 ## Nixvim installation and Markdown workflow
 
@@ -95,7 +95,7 @@ niri msg workspaces
 niri msg keyboard-layouts
 ```
 
-The file should contain one `input` section, one `binds` section, `mod-key "Super"`, the four `Mod+WheelScroll*` binds with cooldown, and `spawn-at-startup "noctalia"`. `Mod+Shift+R` and `Mod+Ctrl+Shift+R` should invoke the two direct recorder wrappers. Brightness is tested separately with `brightnessctl --class=backlight info` and the `XF86MonBrightness*` events from the Latitude `Video Bus`.
+The file should contain one `input` section, one `binds` section, `mod-key "Super"`, the four `Mod+WheelScroll*` binds with cooldown, and `spawn-at-startup "noctalia"`. `Mod+K` should open the Screen Toolkit service, `Mod+Shift+S` should invoke `annotate`, `Mod+Shift+L/Q/O` should invoke Lens/QR/OCR, and `Mod+Shift+R` should invoke the service's idempotent `recordToggle`. A second press must send `recordStop` through the same service and finalize the configured output. Brightness is tested separately with `brightnessctl --class=backlight info` and the `XF86MonBrightness*` events from the Latitude `Video Bus`.
 
 ## Keyboard, drivers and host capabilities
 
