@@ -10,6 +10,7 @@ config_home="$root/config"
 state_home="$root/state"
 bin_dir="$root/bin"
 mkdir -p "$config_home/JetBrains/IntelliJIdea2026.1" "$config_home/Google/AndroidStudio2025.1" "$config_home/matugen" "$config_home/xournalpp" "$bin_dir" "$state_home/livara/theme"
+mkdir -p "$config_home/vesktop"
 cat > "$state_home/livara/theme/bootstrap.json" <<'EOF'
 {"base":"#111318","primary":"#7bb7ff","surface0":"#1a2029","surface1":"#242b36","text":"#eef2f7","subtext0":"#b2bdca","blue":"#7bb7ff","teal":"#70d7c3","red":"#f0878a","sapphire":"#9bc9ff","crust":"#07090d","mantle":"#0b0d12","overlay0":"#596575","overlay1":"#6d7a8b"}
 EOF
@@ -27,8 +28,8 @@ cat > "$config_home/xournalpp/settings.xml" <<'EOF'
   <property name="pageTemplate" value="xoj/template&#10;backgroundType=graph&#10;backgroundColor=#000000&#10;"/>
 </settings>
 EOF
-cat > "$bin_dir/matugen" <<'EOF'
-#!/usr/bin/env bash
+printf '#!%s\n' "$(command -v bash)" > "$bin_dir/matugen"
+cat >> "$bin_dir/matugen" <<'EOF'
 set -Eeuo pipefail
 mkdir -p "$LIVARA_THEME_ROOT/intellij"
 printf '%s\n' '<scheme name="Matugen Dark" version="142" parent_scheme="Darcula" />' > "$LIVARA_THEME_ROOT/intellij/Matugen-Dark.icls"
@@ -46,6 +47,7 @@ export LIVARA_FASTFETCH_CAT_PNG="$root/missing.png"
 export LIVARA_HYDRA_FRIEND_CODE=""
 export LIVARA_HYDRA_SCREENSHOT="$root/missing-screenshot.png"
 export LIVARA_IDE_THEME_PLUGIN="$root/livara-theme"
+export LIVARA_SHELL_NAME="Ambxst"
 mkdir -p "$LIVARA_IDE_THEME_PLUGIN/META-INF" "$root/data/com.nuclearplayer"
 cat > "$LIVARA_IDE_THEME_PLUGIN/META-INF/plugin.xml" <<'EOF'
 <idea-plugin>
@@ -59,6 +61,12 @@ cat > "$LIVARA_IDE_THEME_PLUGIN/META-INF/plugin.xml" <<'EOF'
 </idea-plugin>
 EOF
 bash "$sync_script" dark >/dev/null
+[[ -s "$state_home/livara/theme/browser/firefox.css" ]]
+grep -q -- '--livara-primary: #7bb7ff' "$state_home/livara/theme/browser/firefox.css"
+grep -q '#navigator-toolbox' "$state_home/livara/theme/browser/firefox.css"
+[[ -s "$config_home/vesktop/themes/livara-material.theme.css" ]]
+jq -e '(.enabledThemes // []) | index("livara-material.theme.css") != null' "$config_home/vesktop/settings/settings.json" >/dev/null
+printf '%s\n' 'browser and Vesktop theme contracts passed'
 [[ -L "$config_home/JetBrains/IntelliJIdea2026.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$config_home/Google/AndroidStudio2025.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$root/data/JetBrains/IntelliJIdea2026.1/LivaraTheme" ]]

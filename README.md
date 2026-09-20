@@ -17,11 +17,11 @@ The exported `homeModules.support-core` has no shell-runtime input and can be co
 
 ## Shell-independent support
 
-The core module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The selected shell supplies a palette under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store.
+The core module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The selected shell supplies a palette under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store. The browser adapter writes a profile-consumable `browser/firefox.css`; the Zen/Firefox profile module imports it through `chrome/userChrome.css`.
 
 ## Validation
 
-Run `nix flake check --no-build --no-update-lock-file --all-systems` in this repository, `noctalia-conf` and `nix-conf`. Validate shell scripts with `bash -n` and `shellcheck`, validate the Noctalia TOML through the Noctalia check in `noctalia-conf`, and verify on hardware that Niri starts one Noctalia process, manual wallpaper selection updates the palette, and application adapters remain outside the store's mutable state.
+Run `nix flake check --no-build --no-update-lock-file --all-systems` in this repository, `ambxst-conf` and `nix-conf`. Validate shell scripts with `bash -n` and `shellcheck`, validate the generated Niri contract and Ambxst patch in their owning repositories, and verify on hardware that Niri starts one Ambxst process, manual wallpaper selection updates the palette, Zen imports the generated `userChrome.css`, and application adapters remain outside the store's mutable state.
 
 ## References
 

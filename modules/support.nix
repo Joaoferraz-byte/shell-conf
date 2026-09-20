@@ -2,7 +2,11 @@
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
-  weztermConfig = pkgs.writeText "wezterm.lua" (builtins.readFile (source + "/applications/wezterm.lua"));
+  weztermColorScheme = if shellName == "Noctalia" then "Noctalia" else "Ambxst";
+  weztermConfig = pkgs.writeText "wezterm.lua" (builtins.replaceStrings
+    [ "@LIVARA_WEZTERM_COLOR_SCHEME@" ]
+    [ weztermColorScheme ]
+    (builtins.readFile (source + "/applications/wezterm.lua")));
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
@@ -55,7 +59,7 @@ let
 
   dailyNote = pkgs.writeShellApplication {
     name = "livara-daily-note";
-    runtimeInputs = with pkgs; [ bash coreutils gawk libnotify ];
+    runtimeInputs = with pkgs; [ bash coreutils gawk libnotify neovim wezterm foot ];
     text = builtins.readFile (source + "/scripts/daily_note.sh");
   };
 
@@ -90,6 +94,7 @@ in
       Type = "oneshot";
       ExecStart = "${syncThemes}/bin/sync-livara-themes";
       Environment = [
+        "LIVARA_SHELL_NAME=${shellName}"
         "XDG_CONFIG_HOME=${config.xdg.configHome}"
         "XDG_DATA_HOME=${config.xdg.dataHome}"
         "XDG_STATE_HOME=${config.xdg.stateHome}"
@@ -117,7 +122,7 @@ in
     settings = {
       "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
       # The theme adapter keeps this transparent PNG synchronized with the
-      # active Noctalia primary color. kitty-direct requires both dimensions;
+      # active shell primary color. kitty-direct requires both dimensions;
       # the source content is 1296x1518 (0.854:1), while terminal cells are
       # approximately twice as tall as wide. A 16x9 cell box maps to
       # 16*0.5/9 ~= 0.889, close enough to preserve the source proportion.
@@ -161,6 +166,7 @@ in
   '';
 
   home.sessionVariables = {
+    LIVARA_SHELL_NAME = shellName;
     LIVARA_THEME_ROOT = themeRoot;
     LIVARA_DEFAULT_PALETTE = "${themeRoot}/bootstrap.json";
     LIVARA_VAULT_ROOT = "${config.home.homeDirectory}/Vault";

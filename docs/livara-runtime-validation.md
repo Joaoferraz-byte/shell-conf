@@ -10,28 +10,29 @@ git pull --ff-only origin main
 sudo nixos-rebuild switch --flake .#latitude   # or .#myMachine
 ```
 
-The session must contain exactly one Noctalia process started by Niri:
+The session must contain exactly one Ambxst process started by Niri:
 
 ```bash
-pgrep -a noctalia || true
+pgrep -a ambxst || true
 pgrep -a 'quickshell|dms' || true
-systemctl --user --type=service --state=running | grep -Ei 'noctalia|livara|theme' || true
+systemctl --user --type=service --state=running | grep -Ei 'ambxst|livara|theme' || true
 ```
 
-There should be no second shell, wallpaper daemon, or idle daemon introduced by the user configuration. The Home Manager unit for Noctalia is intentionally disabled because Niri owns the single startup edge.
+There should be no second shell, wallpaper daemon, or idle daemon introduced by the user configuration. The Ambxst lifecycle is intentionally owned by Niri's single `spawn-at-startup` edge.
 
-## Noctalia and plugins
+## Ambxst and runtime state
 
 ```bash
-noctalia msg plugins list
-printf '\n--- Noctalia IPC help ---\n'
-noctalia msg --help
+ambxst --help
+printf '\n--- Ambxst layers and IPC state ---\n'
+niri msg --json layers
+niri msg outputs
 printf '\n--- configuration state ---\n'
-find "${XDG_CONFIG_HOME:-$HOME/.config}/noctalia" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
-find "${XDG_DATA_HOME:-$HOME/.local/share}/noctalia/plugins" -maxdepth 3 -type f -printf '%P\n' 2>/dev/null | sort
+find "${XDG_CONFIG_HOME:-$HOME/.config}/ambxst" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
+find "${XDG_DATA_HOME:-$HOME/.local/share}/ambxst" -maxdepth 3 -type f -printf '%P\n' 2>/dev/null | sort
 ```
 
-The enabled plugins should include `dotnetrob/cat`, `noctalia/timer` and `alexander/screen-toolkit`. The Screen Toolkit should own the bar widget, capture actions and recorder state; plugin source files are store-backed, while only plugin settings and runtime state are mutable.
+Ambxst must expose exactly one bar/dock layer per output. Its patched global-shortcut router owns screenshot, OCR and QR actions; OCR and QR also require the system `tesseract` and `zbar` packages from `features/niri.nix`.
 
 ## Nixvim installation and Markdown workflow
 
@@ -66,7 +67,7 @@ printf '\n--- generated theme state ---\n'
 find "$THEME_ROOT" -maxdepth 3 -type f -printf '%P\n' | sort
 ```
 
-After selecting another wallpaper through Noctalia, the generated `matugen_colors.lua` should change atomically. Restarting or reloading Nixvim must reapply the palette through `_G.reload_livara_theme`; the editor should remain transparent and should not require a generated CSS snippet in the Vault.
+After selecting another wallpaper through Ambxst, the generated `matugen_colors.lua` should change atomically. Restarting or reloading Nixvim must reapply the palette through `_G.reload_livara_theme`; the editor should remain transparent and should not require a generated CSS snippet in the Vault.
 
 ## Other application contracts
 
@@ -77,12 +78,12 @@ find ~/.config/xournalpp/palettes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null
 find "$THEME_ROOT/hydra-export/themes" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
 find ~/.local/share/com.nuclearplayer/themes "$HOME/.var/app/com.nuclearplayer.Nuclear/data/com.nuclearplayer/themes" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
 find ~/.local/share/JetBrains ~/.local/share/Google -path '*/LivaraTheme/META-INF/plugin.xml' -print 2>/dev/null
-for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Noctalia.toml ~/.config/nvim/lua/matugen_colors.lua; do
+for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Ambxst.toml ~/.config/nvim/lua/matugen_colors.lua; do
   test -s "$file" && printf 'ok %s\n' "$file" || printf 'missing %s\n' "$file"
 done
 ```
 
-Firefox profiles may link `userChrome.css` to the Noctalia-generated Firefox output through the shell bridge. Zen Browser `userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf`/Noctalia integration and must be validated under each of `~/.config/zen/{personal,school,programming,hobby}`. Native GTK, Qt, Kitty and WezTerm files are owned by Noctalia templates; `shell-conf` must not overwrite those outputs with a static theme.
+Firefox profiles may link `userChrome.css` to the generated shell output through the support bridge. Zen Browser `chrome/userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf` integration and must be validated under the active profile `~/.config/zen/personal`. The generated `$THEME_ROOT/browser/firefox.css` must contain the active palette and be imported after Material Fox so the shell-specific colors win. Native GTK, Qt, Kitty and WezTerm files remain owned by their declarative modules; `shell-conf` generates only documented consumer formats.
 
 Hydra should report `$XDG_CONFIG_HOME/Hydra/themes/<name>-<friend-code>/theme.css` and the mirrored `hydra-export/themes/<name>-<friend-code>/theme.css` as generated and should mark submission readiness only when a personal friend code and a valid screenshot are present; the live launcher selection remains owned by Hydra's LevelDB database and is not rewritten by the adapter. Nuclear should expose `themes/Livara.json` in every existing native or Flatpak AppData root and persist `core.theme.active.type=advanced` with `core.theme.active.id=themes/Livara.json` only while Nuclear is closed; dark and light invocations must persist `core.theme.dark=true` and `core.theme.dark=false` respectively, and the application watcher reloads subsequent atomic file changes. IntelliJ IDEA and Android Studio should discover both a `Matugen-Dark.icls` link under their versioned `colors` directories and a `LivaraTheme` directory directly under the product's effective plugin root.
 
@@ -95,7 +96,7 @@ niri msg workspaces
 niri msg keyboard-layouts
 ```
 
-The file should contain one `input` section, one `binds` section, `mod-key "Super"`, the four `Mod+WheelScroll*` binds with cooldown, and `spawn-at-startup "noctalia"`. `Mod+K` should open the Screen Toolkit service, `Mod+Shift+S` should invoke `annotate`, `Mod+Shift+L/Q/O` should invoke Lens/QR/OCR, and `Mod+Shift+R` should invoke the service's idempotent `recordToggle`. A second press must send `recordStop` through the same service and finalize the configured output. Brightness is tested separately with `brightnessctl --class=backlight info` and the `XF86MonBrightness*` events from the Latitude `Video Bus`.
+The file should contain one `input` section, one `binds` section, `mod-key "Super"`, the four `Mod+WheelScroll*` binds with cooldown, and `spawn-at-startup` for the Ambxst wrapper. `Mod+Shift+O` must execute `ambxst run ocr`, while `Mod+Shift+Q` must execute `ambxst run qr`; verify both flows by selecting a region and checking the result. Brightness is tested separately with `brightnessctl --class=backlight info` and the `XF86MonBrightness*` events from the Latitude `Video Bus`.
 
 ## Keyboard, drivers and host capabilities
 
@@ -105,7 +106,7 @@ sudo keyd check
 sudo keyd monitor
 ```
 
-Validate NVIDIA/Wayland, PipeWire, portals, Bluetooth, the tablet udev rule and power-profile services through their system modules. These capabilities are intentionally not moved into the Noctalia or Nixvim configuration. The expected icon theme is `Livara-Kora` and the cursor is `Bibata-Modern-Classic`.
+Validate NVIDIA/Wayland, PipeWire, portals, Bluetooth, the tablet udev rule and power-profile services through their system modules. These capabilities are intentionally not moved into the Ambxst or Nixvim configuration. The expected icon theme is `Livara-Kora` and the cursor is `Bibata-Modern-Classic`.
 
 
 ## Super+N and the NixOS configuration editor

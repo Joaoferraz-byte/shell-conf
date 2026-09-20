@@ -20,9 +20,9 @@ config.hide_tab_bar_if_only_one_tab = true
 config.enable_tab_bar = false
 config.use_fancy_tab_bar = false
 
-config.color_scheme = "Ambxst"
+config.color_scheme = "@LIVARA_WEZTERM_COLOR_SCHEME@"
 pcall(wezterm.add_to_config_reload_watch_list,
-      wezterm.config_dir .. "/colors/Ambxst.toml")
+      wezterm.config_dir .. "/colors/@LIVARA_WEZTERM_COLOR_SCHEME@.toml")
 
 config.window_background_opacity = 0.88
 config.text_background_opacity = 0.92
