@@ -1,8 +1,8 @@
 # Livara user-support assets
 
-This directory contains application adapters, templates and small user-session helpers consumed by `shell-conf`'s `homeModules.support`. It is not a compositor, desktop shell, session manager or wallpaper service.
+This directory contains application adapters, templates and small user-session helpers consumed by `shell-conf`'s `homeModules.support-core` or a shell-specific adapter. It is not a compositor, desktop shell, session manager or wallpaper service.
 
-Noctalia v5 owns the visible bar, launcher, panels, wallpaper, theme palette, native templates and shell IPC. The adapter scripts consume the palette rendered by Noctalia under `$XDG_STATE_HOME/livara/theme` and write only documented formats for applications without a native Noctalia template, including the Matugen-generated IntelliJ color scheme. All generated files are mutable runtime outputs and remain outside this source tree.
+The selected shell owns the visible bar, launcher, panels, wallpaper, theme palette and shell IPC. The adapter scripts consume a palette under `$XDG_STATE_HOME/livara/theme` and write only documented formats for applications without a native shell template, including the Matugen-generated IntelliJ color scheme. All generated files are mutable runtime outputs and remain outside this source tree.
 
 Fastfetch uses the transparent cat asset from `src/livara/assets/fastfetch-cat.png`; the Noctalia bar's `control-center` button uses the supplied Japanese Kanji SVG from `noctalia-conf/assets/japanese-kanji.svg`. The theme adapter recolors only the cat's opaque pixels with the active `primary` role and keeps the high-resolution alpha edges intact. Fastfetch sends it through `kitty-direct` with an explicit 16×9 cell box, equal horizontal padding, and a four-row top offset: the 17-row text frame has center 8.5 while the 9-row logo has center 4.5, so the offset aligns both centers. The source content ratio is 1296/1518 ≈ 0.854, close to the terminal-cell-compensated 16×0.5/9 ≈ 0.889.
 

@@ -1,6 +1,6 @@
 # Livara shell support
 
-This repository is the intermediary integration layer for the Livara desktop. It imports the complete customized Noctalia module from `noctalia-conf` and connects that shell to session helpers, application adapters, GTK preferences, browser profiles and the host-specific Home Manager composition.
+This repository is the intermediary integration layer for the Livara desktop. It provides a shell-neutral support core and an optional Noctalia adapter for session helpers, application adapters, GTK preferences, browser profiles and host-specific Home Manager composition.
 
 ## Ownership model
 
@@ -8,15 +8,16 @@ This repository is the intermediary integration layer for the Livara desktop. It
 | --- | --- | --- |
 | Host, hardware, drivers, services, Niri, PipeWire and system capabilities | `nix-conf` | NixOS and Home Manager modules |
 | Noctalia runtime, settings, wallpaper policy, templates, plugins and shell assets | `noctalia-conf` | `packages.default`, `homeModules.default` |
-| Session helpers, application adapters and shell-independent support | This repository | `homeModules.support` |
+| Session helpers, application adapters and shell-independent support | This repository | `homeModules.support-core` |
+| Noctalia runtime adapter | This repository + `noctalia-conf` | `homeModules.support` |
 | NixVim configuration and editor workflow | `vim-conf` | NixVim module consuming generated palette data |
 | Markdown notes and source material | `Vault` | Versioned files and user data |
 
-The exported `homeModules.support` imports `noctalia-conf.homeModules.default`. It does not define `programs.noctalia.settings`, install Noctalia plugins, copy Noctalia templates, or start a second shell lifecycle. Niri starts the single Noctalia process through its declarative session edge in `nix-conf`.
+The exported `homeModules.support-core` has no shell-runtime input and can be consumed by Ambxst or another shell. `homeModules.support` is the Noctalia adapter and imports `noctalia-conf.homeModules.default`; it does not define a second Noctalia lifecycle. A shell consumer must choose one complete shell and must not activate Noctalia and Ambxst together.
 
 ## Shell-independent support
 
-The module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The generated palette is consumed as runtime state under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store.
+The core module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The selected shell supplies a palette under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store.
 
 ## Validation
 

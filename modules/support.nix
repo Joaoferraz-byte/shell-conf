@@ -1,4 +1,4 @@
-{ config, lib, pkgs, desktopProfile ? { }, noctaliaRuntime, ... }:
+{ config, lib, pkgs, desktopProfile ? { }, noctaliaRuntime ? null, shellName ? "Livara", ... }:
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
@@ -69,7 +69,7 @@ let
   fastfetchCatSource = source + "/assets/fastfetch-cat.png";
 in
 {
-  imports = [ noctaliaRuntime.homeModules.default ];
+  imports = lib.optional (noctaliaRuntime != null) noctaliaRuntime.homeModules.default;
 
   home.packages = [
     pkgs.jq
@@ -80,9 +80,9 @@ in
     reloadZen
   ];
 
-  systemd.user.services.livara-theme-sync = {
+    systemd.user.services.livara-theme-sync = {
     Unit = {
-      Description = "Synchronize the active Noctalia palette with application themes";
+        Description = "Synchronize the active ${shellName} palette with application themes";
       After = [ "graphical-session.target" ];
       PartOf = [ "graphical-session.target" ];
     };
@@ -103,7 +103,7 @@ in
 
   systemd.user.paths.livara-theme-sync = {
     Unit = {
-      Description = "Watch the Noctalia palette for application theme updates";
+        Description = "Watch the ${shellName} palette for application theme updates";
     };
     Path = {
       PathChanged = "${themeRoot}/palette.dark.json";
@@ -210,14 +210,14 @@ in
 
   home.file.".config/livara/manifest.json".text = builtins.toJSON {
     name = "Livara";
-    role = "noctalia-application-adapters";
+    role = "application-adapters";
     owner = "shell-conf";
     compositor = "niri";
-    shell = "Noctalia";
-    theme = "Noctalia wallpaper-derived";
+    shell = shellName;
+    theme = "${shellName} palette-derived";
     iconTheme = "Livara-Kora";
     adapters = [
-      "Noctalia palette: GTK/Qt/Kitty/WezTerm/Starship"
+      "${shellName} palette: GTK/Qt/Kitty/WezTerm/Starship"
       "Firefox/Zen userChrome contracts"
       "Nixvim Markdown, Mermaid, LaTeX and Xournal++ workflows"
       "Freesm Launcher"

@@ -48,10 +48,16 @@
       };
 
       flake.homeModules = rec {
+        support-core = { config, lib, pkgs, desktopProfile ? { }, ... }:
+          import ./modules/support.nix {
+            inherit config lib pkgs desktopProfile;
+            shellName = "Ambxst";
+          };
         support = { config, lib, pkgs, desktopProfile ? { }, ... }:
           import ./modules/support.nix {
             inherit config lib pkgs desktopProfile;
             noctaliaRuntime = noctaliaRuntime;
+            shellName = "Noctalia";
           };
         default = support;
       };
