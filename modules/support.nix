@@ -2,7 +2,7 @@
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
-  weztermColorScheme = if shellName == "Noctalia" then "Noctalia" else "Ambxst";
+  weztermColorScheme = if shellName == "Noctalia" then "Noctalia" else "Livara";
   weztermConfig = pkgs.writeText "wezterm.lua" (builtins.replaceStrings
     [ "@LIVARA_WEZTERM_COLOR_SCHEME@" ]
     [ weztermColorScheme ]
@@ -87,10 +87,8 @@ in
   systemd.user.services.livara-theme-sync = {
     Unit = {
       Description = "Synchronize the active ${shellName} palette with application themes";
-      After = [ "graphical-session.target" ]
-        ++ lib.optional (shellName == "Ambxst") "livara-ambxst-palette-bridge.service";
+      After = [ "graphical-session.target" ];
       PartOf = [ "graphical-session.target" ];
-      Wants = lib.optional (shellName == "Ambxst") "livara-ambxst-palette-bridge.service";
     };
     Service = {
       Type = "oneshot";
@@ -244,12 +242,10 @@ in
     if [ ! -s "$theme_root/bootstrap.json" ]; then
       install -Dm0644 "${bootstrapPalette}" "$theme_root/bootstrap.json"
     fi
-    ${lib.optionalString (shellName != "Ambxst") ''
-      for palette in palette.json palette.dark.json palette.light.json; do
-        if [ ! -s "$theme_root/$palette" ]; then
-          cp -f "$theme_root/bootstrap.json" "$theme_root/$palette"
-        fi
-      done
-    ''}
+    for palette in palette.json palette.dark.json palette.light.json; do
+      if [ ! -s "$theme_root/$palette" ]; then
+        cp -f "$theme_root/bootstrap.json" "$theme_root/$palette"
+      fi
+    done
   '';
 }

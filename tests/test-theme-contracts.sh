@@ -47,7 +47,7 @@ export LIVARA_FASTFETCH_CAT_PNG="$root/missing.png"
 export LIVARA_HYDRA_FRIEND_CODE=""
 export LIVARA_HYDRA_SCREENSHOT="$root/missing-screenshot.png"
 export LIVARA_IDE_THEME_PLUGIN="$root/livara-theme"
-export LIVARA_SHELL_NAME="Ambxst"
+export LIVARA_SHELL_NAME="Livara"
 mkdir -p "$LIVARA_IDE_THEME_PLUGIN/META-INF" "$root/data/com.nuclearplayer"
 cat > "$state_home/livara/theme/palette.dark.json" <<'EOF'
 {"background":"#101318","surface":"#171d26","surfaceContainer":"#202936","surfaceContainerLowest":"#080a0e","surfaceDim":"#0b0d12","overBackground":"#eef2f7","outline":"#596575","outlineVariant":"#6d7a8b","primary":"#7bb7ff","primaryContainer":"#29405e","secondary":"#74d7c4","secondaryContainer":"#27493e","tertiary":"#e5bf89","tertiaryContainer":"#554218","error":"#f0878a","errorContainer":"#512d34","overPrimary":"#0c1420","overSecondary":"#0d1a13","overTertiary":"#2b1927","overError":"#2a1218","base":"#101318","mantle":"#0b0d12","crust":"#080a0e","text":"#eef2f7","subtext0":"#596575","subtext1":"#6d7a8b","surface0":"#171d26","surface1":"#202936","surface2":"#303946","overlay0":"#596575","overlay1":"#6d7a8b","overlay2":"#8b9aaa","blue":"#7bb7ff","sapphire":"#72d4e6","peach":"#e5bf89","green":"#83d6a3","red":"#f0878a","mauve":"#c2a4f5","pink":"#e7a9c3","maroon":"#d38b9b","yellow":"#e8cf85","teal":"#74d7c4"}
@@ -133,7 +133,7 @@ printf '%s\n' 'xdg fallback contract passed'
 before_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-material.theme.css")"
 printf '%s\n' '{"base":"not-a-color","blue":"#123"}' > "$state_home/livara/theme/palette.dark.json"
 if bash "$sync_script" dark >/dev/null 2>&1; then
-  echo 'invalid Ambxst canonical palette was accepted' >&2
+  echo 'invalid canonical palette was accepted' >&2
   exit 1
 fi
 after_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-material.theme.css")"

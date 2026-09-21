@@ -1,148 +1,35 @@
 # Livara runtime validation
 
-Run these checks after applying the `nix-conf` generation on the host. They are mostly read-only; opening a panel, changing a wallpaper, or opening a note changes only the user session/Vault state.
+This guide validates the application-adapter layer without assuming a particular shell. The selected shell or theme producer owns the canonical palette; `shell-conf` consumes the neutral files under `$XDG_STATE_HOME/livara/theme` and writes only documented application formats.
 
-## Apply the generation
+## Palette contract
 
-```bash
-cd ~/.config/nixos
-git pull --ff-only origin main
-sudo nixos-rebuild switch --flake .#latitude   # or .#myMachine
-```
-
-The session must contain exactly one Ambxst process started by Niri:
-
-```bash
-ambxst_count="$(pgrep -x ambxst | wc -l)"
-test "$ambxst_count" -eq 1
-! pgrep -x noctalia >/dev/null
-! pgrep -x quickshell >/dev/null
-pgrep -a ambxst
-systemctl --user --type=service --state=running | grep -Ei 'ambxst|livara|theme' || true
-```
-
-There should be no second shell, wallpaper daemon, or idle daemon introduced by the user configuration. The Ambxst lifecycle is intentionally owned by Niri's single `spawn-at-startup` edge.
-
-## Ambxst and runtime state
-
-```bash
-ambxst --help
-printf '\n--- Ambxst layers and IPC state ---\n'
-niri msg --json layers
-niri msg outputs
-printf '\n--- configuration state ---\n'
-find "${XDG_CONFIG_HOME:-$HOME/.config}/ambxst" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
-find "${XDG_DATA_HOME:-$HOME/.local/share}/ambxst" -maxdepth 3 -type f -printf '%P\n' 2>/dev/null | sort
-```
-
-Ambxst must expose exactly one bar/dock layer per output. Its patched global-shortcut router owns screenshot, OCR and QR actions; OCR and QR also require the system `tesseract` and `zbar` packages from `features/niri.nix`.
-
-## Nixvim installation and Markdown workflow
-
-```bash
-command -v nvim
-command -v oil || true
-nvim --headless '+checkhealth' '+qa'
-find ~/.config/nvim -maxdepth 3 -type f \( -name '*.nix' -o -name '*.lua' \) -printf '%P\n' 2>/dev/null | sort
-```
-
-The active editor must be the Nixvim package imported from `vim-conf`. Markdown buffers should expose Treesitter/Marksman support and the `render-markdown` setup. Mermaid notes should be testable through the pinned Mermaid commands or a trusted local preview when that optional layer is enabled; LaTeX math should remain ordinary Markdown source and render through the selected preview path rather than an Obsidian plugin.
-
-Open a representative note from each active Vault area and verify that links, code fences, tables, Mermaid fences, and LaTeX expressions remain editable as plain Markdown. The workflow must not depend on `.obsidian`, Dataview, Templater, dashboard JavaScript, or an Obsidian process.
-
-## Xournal++ integration
-
-```bash
-command -v xournalpp
-ls -l ~/Vault/04\ -\ Xournal++/*.xopp 2>/dev/null || true
-```
-
-Use `livara-xournal-new-note` to create `04 - Xournal++/YYYY-MM-DD.xopp`, then open an existing `.xopp` from the file manager and from NixVim's file explorer. Xournal++ remains the only owner of the journal format and must not create a competing editor-specific path.
-
-## Theme pipeline
+The producer should provide `palette.json`, `palette.dark.json` and, when supported, `palette.light.json`. Each file must contain valid six-digit hexadecimal roles required by the enabled adapters. The synchronizer validates the active dark file before writing any destination. Invalid input must preserve the previous generated outputs.
 
 ```bash
 THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
-test -s "${AMBXST_COLORS_SOURCE:-$HOME/.cache/ambxst/colors.json}"
 test -s "$THEME_ROOT/palette.dark.json"
-jq -e '(.primary | strings | test("^#[0-9A-Fa-f]{6}$")) and (.background | strings | test("^#[0-9A-Fa-f]{6}$")) and (.base == .background) and (.surface0 | strings | test("^#[0-9A-Fa-f]{6}$")) and (.blue == .primary)' "$THEME_ROOT/palette.dark.json"
-sha256sum "${AMBXST_COLORS_SOURCE:-$HOME/.cache/ambxst/colors.json}" "$THEME_ROOT/palette.dark.json"
-test -s ~/.config/nvim/lua/matugen_colors.lua
-printf '\n--- generated theme state ---\n'
-find "$THEME_ROOT" -maxdepth 3 -type f -printf '%P\n' | sort
+jq -e '(.base | strings | test("^#[0-9A-Fa-f]{6}$")) and (.blue | strings | test("^#[0-9A-Fa-f]{6}$"))' "$THEME_ROOT/palette.dark.json"
+sha256sum "$THEME_ROOT/palette.dark.json"
 ```
 
-After selecting another wallpaper through Ambxst, the generated `matugen_colors.lua` should change atomically. Restarting or reloading Nixvim must reapply the palette through `_G.reload_livara_theme`; the editor should remain transparent and should not require a generated CSS snippet in the Vault.
+## Applications
 
-## Other application contracts
+Firefox and Zen consume the generated `browser/firefox.css` only through their declarative profile owner. WezTerm consumes the selected TOML scheme from its `colors` directory. GTK files generated here contain only stable icon and dark-mode preferences; GTK/libadwaita styles remain toolkit-owned. Qt uses its configured platform theme. NixVim, Xournal++, Foliate, KDE/Okular, Nuclear, Hydra, IntelliJ IDEA and Android Studio must be checked only when their documented profiles or state roots exist.
 
-```bash
-find "${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme/browser" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find ~/.config/vesktop/themes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find ~/.config/xournalpp/palettes -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find "$THEME_ROOT/hydra-export/themes" -maxdepth 2 -type f -printf '%P\n' 2>/dev/null | sort
-find ~/.local/share/com.nuclearplayer/themes "$HOME/.var/app/com.nuclearplayer.Nuclear/data/com.nuclearplayer/themes" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null | sort
-find ~/.local/share/JetBrains ~/.local/share/Google -path '*/LivaraTheme/META-INF/plugin.xml' -print 2>/dev/null
-for file in ~/.config/gtk-3.0/settings.ini ~/.config/gtk-4.0/settings.ini ~/.config/wezterm/colors/Ambxst.toml ~/.config/nvim/lua/matugen_colors.lua; do
-  test -s "$file" && printf 'ok %s\n' "$file" || printf 'missing %s\n' "$file"
-done
-```
+For each adapter, distinguish `generated`, `selected`, `loaded` and `confirmed`. The existence of a file is not proof that an application imported or selected it. Restart or reload the application only through its documented mechanism, and never overwrite an application-owned profile while it is running.
 
-Firefox profiles may link `userChrome.css` to the generated shell output through the support bridge. Zen Browser `chrome/userChrome.css`, profiles, containers and session stores are owned by the declarative `nix-conf` integration and must be validated under the active profile `~/.config/zen/personal`. The generated `$THEME_ROOT/browser/firefox.css` must contain the active palette and be imported after Material Fox so the shell-specific colors win. GTK settings generated here select the icon theme and dark preference; the native GTK/libadwaita stylesheet remains toolkit-owned. Qt applications use the `qt6ct` platform integration and do not receive an undocumented global palette writer from this repository. Kitty, WezTerm and the other adapters are validated through their documented consumer formats.
+## Session and ownership
 
-Hydra should report `$XDG_CONFIG_HOME/Hydra/themes/<name>-<friend-code>/theme.css` and the mirrored `hydra-export/themes/<name>-<friend-code>/theme.css` as generated and should mark submission readiness only when a personal friend code and a valid screenshot are present; the live launcher selection remains owned by Hydra's LevelDB database and is not rewritten by the adapter. Nuclear should expose `themes/Livara.json` in every existing native or Flatpak AppData root and persist `core.theme.active.type=advanced` with `core.theme.active.id=themes/Livara.json` only while Nuclear is closed; dark and light invocations must persist `core.theme.dark=true` and `core.theme.dark=false` respectively, and the application watcher reloads subsequent atomic file changes. IntelliJ IDEA and Android Studio should discover both a `Matugen-Dark.icls` link under their versioned `colors` directories and a `LivaraTheme` directory directly under the product's effective plugin root.
+The selected shell is the only owner of bars, docks, launchers, panels, compositor IPC and layer-shell reservations. `shell-conf` must not start a shell, create a second panel, define compositor shortcuts or emulate exclusive zones. Niri owns window rules, workspace definitions and key bindings; application commands are separate packages or scripts with explicit contracts.
 
-## Niri and input
+No full system build is required for this guide. Use `bash -n`, focused fixture tests, `git diff --check`, and documented application validators. Runtime visual validation must be performed on the real Wayland session after the declarative configuration has been activated.
 
-```bash
-niri validate --config ~/.config/niri/config.kdl
-niri msg focused-output
-niri msg workspaces
-niri msg keyboard-layouts
-```
+## References
 
-The file should contain one `input` section, one `binds` section, `mod-key "Super"`, the four `Mod+WheelScroll*` binds with cooldown, and `spawn-at-startup` for the Ambxst wrapper. `Mod+Shift+O` must execute `ambxst run ocr`, while `Mod+Shift+Q` must execute `ambxst run qr`; verify both flows by selecting a region and checking the result. Brightness is tested separately with `brightnessctl --class=backlight info` and the `XF86MonBrightness*` events from the Latitude `Video Bus`.
-
-## Keyboard, drivers and host capabilities
-
-```bash
-systemctl status keyd --no-pager -n 20
-sudo keyd check
-sudo keyd monitor
-```
-
-Validate NVIDIA/Wayland, PipeWire, portals, Bluetooth, the tablet udev rule and power-profile services through their system modules. These capabilities are intentionally not moved into the Ambxst or Nixvim configuration. The expected icon theme is `Livara-Kora` and the cursor is `Bibata-Modern-Classic`.
-
-
-## Super+N and the NixOS configuration editor
-
-The Super+N path is owned by Niri and exported directly by `shell-conf` as `open-nixos-nvim.sh`. The historical continuation prompt came from output emitted while Neovim was starting; setting `nomore` only with a post-init `-c` command left a window where startup messages could still trigger the pager.
-
-The wrapper now passes `--cmd "set nomore"` and `--cmd "set shortmess+=F"` before the init files in the WezTerm, footclient and fallback paths, then opens the repository with Oil. Validate the static contract with:
-
-```bash
-~/.local/share/livara/scripts/validate-livara-shell.sh
-bash -n ~/.local/share/livara/scripts/open-nixos-nvim.sh
-```
-
-A live session should open the NixOS repository without asking for a key. This check is intentionally separate from `nixos-rebuild`; no rebuild or boot-affecting operation is required to validate the wrapper.
-
-
-## Matugen/NixVim path contract
-
-NixVim/Home Manager generates the editable palette module at `~/.config/nvim/lua/matugen_colors.lua`. The theme synchronization script must write to that exact path; writing to `~/.config/nvim/matugen_colors.lua` leaves the editor using a stale or missing palette. The shell validator checks both the producer path and the absence of the legacy root-level path.
-
-## Application state and false-positive checks
-
-The generated report at `$THEME_ROOT/applied-applications.json` distinguishes `generated`, `available`, `installed`, `submissionReady`, `activationRequired` and `applied`. A generated file is not evidence that an application selected or reloaded it. Nuclear is `applied=true` only when its own JSON settings store points to the relative AppData id `themes/Livara.json`. IntelliJ IDEA and Android Studio expose available editor schemes and installed UI plugins, while the IDE keeps the final appearance selection. Hydra has generated CSS in `$XDG_CONFIG_HOME/Hydra/themes/<theme-id>` and in the publication export, but remains `applied=false` and `activationRequired=true` because its live selection is stored in the launcher's private LevelDB database rather than in the theme directory.
-
-```bash
-THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
-jq '.applications[] | {name, generated, available, installed, submissionReady, activationRequired, applied}' "$THEME_ROOT/applied-applications.json"
-printf '\n--- Nuclear selection ---\n'
-jq '{type: ."core.theme.active.type", id: ."core.theme.active.id"}' ~/.local/share/com.nuclearplayer/settings.json 2>/dev/null || true
-printf '\n--- IDE availability ---\n'
-find "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains" "${XDG_DATA_HOME:-$HOME/.local/share}/Google" -type f \( -path '*/colors/Matugen-Dark.icls' -o -path '*/LivaraTheme/META-INF/plugin.xml' \) -print 2>/dev/null
-```
-
-Web-based application adapters only control the consumer's documented web content; a remaining native Wayland or X11 titlebar decoration must be diagnosed through compositor and window-decoration settings rather than by adding selectors to an application stylesheet.
+[1]: https://docs.noctalia.dev/noctalia/theming/palette/ "Noctalia palette contract"
+[2]: https://docs.noctalia.dev/noctalia/theming/app-theming/ "Noctalia application theming"
+[3]: https://docs.zen-browser.app/guides/live-editing "Zen Browser live editing"
+[4]: https://wezterm.org/config/appearance.html "WezTerm appearance configuration"
+[5]: https://docs.gtk.org/gtk4/css-overview.html "GTK CSS overview"
+[6]: https://doc.qt.io/qt-6/stylesheet.html "Qt Style Sheets"

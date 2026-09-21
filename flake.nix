@@ -47,19 +47,23 @@
         };
       };
 
-      flake.homeModules = rec {
-        support-core = { config, lib, pkgs, desktopProfile ? { }, ... }:
-          import ./modules/support.nix {
-            inherit config lib pkgs desktopProfile;
-            shellName = "Ambxst";
-          };
+      flake.homeModules = {
         support = { config, lib, pkgs, desktopProfile ? { }, ... }:
           import ./modules/support.nix {
             inherit config lib pkgs desktopProfile;
             noctaliaRuntime = noctaliaRuntime;
             shellName = "Noctalia";
           };
-        default = support;
+        default = {
+          config,
+          lib,
+          pkgs,
+          desktopProfile ? { },
+          ...
+        }:
+          import ./modules/support.nix {
+            inherit config lib pkgs desktopProfile;
+          };
       };
     };
 }
