@@ -225,7 +225,8 @@ in
     theme = "${shellName} palette-derived";
     iconTheme = "Livara-Kora";
     adapters = [
-      "${shellName} palette: GTK/Qt/Kitty/WezTerm/Starship"
+      "${shellName} palette: Kitty/WezTerm/Starship and documented application adapters"
+      "GTK icon/dark preferences; native GTK/Qt toolkit themes remain toolkit-owned"
       "Firefox/Zen userChrome contracts"
       "Nixvim Markdown, Mermaid, LaTeX and Xournal++ workflows"
       "Freesm Launcher"
