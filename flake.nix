@@ -1,19 +1,12 @@
 {
-  description = "Livara shell integration and application support";
+  description = "Livara application adapters for the Ambxst desktop shell";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-parts.url = "github:hercules-ci/flake-parts";
-    noctalia-conf = {
-      url = "github:Joaoferraz-byte/noctalia-conf";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
   outputs = inputs@{ self, flake-parts, ... }:
-    let
-      noctaliaRuntime = inputs.noctalia-conf;
-    in
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = [ "x86_64-linux" "aarch64-linux" ];
 
@@ -27,47 +20,36 @@
           packages = with pkgs; [ bash jq shellcheck ];
         };
 
-        checks = {
-          support-scripts = pkgs.runCommand "livara-support-script-check" {
-            nativeBuildInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused jq procps util-linux ];
-          } ''
-            bash -n ${self}/src/livara/scripts/daily_note.sh
-            bash -n ${self}/src/livara/scripts/open-nixos-nvim.sh
-            bash -n ${self}/src/livara/scripts/open-zen.sh
-            bash -n ${self}/src/livara/scripts/reload-zen.sh
-            bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
-            bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
-            bash -n ${self}/src/livara/scripts/sync-ambxst-palette.sh
-            bash -n ${self}/tests/test-theme-contracts.sh
-            bash -n ${self}/tests/test-ambxst-palette-bridge.sh
-            bash ${self}/tests/test-theme-contracts.sh
-            bash ${self}/tests/test-ambxst-palette-bridge.sh
-            if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
-              exit 1
-            fi
-            touch "$out"
-          '';
-        };
+        checks.support-scripts = pkgs.runCommand "livara-support-script-check" {
+          nativeBuildInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused jq procps util-linux ];
+        } ''
+          bash -n ${self}/src/livara/scripts/daily_note.sh
+          bash -n ${self}/src/livara/scripts/open-nixos-nvim.sh
+          bash -n ${self}/src/livara/scripts/open-zen.sh
+          bash -n ${self}/src/livara/scripts/reload-zen.sh
+          bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
+          bash -n ${self}/src/livara/scripts/sync-ambxst-palette.sh
+          bash -n ${self}/tests/test-theme-contracts.sh
+          bash -n ${self}/tests/test-ambxst-palette-bridge.sh
+          bash ${self}/tests/test-theme-contracts.sh
+          bash ${self}/tests/test-ambxst-palette-bridge.sh
+          if grep -Eq 'config\\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
+            exit 1
+          fi
+          touch "$out"
+        '';
       };
 
-      flake.homeModules = {
-        support = { config, lib, pkgs, desktopProfile ? { }, ... }:
-          import ./modules/support.nix {
-            inherit config lib pkgs desktopProfile;
-            noctaliaRuntime = noctaliaRuntime;
-            shellName = "Noctalia";
-          };
-        default = {
-          config,
-          lib,
-          pkgs,
-          desktopProfile ? { },
-          shellName ? "Livara",
-          ...
-        }:
-          import ./modules/support.nix {
-            inherit config lib pkgs desktopProfile shellName;
-          };
-      };
+      flake.homeModules.default = {
+        config,
+        lib,
+        pkgs,
+        desktopProfile ? { },
+        shellName ? "Livara",
+        ...
+      }:
+        import ./modules/support.nix {
+          inherit config lib pkgs desktopProfile shellName;
+        };
     };
 }

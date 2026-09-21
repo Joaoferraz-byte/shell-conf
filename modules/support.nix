@@ -1,4 +1,4 @@
-{ config, lib, pkgs, desktopProfile ? { }, noctaliaRuntime ? null, shellName ? "Livara", ... }:
+{ config, lib, pkgs, desktopProfile ? { }, shellName ? "Livara", ... }:
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
@@ -88,8 +88,6 @@ let
   fastfetchCatSource = source + "/assets/fastfetch-cat.png";
 in
 {
-  imports = lib.optional (noctaliaRuntime != null) noctaliaRuntime.homeModules.default;
-
   home.packages = [
     pkgs.jq
     syncAmbxstPalette
