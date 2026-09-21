@@ -84,11 +84,13 @@ in
     reloadZen
   ];
 
-    systemd.user.services.livara-theme-sync = {
+  systemd.user.services.livara-theme-sync = {
     Unit = {
-        Description = "Synchronize the active ${shellName} palette with application themes";
-      After = [ "graphical-session.target" ];
+      Description = "Synchronize the active ${shellName} palette with application themes";
+      After = [ "graphical-session.target" ]
+        ++ lib.optional (shellName == "Ambxst") "livara-ambxst-palette-bridge.service";
       PartOf = [ "graphical-session.target" ];
+      Wants = lib.optional (shellName == "Ambxst") "livara-ambxst-palette-bridge.service";
     };
     Service = {
       Type = "oneshot";
@@ -108,7 +110,7 @@ in
 
   systemd.user.paths.livara-theme-sync = {
     Unit = {
-        Description = "Watch the ${shellName} palette for application theme updates";
+      Description = "Watch the ${shellName} palette for application theme updates";
     };
     Path = {
       PathChanged = "${themeRoot}/palette.dark.json";
@@ -227,11 +229,11 @@ in
       "Firefox/Zen userChrome contracts"
       "Nixvim Markdown, Mermaid, LaTeX and Xournal++ workflows"
       "Freesm Launcher"
-      "Heroic/Prism: Noctalia templates pinados"
+      "Heroic/Prism: application-owned templates"
       "Xournal++"
       "IntelliJ IDEA and Android Studio: generated Matugen ICLS"
       "Hydra Launcher: generated theme.css for the supported Create/Edit flow and upstream submission"
-      "Nuclear Music Player: Noctalia-generated v2 advanced theme JSON"
+      "Nuclear Music Player: generated v2 advanced theme JSON"
     ];
   };
 
@@ -241,10 +243,12 @@ in
     if [ ! -s "$theme_root/bootstrap.json" ]; then
       install -Dm0644 "${bootstrapPalette}" "$theme_root/bootstrap.json"
     fi
-    for palette in palette.json palette.dark.json palette.light.json; do
-      if [ ! -s "$theme_root/$palette" ]; then
-        cp -f "$theme_root/bootstrap.json" "$theme_root/$palette"
-      fi
-    done
+    ${lib.optionalString (shellName != "Ambxst") ''
+      for palette in palette.json palette.dark.json palette.light.json; do
+        if [ ! -s "$theme_root/$palette" ]; then
+          cp -f "$theme_root/bootstrap.json" "$theme_root/$palette"
+        fi
+      done
+    ''}
   '';
 }

@@ -1,6 +1,6 @@
 # Livara application palette examples
 
-A paleta ativa do Noctalia é a fonte de verdade. Os adaptadores abaixo transformam os mesmos papéis semânticos em formatos próprios de cada aplicação.
+A paleta ativa do shell é a fonte de verdade. No modo Ambxst, ela vem de `~/.cache/ambxst/colors.json` e passa pelo bridge para aliases Livara validados. Os adaptadores abaixo transformam os mesmos papéis semânticos em formatos próprios de cada aplicação.
 
 | Aplicação | Fundo principal | Superfície | Texto | Acento | Aplicação |
 | --- | --- | --- | --- | --- | --- |
@@ -31,7 +31,7 @@ red        = #f0878a
 
 For Nuclear, the same values become `background=base`, `card=surface0`, `foreground=text`, `muted-foreground=subtext0`, `primary=blue` and `border=overlay0` in the v2 advanced-theme JSON. For Hydra, the CSS variables `--livara-background`, `--livara-surface`, `--livara-surface-raised`, `--livara-text`, `--livara-muted`, `--livara-primary` and `--livara-error` use exactly the same semantic roles.
 
-These are application-format examples of one Noctalia palette, not manually invented palettes. When Noctalia changes wallpaper, the adapters regenerate file-based contracts from the active palette, while mutable application-owned stores are changed only through their documented JSON or UI contracts.
+These are application-format examples of one shell palette, not manually invented palettes. When Ambxst changes wallpaper, its bridge promotes the new colors atomically and the adapters regenerate file-based contracts from that canonical output, while mutable application-owned stores are changed only through their documented JSON or UI contracts.
 
 ## External application boundaries
 

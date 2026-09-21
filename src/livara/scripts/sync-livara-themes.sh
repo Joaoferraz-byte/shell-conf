@@ -68,13 +68,23 @@ set -Eeuo pipefail
 
     # The application adapters below consume each ecosystem's documented
     # format. Matugen owns the shared palette, while this script only writes
-    # formats that the target application actually consumes.
-    if [[ ! -s "$THEME_DIR/palette.json" ]]; then
-      install -m 0644 "${LIVARA_DEFAULT_PALETTE:-$THEME_DIR/bootstrap.json}" "$THEME_DIR/palette.json"
-      log "installed the emergency Livara fallback palette"
+    # formats that the target application actually consumes. Ambxst has a
+    # separate producer; never promote bootstrap.json over its live palette.
+    if [[ "$SHELL_NAME" == "Ambxst" ]]; then
+      if [[ ! -s "$THEME_DIR/palette.dark.json" ]]; then
+        log "Ambxst palette is not available yet; skipping application sync"
+        exit 0
+      fi
+      [[ -s "$THEME_DIR/palette.json" ]] || cp -f "$THEME_DIR/palette.dark.json" "$THEME_DIR/palette.json"
+      [[ -s "$THEME_DIR/palette.light.json" ]] || cp -f "$THEME_DIR/palette.dark.json" "$THEME_DIR/palette.light.json"
+    else
+      if [[ ! -s "$THEME_DIR/palette.json" ]]; then
+        install -m 0644 "${LIVARA_DEFAULT_PALETTE:-$THEME_DIR/bootstrap.json}" "$THEME_DIR/palette.json"
+        log "installed the emergency Livara fallback palette"
+      fi
+      [[ -s "$THEME_DIR/palette.light.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.light.json"
+      [[ -s "$THEME_DIR/palette.dark.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.dark.json"
     fi
-    [[ -s "$THEME_DIR/palette.light.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.light.json"
-    [[ -s "$THEME_DIR/palette.dark.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.dark.json"
 
     json_color() {
       local key="$1"
@@ -82,10 +92,20 @@ set -Eeuo pipefail
       local color
       # palette.dark.json is the single dark-mode source produced by the active
       # shell. palette.json remains only a compatibility copy.
-      color="$(jq -r --arg key "$key" --arg fallback "$fallback" '.[$key] // .[$fallback] // .base // "#111318"' "$THEME_DIR/palette.dark.json")"
+      if ! color="$(jq -er --arg key "$key" --arg fallback "$fallback" '.[$key] // .[$fallback] // .base // error("missing color")' "$THEME_DIR/palette.dark.json")"; then
+        if [[ "$SHELL_NAME" == "Ambxst" ]]; then
+          log "Ambxst canonical palette is missing color role: $key"
+          return 1
+        fi
+        color="#111318"
+      fi
       if [[ "$color" =~ ^#[[:xdigit:]]{6}$ ]]; then
         printf '%s\n' "$color"
       else
+        if [[ "$SHELL_NAME" == "Ambxst" ]]; then
+          log "Ambxst canonical palette has invalid color role: $key"
+          return 1
+        fi
         printf '%s\n' '#111318'
       fi
       }

@@ -13,8 +13,11 @@ sudo nixos-rebuild switch --flake .#latitude   # or .#myMachine
 The session must contain exactly one Ambxst process started by Niri:
 
 ```bash
-pgrep -a ambxst || true
-pgrep -a 'quickshell|dms' || true
+ambxst_count="$(pgrep -x ambxst | wc -l)"
+test "$ambxst_count" -eq 1
+! pgrep -x noctalia >/dev/null
+! pgrep -x quickshell >/dev/null
+pgrep -a ambxst
 systemctl --user --type=service --state=running | grep -Ei 'ambxst|livara|theme' || true
 ```
 
@@ -60,8 +63,10 @@ Use `livara-xournal-new-note` to create `04 - Xournal++/YYYY-MM-DD.xopp`, then o
 
 ```bash
 THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
+test -s "${AMBXST_COLORS_SOURCE:-$HOME/.cache/ambxst/colors.json}"
 test -s "$THEME_ROOT/palette.dark.json"
-jq -e '(.primary | type == "string") and (.background | type == "string")' "$THEME_ROOT/palette.dark.json"
+jq -e '(.primary | strings | test("^#[0-9A-Fa-f]{6}$")) and (.background | strings | test("^#[0-9A-Fa-f]{6}$")) and (.base == .background) and (.surface0 | strings | test("^#[0-9A-Fa-f]{6}$")) and (.blue == .primary)' "$THEME_ROOT/palette.dark.json"
+sha256sum "${AMBXST_COLORS_SOURCE:-$HOME/.cache/ambxst/colors.json}" "$THEME_ROOT/palette.dark.json"
 test -s ~/.config/nvim/lua/matugen_colors.lua
 printf '\n--- generated theme state ---\n'
 find "$THEME_ROOT" -maxdepth 3 -type f -printf '%P\n' | sort

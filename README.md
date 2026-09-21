@@ -17,7 +17,7 @@ The exported `homeModules.support-core` has no shell-runtime input and can be co
 
 ## Shell-independent support
 
-The core module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. The selected shell supplies a palette under `$XDG_STATE_HOME/livara/theme`; source configuration remains in its owning repository and mutable profiles remain outside the Nix store. The browser adapter writes a profile-consumable `browser/firefox.css`; the Zen/Firefox profile module imports it through `chrome/userChrome.css`.
+The core module provides Fastfetch, WezTerm configuration, tablet detection, Xournal++ and daily-note helpers, GTK preferences, browser-theme synchronization, and application-specific theme adapters. In the active Ambxst composition, the bridge promotes `~/.cache/ambxst/colors.json` into a validated semantic palette under `$XDG_STATE_HOME/livara/theme`; this repository consumes that output and does not read or rewrite Ambxst state directly. Source configuration remains in its owning repository and mutable profiles remain outside the Nix store. The browser adapter is the sole writer of the profile-consumable `browser/firefox.css`; the Zen/Firefox profile module imports it through `chrome/userChrome.css`. Ambxst remains the sole writer of `wezterm/colors/Ambxst.toml` in the integration, while this repository selects and watches that file for reload.
 
 ## Validation
 
