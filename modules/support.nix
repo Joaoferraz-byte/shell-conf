@@ -2,7 +2,7 @@
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
-  weztermColorScheme = if shellName == "Noctalia" then "Noctalia" else "Livara";
+  weztermColorScheme = if shellName == "Ambxst" then "Ambxst" else "Livara";
   weztermConfig = pkgs.writeText "wezterm.lua" (builtins.replaceStrings
     [ "@LIVARA_WEZTERM_COLOR_SCHEME@" ]
     [ weztermColorScheme ]
@@ -12,6 +12,21 @@ let
     name = "sync-livara-themes";
     runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps util-linux wezterm flatpak dconf ];
     text = builtins.readFile syncSource;
+  };
+
+  syncAmbxstPalette = pkgs.writeShellApplication {
+    name = "sync-ambxst-palette";
+    runtimeInputs = with pkgs; [ bash coreutils grep jq ];
+    text = builtins.readFile (source + "/scripts/sync-ambxst-palette.sh");
+  };
+
+  syncAllThemes = pkgs.writeShellApplication {
+    name = "sync-all-livara-themes";
+    runtimeInputs = [ syncAmbxstPalette syncThemes ];
+    text = ''
+      sync-ambxst-palette
+      sync-livara-themes "''${1:-dark}"
+    '';
   };
 
 
@@ -77,6 +92,8 @@ in
 
   home.packages = [
     pkgs.jq
+    syncAmbxstPalette
+    syncAllThemes
     syncThemes
     tabletStatus
     xournalNewNote
@@ -92,7 +109,7 @@ in
     };
     Service = {
       Type = "oneshot";
-      ExecStart = "${syncThemes}/bin/sync-livara-themes";
+      ExecStart = "${syncAllThemes}/bin/sync-all-livara-themes";
       Environment = [
         "LIVARA_SHELL_NAME=${shellName}"
         "XDG_CONFIG_HOME=${config.xdg.configHome}"
@@ -111,7 +128,7 @@ in
       Description = "Watch the ${shellName} palette for application theme updates";
     };
     Path = {
-      PathChanged = "${themeRoot}/palette.dark.json";
+      PathChanged = "${config.xdg.cacheHome}/ambxst/colors.json";
       Unit = "livara-theme-sync.service";
     };
     Install.WantedBy = [ "graphical-session.target" ];

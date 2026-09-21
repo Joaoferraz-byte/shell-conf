@@ -36,9 +36,12 @@
             bash -n ${self}/src/livara/scripts/open-zen.sh
             bash -n ${self}/src/livara/scripts/reload-zen.sh
             bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
-            bash -n ${self}/src/livara/scripts/xournal_new_note.sh
+            bash -n ${self}/src/livara/scripts/sync-livara-themes.sh
+            bash -n ${self}/src/livara/scripts/sync-ambxst-palette.sh
             bash -n ${self}/tests/test-theme-contracts.sh
+            bash -n ${self}/tests/test-ambxst-palette-bridge.sh
             bash ${self}/tests/test-theme-contracts.sh
+            bash ${self}/tests/test-ambxst-palette-bridge.sh
             if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
               exit 1
             fi
@@ -59,10 +62,11 @@
           lib,
           pkgs,
           desktopProfile ? { },
+          shellName ? "Livara",
           ...
         }:
           import ./modules/support.nix {
-            inherit config lib pkgs desktopProfile;
+            inherit config lib pkgs desktopProfile shellName;
           };
       };
     };
