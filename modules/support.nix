@@ -16,7 +16,7 @@ let
 
   syncAmbxstPalette = pkgs.writeShellApplication {
     name = "sync-ambxst-palette";
-    runtimeInputs = with pkgs; [ bash coreutils grep jq ];
+    runtimeInputs = with pkgs; [ bash coreutils gnugrep jq ];
     text = builtins.readFile (source + "/scripts/sync-ambxst-palette.sh");
   };
 
