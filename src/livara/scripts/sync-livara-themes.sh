@@ -123,25 +123,60 @@ set -Eeuo pipefail
   --livara-text: $(json_color text);
   --livara-muted: $(json_color subtext0);
   --livara-primary: $(json_color blue);
+  --livara-on-primary: $(json_color overPrimary);
   --livara-border: $(json_color overlay0);
 }
 
 @-moz-document url-prefix("chrome://browser/content/browser.xhtml") {
-  #navigator-toolbox,
-  #TabsToolbar,
-  #nav-bar,
-  #PersonalToolbar {
-    background-color: var(--livara-base) !important;
+  /* Firefox and Zen keep the browser chrome separate from web content. */
+  :root,
+  #main-window,
+  #browser,
+  #zen-main-app-wrapper,
+  #zen-browser-background,
+  #zen-toolbar-background,
+  #zen-appcontent-wrapper,
+  #zen-tabbox-wrapper,
+  #tabbrowser-tabbox,
+  #tabbrowser-tabpanels {
+    background: var(--livara-base) !important;
     color: var(--livara-text) !important;
   }
 
-  #main-window,
-  #browser,
-  #tabbrowser-tabbox,
-  #appcontent,
-  #statuspanel,
+  #zen-browser-background::before,
+  #zen-browser-background::after,
+  #zen-toolbar-background::before,
+  #zen-toolbar-background::after {
+    background: var(--livara-base) !important;
+    opacity: 1 !important;
+  }
+
+  #navigator-toolbox,
+  #TabsToolbar,
+  #nav-bar,
+  #PersonalToolbar,
+  #zen-appcontent-navbar-wrapper,
+  #zen-appcontent-navbar-container,
+  #zen-toolbar-background {
+    background: var(--livara-base) !important;
+    color: var(--livara-text) !important;
+    border-color: var(--livara-border) !important;
+  }
+
+  #zen-tabs-wrapper,
+  #zen-essentials,
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons,
   #sidebar-box,
   #sidebar-header,
+  #zen-sidebar-splitter,
+  #zen-expand-sidebar-button,
+  #zen-workspaces-button,
+  #zen-create-new-button,
+  #zen-sidebar-foot-buttons toolbarbutton,
+  #zen-sidebar-top-buttons toolbarbutton,
+  #appcontent,
+  #statuspanel,
   #findbar,
   #downloadsPanel,
   #downloadsListBox,
@@ -150,44 +185,127 @@ set -Eeuo pipefail
   menupopup,
   menu,
   menuitem {
-    background-color: var(--livara-base) !important;
+    background: var(--livara-surface) !important;
     color: var(--livara-text) !important;
     border-color: var(--livara-border) !important;
+  }
+
+  #zen-tabs-wrapper,
+  #zen-essentials,
+  #sidebar-box,
+  #sidebar-header,
+  #zen-sidebar-foot-buttons,
+  #zen-sidebar-top-buttons {
+    box-shadow: none !important;
+  }
+
+  #urlbar,
+  #urlbar-background,
+  .urlbar-background,
+  #searchbar,
+  .urlbar-input-container,
+  .searchbar-textbox {
+    background: var(--livara-surface) !important;
+    color: var(--livara-text) !important;
+    border-color: var(--livara-border) !important;
+  }
+
+  #urlbar-input,
+  .urlbar-input,
+  .searchbar-textbox {
+    color: var(--livara-text) !important;
+    fill: var(--livara-text) !important;
+  }
+
+  toolbarbutton,
+  toolbarbutton .toolbarbutton-icon,
+  #zen-sidebar-foot-buttons toolbarbutton,
+  #zen-sidebar-top-buttons toolbarbutton {
+    color: var(--livara-text) !important;
+    fill: var(--livara-text) !important;
+    -moz-context-properties: fill, fill-opacity, stroke, stroke-opacity !important;
   }
 
   toolbarbutton:hover,
   menu:hover,
   menuitem:hover,
   .subviewbutton:hover,
-  .toolbarbutton-1:hover {
-    background-color: var(--livara-surface-raised) !important;
+  .toolbarbutton-1:hover,
+  #zen-sidebar-foot-buttons toolbarbutton:hover,
+  #zen-sidebar-top-buttons toolbarbutton:hover {
+    background: var(--livara-surface-raised) !important;
     color: var(--livara-text) !important;
+    fill: var(--livara-text) !important;
   }
 
   toolbarbutton[checked="true"],
   toolbarbutton[open="true"],
-  .subviewbutton[checked="true"] {
-    background-color: var(--livara-surface) !important;
-    color: var(--livara-primary) !important;
+  toolbarbutton[aria-pressed="true"],
+  .subviewbutton[checked="true"],
+  .tabbrowser-tab[selected="true"] .tab-background {
+    background: var(--livara-primary) !important;
+    color: var(--livara-on-primary) !important;
+    fill: var(--livara-on-primary) !important;
   }
 
-  #urlbar,
-  #searchbar,
-  .urlbar-input-container {
-    background-color: var(--livara-surface) !important;
-    color: var(--livara-text) !important;
+  #zen-sidebar-foot-buttons toolbarbutton[open="true"],
+  #zen-sidebar-foot-buttons toolbarbutton[checked="true"],
+  #zen-sidebar-top-buttons toolbarbutton[open="true"],
+  #zen-sidebar-top-buttons toolbarbutton[checked="true"] {
+    background: var(--livara-primary) !important;
+    color: var(--livara-on-primary) !important;
+    fill: var(--livara-on-primary) !important;
+  }
+
+  .tabbrowser-tab .tab-background {
+    background: var(--livara-surface) !important;
     border-color: var(--livara-border) !important;
   }
 
-  .tabbrowser-tab[selected="true"] .tab-background {
-    background-color: var(--livara-surface-raised) !important;
-    border-bottom: 2px solid var(--livara-primary) !important;
+  .tabbrowser-tab[selected="true"] .tab-label,
+  .tabbrowser-tab[selected="true"] .tab-icon-image,
+  .tabbrowser-tab[selected="true"] .tab-throbber {
+    color: var(--livara-on-primary) !important;
+    fill: var(--livara-on-primary) !important;
   }
 
   .tabbrowser-tab:not([selected="true"]) .tab-label,
   #sidebar-header,
   #sidebar-box {
     color: var(--livara-muted) !important;
+  }
+
+  #sidebar-splitter,
+  #zen-sidebar-splitter,
+  .sidebar-splitter {
+    border-color: var(--livara-border) !important;
+  }
+
+  /* Zen compact mode controls geometry upstream; these rules only paint it. */
+  :root[zen-compact-mode="true"] #zen-appcontent-navbar-wrapper,
+  :root[zen-compact-mode-active="true"] #navigator-toolbox,
+  :root[zen-has-hover="true"] #navigator-toolbox,
+  :root[zen-user-show="true"] #navigator-toolbox,
+  :root[has-popup-menu="true"] #navigator-toolbox {
+    background: var(--livara-base) !important;
+    color: var(--livara-text) !important;
+  }
+
+  /* Firefox panels, menus, downloads and the Zen three-dot panel. */
+  panel,
+  panelview,
+  menupopup,
+  menu,
+  menuitem,
+  .panel-subview-body,
+  .subviewbutton,
+  #PanelUI-popup,
+  #appMenu-popup,
+  #downloadsPanel,
+  #downloadsListBox {
+    background: var(--livara-base) !important;
+    color: var(--livara-text) !important;
+    border-color: var(--livara-border) !important;
   }
 }
 EOF
