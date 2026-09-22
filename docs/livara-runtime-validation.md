@@ -4,7 +4,7 @@ This guide validates the application-adapter layer without assuming a particular
 
 ## Palette contract
 
-The producer should provide `palette.json`, `palette.dark.json` and, when supported, `palette.light.json`. Each file must contain valid six-digit hexadecimal roles required by the enabled adapters. The synchronizer validates the active dark file before writing any destination. Invalid input must preserve the previous generated outputs.
+The producer should provide `palette.json`, `palette.dark.json` and, when supported, `palette.light.json`. Each file must contain valid six-digit hexadecimal roles required by the enabled adapters. The synchronizer selects the requested `dark` or `light` variant, validates it before writing any destination, and records an explicit fallback to `palette.json` when a separate variant is unavailable. Invalid input must preserve the previous generated outputs.
 
 ```bash
 THEME_ROOT="${LIVARA_THEME_ROOT:-${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme}"
@@ -15,9 +15,9 @@ sha256sum "$THEME_ROOT/palette.dark.json"
 
 ## Applications
 
-Firefox and Zen consume the generated `browser/firefox.css` only through their declarative profile owner. WezTerm consumes the selected TOML scheme from its `colors` directory. GTK files generated here contain only stable icon and dark-mode preferences; GTK/libadwaita styles remain toolkit-owned. Qt uses its configured platform theme. NixVim, Xournal++, Foliate, KDE/Okular, Nuclear, Hydra, IntelliJ IDEA and Android Studio must be checked only when their documented profiles or state roots exist.
+Firefox and Zen consume the generated `browser/firefox.css` only through their declarative profile owner. WezTerm consumes the selected TOML scheme from its `colors` directory, btop consumes the generated `.theme`, and Fastfetch consumes `fastfetch.jsonc` through the `livara-fastfetch` wrapper. GTK files generated here provide the palette projection and dark/light preference for GTK3/GTK4 applications such as GParted; libadwaita remains toolkit-owned and GTK applications need a restart. Qt/KDE uses its configured platform/color scheme. NixVim, Xournal++, Foliate, KDE/Okular, Nuclear, Hydra Launcher, IntelliJ IDEA and Android Studio must be checked only when their documented profiles or state roots exist.
 
-For each adapter, distinguish `generated`, `selected`, `loaded` and `confirmed`. The existence of a file is not proof that an application imported or selected it. Restart or reload the application only through its documented mechanism, and never overwrite an application-owned profile while it is running.
+For each adapter, distinguish `generated`, `selected`, `loaded` and `confirmed`. The existence of a file is not proof that an application imported or selected it. GTK3/GTK4, Firefox/Zen, FreeSM, Vesktop and Xournal++ generally need an application restart after an external file change; WezTerm, Neovim, btop and JavaFX Study Planner reload through their documented watcher or signal path. No logout is required for these file-based transitions, and the synchronizer never overwrites an application-owned profile while it is running.
 
 ## Session and ownership
 

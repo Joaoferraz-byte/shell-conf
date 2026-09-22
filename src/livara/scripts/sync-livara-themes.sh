@@ -12,7 +12,7 @@ set -Eeuo pipefail
     FOLIATE_FLATPAK_HOME="$HOME/.var/app/com.github.johnfactotum.Foliate/config/com.github.johnfactotum.Foliate"
     VESKTOP_CONFIG_HOME="$XDG_CONFIG_HOME/vesktop"
     VESKTOP_FLATPAK_HOME="$HOME/.var/app/dev.vencord.Vesktop/config/vesktop"
-    XOURNAL_PALETTE_NAME="tokyonight.gpl"
+    XOURNAL_PALETTE_NAME="livara.gpl"
     FASTFETCH_CAT_SOURCE="${LIVARA_FASTFETCH_CAT_PNG:-$HOME/.local/share/livara/assets/fastfetch-cat.png}"
     FASTFETCH_CAT_OUTPUT="$THEME_DIR/fastfetch-cat.png"
     FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
@@ -51,6 +51,16 @@ set -Eeuo pipefail
     NUCLEAR_THEME_PATH="$NUCLEAR_THEME_DIR/Livara.json"
     NUCLEAR_THEME_ID="themes/Livara.json"
     NUCLEAR_DARK_MODE="${1:-dark}"
+    case "$NUCLEAR_DARK_MODE" in
+      dark|light) ;;
+      *) printf 'invalid Livara palette variant: %s\n' "$NUCLEAR_DARK_MODE" >&2; exit 2 ;;
+    esac
+    PALETTE_VARIANT="$NUCLEAR_DARK_MODE"
+    PALETTE_FILE="$THEME_DIR/palette.$PALETTE_VARIANT.json"
+    BTOP_CONFIG="$XDG_CONFIG_HOME/btop/btop.conf"
+    BTOP_THEME="$XDG_CONFIG_HOME/btop/themes/Livara.theme"
+    WEZTERM_SCHEME="${LIVARA_WEZTERM_COLOR_SCHEME:-$SHELL_NAME}"
+    WEZTERM_THEME="$XDG_CONFIG_HOME/wezterm/colors/$WEZTERM_SCHEME.toml"
     MATUGEN_CONFIG="$XDG_CONFIG_HOME/matugen/config.toml"
     # NixVim/Home Manager exposes the generated Lua module under lua/.
     NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
@@ -67,24 +77,30 @@ set -Eeuo pipefail
     fi
 
     # The application adapters below consume each ecosystem's documented
-    # format. Matugen owns the shared palette, while this script only writes
-    # The selected shell or theme service owns palette production. This
-    # adapter consumes the neutral Livara files and only creates a bootstrap
-    # fallback when no producer has populated them yet.
+    # format. The selected shell owns palette production; this adapter only
+    # consumes the requested neutral variant and publishes projections.
     if [[ ! -s "$THEME_DIR/palette.json" ]]; then
       install -m 0644 "${LIVARA_DEFAULT_PALETTE:-$THEME_DIR/bootstrap.json}" "$THEME_DIR/palette.json"
       log "installed the emergency Livara fallback palette"
     fi
-    [[ -s "$THEME_DIR/palette.light.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.light.json"
-    [[ -s "$THEME_DIR/palette.dark.json" ]] || cp -f "$THEME_DIR/palette.json" "$THEME_DIR/palette.dark.json"
-
+    if [[ ! -s "$PALETTE_FILE" ]]; then
+      if [[ -s "$THEME_DIR/palette.json" ]]; then
+        cp -f "$THEME_DIR/palette.json" "$PALETTE_FILE"
+        log "palette.$PALETTE_VARIANT.json missing; using the active palette as an explicit fallback"
+      else
+        log "palette.$PALETTE_VARIANT.json and palette.json are missing"
+        exit 1
+      fi
+    fi
+    jq -e 'type == "object" and all(.[]; type == "string" and test("^#[0-9A-Fa-f]{6}$"))' "$PALETTE_FILE" >/dev/null || {
+      log "palette.$PALETTE_VARIANT.json is invalid"
+      exit 1
+    }
     json_color() {
       local key="$1"
       local fallback="${2:-base}"
       local color
-      # palette.dark.json is the single dark-mode source produced by the active
-      # shell. palette.json remains only a compatibility copy.
-      if ! color="$(jq -er --arg key "$key" --arg fallback "$fallback" '.[$key] // .[$fallback] // .base // error("missing color")' "$THEME_DIR/palette.dark.json")"; then
+      if ! color="$(jq -er --arg key "$key" --arg fallback "$fallback" '.[$key] // .[$fallback] // .base // error("missing color")' "$PALETTE_FILE")"; then
         log "palette is missing required color role: $key"
         return 1
       fi
@@ -119,6 +135,42 @@ set -Eeuo pipefail
     color: var(--livara-text) !important;
   }
 
+  #main-window,
+  #browser,
+  #tabbrowser-tabbox,
+  #appcontent,
+  #statuspanel,
+  #sidebar-box,
+  #sidebar-header,
+  #findbar,
+  #downloadsPanel,
+  #downloadsListBox,
+  panel,
+  panelview,
+  menupopup,
+  menu,
+  menuitem {
+    background-color: var(--livara-base) !important;
+    color: var(--livara-text) !important;
+    border-color: var(--livara-border) !important;
+  }
+
+  toolbarbutton:hover,
+  menu:hover,
+  menuitem:hover,
+  .subviewbutton:hover,
+  .toolbarbutton-1:hover {
+    background-color: var(--livara-surface-raised) !important;
+    color: var(--livara-text) !important;
+  }
+
+  toolbarbutton[checked="true"],
+  toolbarbutton[open="true"],
+  .subviewbutton[checked="true"] {
+    background-color: var(--livara-surface) !important;
+    color: var(--livara-primary) !important;
+  }
+
   #urlbar,
   #searchbar,
   .urlbar-input-container {
@@ -140,6 +192,16 @@ set -Eeuo pipefail
 }
 EOF
     }
+
+    sync_nvim_palette() {
+      local tmp
+      tmp="$(mktemp)"
+      jq -r 'to_entries | map("  " + .key + " = " + (.value | @json) + ",") | "return {\n" + join("\n") + "\n}\n"' \
+        "$PALETTE_FILE" > "$tmp"
+      write_atomic "$NVIM_THEME_PATH" < "$tmp"
+      rm -f "$tmp"
+    }
+
     hex_to_rgb() {
       local hex="${1#\#}"
       [[ "${#hex}" == 6 ]] || hex=000000
@@ -154,14 +216,65 @@ EOF
 
     write_atomic() {
       local target="$1"
-      local tmp="${target}.tmp.$$"
-      mkdir -p "$(dirname "$target")"
+      local target_dir tmp
+      target_dir="$(dirname "$target")"
+      mkdir -p "$target_dir"
+      tmp="$(mktemp "$target_dir/.livara-theme.XXXXXX")"
       cat > "$tmp"
       chmod 0644 "$tmp"
-      mv -f "$tmp" "$target"
+      mv -f -- "$tmp" "$target"
       }
 
+    write_atomic "$THEME_DIR/palette.json" < "$PALETTE_FILE"
+
+    sync_gtk_theme() {
+      local dark_mode=false
+      [[ "$PALETTE_VARIANT" == dark ]] && dark_mode=true
+      local gtk_css gtk_settings
+      for gtk_css in "$XDG_CONFIG_HOME/gtk-3.0/gtk.css" "$XDG_CONFIG_HOME/gtk-4.0/gtk.css"; do
+        write_atomic "$gtk_css" <<EOF
+/* Generated by Livara from palette.$PALETTE_VARIANT.json. */
+window, .background, .view, textview, entry, list, row, popover, menu,
+headerbar, .titlebar, button, .suggested-action, .destructive-action,
+treeview, scrollbar, scale, switch, checkbutton, radiobutton {
+  color: $(json_color text);
+  background-color: $(json_color base);
+  border-color: $(json_color overlay0);
+}
+headerbar, .titlebar, popover, menu, button, entry, list, row {
+  background-color: $(json_color surface0);
+}
+button:hover, row:hover, .view:selected, textview text selection {
+  background-color: $(json_color surface1);
+  color: $(json_color text);
+}
+button:checked, .suggested-action, scale highlight, progressbar progress {
+  background-color: $(json_color primary);
+  color: $(json_color on_primary);
+}
+*:focus, entry:focus, button:focus {
+  outline-color: $(json_color primary);
+  border-color: $(json_color primary);
+}
+label:disabled, entry:disabled, button:disabled {
+  color: $(json_color subtext0);
+}
+EOF
+      done
+      for gtk_settings in "$XDG_CONFIG_HOME/gtk-3.0/settings.ini" "$XDG_CONFIG_HOME/gtk-4.0/settings.ini"; do
+        write_atomic "$gtk_settings" <<EOF
+[Settings]
+gtk-icon-theme-name=Livara-Kora
+gtk-application-prefer-dark-theme=$dark_mode
+gtk-enable-animations=true
+EOF
+      done
+      log "GTK3/GTK4 CSS and preference files synchronized for $PALETTE_VARIANT mode"
+    }
+
+    sync_gtk_theme
     sync_browser_theme
+    sync_nvim_palette
 
     sync_fastfetch_cat() {
       [[ -s "$FASTFETCH_CAT_SOURCE" ]] || {
@@ -198,7 +311,136 @@ EOF
       log "Fastfetch cat synchronized: $FASTFETCH_CAT_OUTPUT"
     }
 
+    sync_fastfetch_config() {
+      local tmp primary text logo
+      primary="$(json_color primary)"
+      text="$(json_color text)"
+      logo="$FASTFETCH_CAT_OUTPUT"
+      tmp="$(mktemp)"
+      jq -n --arg primary "$primary" --arg text "$text" --arg logo "$logo" '
+        {
+          "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+          logo: {source: $logo, type: "kitty-direct", width: 16, height: 9,
+            padding: {top: 4, right: 3, left: 3}},
+          display: {separator: " ", color: {keys: $primary, title: $primary, output: $text}},
+          modules: [
+            {type: "custom", key: "╭───────────╮", keyColor: $primary},
+            {type: "title", key: "│  user    │", format: "{user-name}", keyColor: $primary},
+            {type: "title", key: "│ 󰇅 hname   │", format: "{host-name}", keyColor: $primary},
+            {type: "uptime", key: "│ 󰅐 uptime  │", keyColor: $primary},
+            {type: "os", key: "│ {icon} distro  │", keyColor: $primary},
+            {type: "kernel", key: "│  kernel  │", keyColor: $primary},
+            {type: "wm", key: "│  wm      │", keyColor: $primary},
+            {type: "de", key: "│ 󰇄 desktop │", keyColor: $primary},
+            {type: "terminal", key: "│  term    │", keyColor: $primary},
+            {type: "shell", key: "│  shell   │", keyColor: $primary},
+            {type: "cpu", key: "│ 󰍛 cpu     │", format: "{name}", keyColor: $primary},
+            {type: "gpu", key: "│ 󰯦 gpu     │", format: "{name} ", detectionMethod: "auto", keyColor: $primary},
+            {type: "disk", key: "│ 󰉉 disk    │", folders: ["/"], format: "{size-used} / {size-total}", keyColor: $primary},
+            {type: "memory", key: "│  memory  │", keyColor: $primary},
+            {type: "custom", key: "├───────────┤", keyColor: $primary},
+            {type: "colors", key: "│  colors  │", symbol: "circle", keyColor: $primary},
+            {type: "custom", key: "╰───────────╯", keyColor: $primary}
+          ]
+        }
+      ' > "$tmp"
+      write_atomic "$THEME_DIR/fastfetch.jsonc" < "$tmp"
+      rm -f "$tmp"
+    }
+
     sync_fastfetch_cat
+    sync_fastfetch_config
+
+    sync_wezterm_scheme() {
+      write_atomic "$WEZTERM_THEME" <<EOF
+[colors]
+foreground = "$(json_color text)"
+background = "$(json_color base)"
+cursor_bg = "$(json_color primary)"
+cursor_fg = "$(json_color base)"
+selection_fg = "$(json_color text)"
+selection_bg = "$(json_color surface1)"
+quick_select_label_bg = "$(json_color primary)"
+quick_select_label_fg = "$(json_color on_primary)"
+input_selector_label_bg = "$(json_color secondary)"
+input_selector_label_fg = "$(json_color on_secondary)"
+launcher_label_bg = "$(json_color tertiary)"
+launcher_label_fg = "$(json_color on_tertiary)"
+ansi = ["$(json_color base)", "$(json_color red)", "$(json_color green)", "$(json_color yellow)", "$(json_color blue)", "$(json_color mauve)", "$(json_color teal)", "$(json_color text)"]
+brights = ["$(json_color surface1)", "$(json_color red)", "$(json_color green)", "$(json_color yellow)", "$(json_color blue)", "$(json_color mauve)", "$(json_color teal)", "$(json_color text)"]
+EOF
+      log "WezTerm scheme synchronized: $WEZTERM_THEME"
+    }
+
+    sync_btop_theme() {
+      write_atomic "$BTOP_THEME" <<EOF
+# Livara btop theme generated from the active palette.
+theme[main_bg]="$(json_color base)"
+theme[main_fg]="$(json_color text)"
+theme[title]="$(json_color text)"
+theme[hi_fg]="$(json_color primary)"
+theme[selected_bg]="$(json_color primary)"
+theme[selected_fg]="$(json_color on_primary)"
+theme[inactive_fg]="$(json_color subtext0)"
+theme[graph_text]="$(json_color secondary)"
+theme[meter_bg]="$(json_color surface1)"
+theme[proc_misc]="$(json_color tertiary)"
+theme[cpu_box]="$(json_color primary)"
+theme[mem_box]="$(json_color secondary)"
+theme[net_box]="$(json_color tertiary)"
+theme[proc_box]="$(json_color blue)"
+theme[div_line]="$(json_color overlay0)"
+theme[temp_start]="$(json_color green)"
+theme[temp_mid]="$(json_color yellow)"
+theme[temp_end]="$(json_color red)"
+theme[cpu_start]="$(json_color green)"
+theme[cpu_mid]="$(json_color primary)"
+theme[cpu_end]="$(json_color red)"
+theme[free_end]="$(json_color green)"
+theme[free_mid]="$(json_color secondary)"
+theme[free_start]="$(json_color red)"
+theme[cached_start]="$(json_color green)"
+theme[cached_mid]="$(json_color secondary)"
+theme[cached_end]="$(json_color red)"
+theme[available_start]="$(json_color red)"
+theme[available_mid]="$(json_color yellow)"
+theme[available_end]="$(json_color green)"
+theme[used_start]="$(json_color green)"
+theme[used_mid]="$(json_color yellow)"
+theme[used_end]="$(json_color red)"
+theme[download_start]="$(json_color green)"
+theme[download_mid]="$(json_color secondary)"
+theme[download_end]="$(json_color red)"
+theme[upload_start]="$(json_color green)"
+theme[upload_mid]="$(json_color secondary)"
+theme[upload_end]="$(json_color red)"
+theme[process_start]="$(json_color subtext1)"
+theme[process_mid]="$(json_color primary)"
+theme[process_end]="$(json_color tertiary)"
+EOF
+      mkdir -p "$(dirname "$BTOP_CONFIG")"
+      if [[ -s "$BTOP_CONFIG" ]]; then
+        local config_tmp
+        config_tmp="$(mktemp)"
+        awk '
+          BEGIN { replaced = 0 }
+          /^color_theme[[:space:]]*=/ { print "color_theme = \"Livara\""; replaced = 1; next }
+          { print }
+          END { if (!replaced) print "color_theme = \"Livara\"" }
+        ' "$BTOP_CONFIG" > "$config_tmp"
+        write_atomic "$BTOP_CONFIG" < "$config_tmp"
+        rm -f "$config_tmp"
+      else
+        printf 'color_theme = "Livara"\n' | write_atomic "$BTOP_CONFIG"
+      fi
+      if pgrep -x btop >/dev/null 2>&1; then
+        pkill -USR2 -x btop || true
+        log "btop theme reloaded through SIGUSR2"
+      fi
+    }
+
+    sync_wezterm_scheme
+    sync_btop_theme
 
     sync_intellij_scheme() {
       [[ -s "$MATUGEN_CONFIG" ]] || return 0
@@ -775,8 +1017,9 @@ CFG
     sync_xournal_theme() {
       local root="$1"
       local palette="$root/palettes/$XOURNAL_PALETTE_NAME"
-      local palette_tmp="$palette.tmp.$$"
+      local palette_tmp
       mkdir -p "$(dirname "$palette")"
+      palette_tmp="$(mktemp "$(dirname "$palette")/.livara-xournal.XXXXXX")"
       {
         local seen=""
 
@@ -790,7 +1033,7 @@ CFG
           printf '%s %s\n' "$rgb" "$2"
         }
 
-        printf '%s\n' 'GIMP Palette' 'Name: Tokyo Night' 'Columns: 4' '#'
+        printf '%s\n' 'GIMP Palette' 'Name: Livara' 'Columns: 4' '#'
         # GPL has no aliases: keep the first semantic role for equal RGB values.
         # Material roles are application-surface semantics, not drawing colors;
         # wallpaper-derived primary/container/secondary/tertiary roles often
@@ -821,8 +1064,9 @@ CFG
       fi
       mv -f "$palette_tmp" "$palette"
 
-      local canvas_color selection_color canvas_argb selection_argb
+      local canvas_color grid_color selection_color canvas_argb selection_argb
       canvas_color="$(json_color mantle)"
+      grid_color="$(json_color overlay0)"
       selection_color="$(json_color blue)"
       canvas_argb="$(hex_to_argb_decimal "$canvas_color")"
       selection_argb="$(hex_to_argb_decimal "$selection_color")"
@@ -854,6 +1098,7 @@ EOF
       sed -i \
         -e 's|<property name="backgroundColor" value="[^"]*"/>|<property name="backgroundColor" value="'"$canvas_argb"'"/>|' \
         -e 's|<property name="selectionBorderColor" value="[^"]*"/>|<property name="selectionBorderColor" value="'"$selection_argb"'"/>|' \
+        -e 's|backgroundTypeConfig=f1=#[0-9A-Fa-f]\{6\},af1=#[0-9A-Fa-f]\{6\}|backgroundTypeConfig=f1='"$grid_color"',af1='"$canvas_color"'|' \
         -e 's|<property name="menubarVisible" value="[^"]*"/>|<property name="menubarVisible" value="false"/>|' \
         -e 's|<property name="defaultViewModeAttributes" value="[^"]*"/>|<property name="defaultViewModeAttributes" value="showToolbar,showSidebar"/>|' \
         "$settings_tmp"
@@ -869,11 +1114,83 @@ EOF
       local root="$1"
       [[ -n "$root" && -d "$root" ]] || return 0
       local themes_dir="$root/themes"
-      local css="$themes_dir/livara-material.theme.css"
+      local css="$themes_dir/livara-midnight.theme.css"
       mkdir -p "$themes_dir"
       write_atomic "$css" <<EOF
-/* Generated by $SHELL_NAME for Vesktop/Vencord. */
+/**
+ * @name Livara Midnight
+ * @description Midnight Discord with the active $SHELL_NAME palette.
+ * @source https://github.com/refact0r/midnight-discord
+ */
+@import url('https://refact0r.github.io/midnight-discord/build/midnight.css');
+
+body {
+  --font: '';
+  --code-font: '';
+  --gap: 12px;
+  --border-thickness: 1px;
+  --animations: on;
+  --custom-window-controls: on;
+  --top-bar-button-position: titlebar;
+  --small-user-panel: off;
+}
+
 :root {
+  --colors: on;
+  --text-0: $(json_color base);
+  --text-1: $(json_color text);
+  --text-2: $(json_color subtext1);
+  --text-3: $(json_color subtext0);
+  --text-4: $(json_color overlay0);
+  --text-5: $(json_color overlay1);
+  --bg-1: $(json_color surface2);
+  --bg-2: $(json_color surface1);
+  --bg-3: $(json_color surface0);
+  --bg-4: $(json_color base);
+  --hover: color-mix(in srgb, $(json_color primary) 12%, transparent);
+  --active: $(json_color surface2);
+  --active-2: $(json_color surface1);
+  --message-hover: color-mix(in srgb, $(json_color primary) 8%, transparent);
+  --accent-1: $(json_color primary);
+  --accent-2: $(json_color primary);
+  --accent-3: $(json_color secondary);
+  --accent-4: $(json_color secondary);
+  --accent-5: $(json_color tertiary);
+  --accent-new: $(json_color error);
+  --online: $(json_color green);
+  --dnd: $(json_color red);
+  --idle: $(json_color yellow);
+  --streaming: $(json_color mauve);
+  --offline: $(json_color overlay0);
+  --border-light: var(--hover);
+  --border: var(--active);
+  --border-hover: var(--active);
+  --button-border: color-mix(in srgb, $(json_color text) 12%, transparent);
+  --red-1: $(json_color red);
+  --red-2: $(json_color red);
+  --red-3: $(json_color red);
+  --red-4: $(json_color red);
+  --red-5: $(json_color red);
+  --green-1: $(json_color green);
+  --green-2: $(json_color green);
+  --green-3: $(json_color green);
+  --green-4: $(json_color green);
+  --green-5: $(json_color green);
+  --blue-1: $(json_color blue);
+  --blue-2: $(json_color blue);
+  --blue-3: $(json_color blue);
+  --blue-4: $(json_color blue);
+  --blue-5: $(json_color blue);
+  --yellow-1: $(json_color yellow);
+  --yellow-2: $(json_color yellow);
+  --yellow-3: $(json_color yellow);
+  --yellow-4: $(json_color yellow);
+  --yellow-5: $(json_color yellow);
+  --purple-1: $(json_color mauve);
+  --purple-2: $(json_color mauve);
+  --purple-3: $(json_color mauve);
+  --purple-4: $(json_color mauve);
+  --purple-5: $(json_color mauve);
   --background-primary: $(json_color base);
   --background-secondary: $(json_color surface0);
   --background-secondary-alt: $(json_color surface1);
@@ -884,33 +1201,30 @@ EOF
   --header-primary: $(json_color text);
   --header-secondary: $(json_color subtext1);
   --interactive-normal: $(json_color text);
-  --interactive-hover: $(json_color blue);
-  --brand-experiment: $(json_color blue);
-  --brand-experiment-560: $(json_color blue);
+  --interactive-hover: $(json_color primary);
+  --brand-experiment: $(json_color primary);
+  --brand-experiment-560: $(json_color primary);
 }
 EOF
-      rm -f "$themes_dir/dank-discord.css" "$themes_dir/noctalia-material.theme.css"
+      rm -f "$themes_dir/dank-discord.css" "$themes_dir/noctalia-material.theme.css" "$themes_dir/livara-material.theme.css"
 
       local settings="$root/settings/settings.json"
       local tmp="$settings.tmp.$$"
       mkdir -p "$(dirname "$settings")"
       if [[ -f "$settings" ]]; then
-        jq '.enabledThemes = (((.enabledThemes // []) - ["dank-discord.css", "noctalia-material.theme.css"] + ["livara-material.theme.css"]) | unique)' "$settings" > "$tmp"
+        jq '.enabledThemes = (((.enabledThemes // []) - ["dank-discord.css", "noctalia-material.theme.css", "livara-material.theme.css"] + ["livara-midnight.theme.css"]) | unique)' "$settings" > "$tmp"
       else
-        jq -n '{enabledThemes: ["livara-material.theme.css"]}' > "$tmp"
+        jq -n '{enabledThemes: ["livara-midnight.theme.css"]}' > "$tmp"
       fi
       chmod 0644 "$tmp"
       mv -f "$tmp" "$settings"
-      log "$SHELL_NAME Discord theme enabled: $css"
+      log "$SHELL_NAME Midnight Discord theme enabled: $css (restart Vesktop if it was already running)"
     }
 
     # Generate the CSS from the active shell palette and select it in Vencord;
     # mirror the same contract into an existing Vesktop Flatpak data root.
     sync_vesktop_theme_root "$VESKTOP_CONFIG_HOME"
     [[ -d "$HOME/.var/app/dev.vencord.Vesktop" ]] && sync_vesktop_theme_root "$VESKTOP_FLATPAK_HOME"
-
-    # WezTerm owns its declarative configuration; this adapter intentionally
-    # does not overwrite or reload that consumer-owned file.
 
     foliate_root="$FOLIATE_CONFIG_HOME"
     [[ -d "$FOLIATE_FLATPAK_HOME" ]] && foliate_root="$FOLIATE_FLATPAK_HOME"
@@ -920,7 +1234,7 @@ EOF
     [[ -d "$HOME/.var/app/com.github.xournalpp.xournalpp/config/xournalpp" ]] && xournal_root="$HOME/.var/app/com.github.xournalpp.xournalpp/config/xournalpp"
 
     palette_applied=false
-    [[ -s "$THEME_DIR/palette.dark.json" ]] && palette_applied=true
+    [[ -s "$PALETTE_FILE" ]] && palette_applied=true
 
     nvim_applied=false
     [[ -s "$NVIM_THEME_PATH" ]] && nvim_applied=true
@@ -978,18 +1292,18 @@ EOF
     fi
 
     xournal_applied=false
-    if [[ -s "$xournal_root/palettes/tokyonight.gpl" ]] &&
+    if [[ -s "$xournal_root/palettes/$XOURNAL_PALETTE_NAME" ]] &&
        grep -q 'name="colorPalette"' "$xournal_root/settings.xml" 2>/dev/null; then
       xournal_applied=true
     fi
 
     fastfetch_applied=false
-    [[ -s "$FASTFETCH_CAT_OUTPUT" ]] && fastfetch_applied=true
+    [[ -s "$FASTFETCH_CAT_OUTPUT" && -s "$THEME_DIR/fastfetch.jsonc" ]] && fastfetch_applied=true
 
     vesktop_applied=false
     for vesktop_root in "$VESKTOP_CONFIG_HOME" "$VESKTOP_FLATPAK_HOME"; do
-      if [[ -s "$vesktop_root/themes/livara-material.theme.css" && -s "$vesktop_root/settings/settings.json" ]] &&
-         jq -e --arg theme "livara-material.theme.css" '((.enabledThemes // []) | index($theme)) != null' "$vesktop_root/settings/settings.json" >/dev/null 2>&1; then
+      if [[ -s "$vesktop_root/themes/livara-midnight.theme.css" && -s "$vesktop_root/settings/settings.json" ]] &&
+         jq -e --arg theme "livara-midnight.theme.css" '((.enabledThemes // []) | index($theme)) != null' "$vesktop_root/settings/settings.json" >/dev/null 2>&1; then
         vesktop_applied=true
         break
       fi
@@ -1007,16 +1321,19 @@ EOF
 {
   "generatedFrom": "$SHELL_NAME application contracts",
   "applications": [
-    {"name":"$SHELL_NAME palette","contract":"$SHELL_NAME palette for GTK/Qt/Kitty/WezTerm and application adapters","path":"$THEME_DIR/palette.dark.json","applied":$palette_applied,"activation":"active shell palette generated"},
+    {"name":"$SHELL_NAME palette","contract":"$SHELL_NAME palette variant $PALETTE_VARIANT for GTK/Qt/Kitty/WezTerm and application adapters","path":"$PALETTE_FILE","applied":$palette_applied,"activation":"active shell palette generated"},
+    {"name":"GTK/libadwaita/GParted","contract":"GTK3/GTK4 gtk.css plus settings.ini generated from the active variant","path":"$XDG_CONFIG_HOME/gtk-3.0/gtk.css","applied":true,"activation":"restart GTK applications; no logout required"},
     {"name":"Zen/Firefox","contract":"profile-consumable userChrome.css imported by the declarative profile module","path":"$THEME_DIR/browser/firefox.css","applied":true,"activation":"restart Zen/Firefox after enabling userChrome.css"},
     {"name":"Neovim/NixVim","contract":"matugen_colors.lua + NixVim transparent highlight policy","path":"$NVIM_THEME_PATH","applied":$nvim_applied,"activation":"palette file generated and watched by NixVim"},
     {"name":"Nuclear Music Player","contract":"Nuclear v2 advanced theme JSON generated from the active $SHELL_NAME palette","path":"$NUCLEAR_THEME_PATH","applied":$nuclear_selected,"generated":true,"activation":"selection is owned by Nuclear settings; edits reload live after Livara is selected"},
     {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
     {"name":"KDE/Okular","contract":"Generated .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
-    {"name":"Xournal++","contract":"palettes/tokyonight.gpl + settings.xml colorPalette","path":"$xournal_root/palettes/tokyonight.gpl","applied":$xournal_applied,"activation":"palette selection verified"},
-    {"name":"Fastfetch","contract":"$SHELL_NAME primary color + transparent cat PNG + kitty-direct","path":"$FASTFETCH_CAT_OUTPUT","applied":$fastfetch_applied,"activation":"recolored image generated"},
-    {"name":"Vesktop","contract":"$SHELL_NAME Discord CSS + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/livara-material.theme.css","applied":$vesktop_applied,"activation":"enabledThemes selection verified"},
+    {"name":"Xournal++","contract":"palettes/$XOURNAL_PALETTE_NAME + settings.xml colorPalette","path":"$xournal_root/palettes/$XOURNAL_PALETTE_NAME","applied":$xournal_applied,"activation":"restart Xournal++ after a palette change"},
+    {"name":"Fastfetch","contract":"$SHELL_NAME primary color + generated keyColor hex + kitty-direct","path":"$THEME_DIR/fastfetch.jsonc","applied":$fastfetch_applied,"activation":"next invocation reads the generated config"},
+    {"name":"btop","contract":"generated $BTOP_THEME + color_theme selection","path":"$BTOP_THEME","applied":true,"activation":"SIGUSR2 sent when btop is running"},
+    {"name":"WezTerm","contract":"generated color scheme watched by the WezTerm Lua config","path":"$WEZTERM_THEME","applied":true,"activation":"automatically_reload_config handles reload"},
+    {"name":"Vesktop","contract":"Midnight Discord CSS + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/livara-midnight.theme.css","applied":$vesktop_applied,"activation":"restart Vesktop after external settings change"},
     {"name":"IntelliJ IDEA editor scheme","contract":"Matugen generated .icls + versioned JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$intellij_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
     {"name":"IntelliJ IDEA UI theme","contract":"Livara Theme plugin + JetBrains product plugin-root symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$intellij_ui_theme_applied,"installed":$intellij_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
     {"name":"Android Studio editor scheme","contract":"Matugen generated .icls + versioned Google colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$android_studio_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},

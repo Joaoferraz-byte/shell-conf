@@ -22,6 +22,8 @@ bash "$bridge"
 test "$(jq -r .blue "$LIVARA_THEME_ROOT/palette.dark.json")" = '#ff5577'
 test "$(jq -r .base "$LIVARA_THEME_ROOT/palette.json")" = '#101010'
 grep -Fq 'background = "#101010"' "$LIVARA_THEME_ROOT/wezterm/Ambxst.toml"
+grep -Fxq 'return {' "$HOME/.config/nvim/lua/matugen_colors.lua"
+grep -Fq 'primary = "#ff5577"' "$HOME/.config/nvim/lua/matugen_colors.lua"
 
 cp "$LIVARA_THEME_ROOT/palette.dark.json" "$tmp/previous.json"
 printf '{"primary":"not-a-color"}\n' > "$XDG_CACHE_HOME/ambxst/colors.json"

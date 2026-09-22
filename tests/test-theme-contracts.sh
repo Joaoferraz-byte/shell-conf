@@ -25,7 +25,7 @@ cat > "$config_home/xournalpp/settings.xml" <<'EOF'
   <property name="colorPalette" value="/old/second.gpl"/>
   <property name="menubarVisible" value="true"/>
   <property name="defaultViewModeAttributes" value="showMenubar,showToolbar,showSidebar"/>
-  <property name="pageTemplate" value="xoj/template&#10;backgroundType=graph&#10;backgroundColor=#000000&#10;"/>
+  <property name="pageTemplate" value="xoj/template&#10;backgroundType=graph&#10;backgroundTypeConfig=f1=#ffffff,af1=#ffffff&#10;backgroundColor=#000000&#10;"/>
 </settings>
 EOF
 printf '#!%s\n' "$(command -v bash)" > "$bin_dir/matugen"
@@ -67,19 +67,32 @@ bash "$sync_script" dark >/dev/null
 [[ -s "$state_home/livara/theme/browser/firefox.css" ]]
 grep -q -- '--livara-primary: #7bb7ff' "$state_home/livara/theme/browser/firefox.css"
 grep -q '#navigator-toolbox' "$state_home/livara/theme/browser/firefox.css"
-[[ -s "$config_home/vesktop/themes/livara-material.theme.css" ]]
-jq -e '(.enabledThemes // []) | index("livara-material.theme.css") != null' "$config_home/vesktop/settings/settings.json" >/dev/null
-printf '%s\n' 'browser and Vesktop theme contracts passed'
+[[ -s "$config_home/vesktop/themes/livara-midnight.theme.css" ]]
+grep -q 'refact0r.github.io/midnight-discord/build/midnight.css' "$config_home/vesktop/themes/livara-midnight.theme.css"
+jq -e '(.enabledThemes // []) | index("livara-midnight.theme.css") != null' "$config_home/vesktop/settings/settings.json" >/dev/null
+[[ -s "$state_home/livara/theme/fastfetch.jsonc" ]]
+jq -e '.modules[1].keyColor == "#7bb7ff" and (.modules | map(select(.key | contains("{#"))) | length == 0)' "$state_home/livara/theme/fastfetch.jsonc" >/dev/null
+[[ -s "$config_home/wezterm/colors/Livara.toml" ]]
+grep -q 'background = "#101318"' "$config_home/wezterm/colors/Livara.toml"
+[[ -s "$config_home/btop/themes/Livara.theme" ]]
+grep -q 'theme\[mem_box\]="#74d7c4"' "$config_home/btop/themes/Livara.theme"
+grep -q 'color_theme = "Livara"' "$config_home/btop/btop.conf"
+[[ -s "$config_home/nvim/lua/matugen_colors.lua" ]]
+grep -q 'primary = "#7bb7ff"' "$config_home/nvim/lua/matugen_colors.lua"
+[[ -s "$config_home/gtk-3.0/gtk.css" && -s "$config_home/gtk-4.0/gtk.css" ]]
+grep -q 'background-color: #101318' "$config_home/gtk-3.0/gtk.css"
+grep -q 'gtk-application-prefer-dark-theme=true' "$config_home/gtk-4.0/settings.ini"
+printf '%s\n' 'browser, terminal, monitor and editor theme contracts passed'
 [[ -L "$config_home/JetBrains/IntelliJIdea2026.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$config_home/Google/AndroidStudio2025.1/colors/Matugen-Dark.icls" ]]
 [[ -L "$root/data/JetBrains/IntelliJIdea2026.1/LivaraTheme" ]]
 [[ -L "$root/data/Google/AndroidStudio2025.1/LivaraTheme" ]]
-[[ -s "$config_home/xournalpp/palettes/tokyonight.gpl" ]]
-grep -q '^Name: Tokyo Night$' "$config_home/xournalpp/palettes/tokyonight.gpl"
-! grep -Eiq '[[:space:]](Primary|Primary Container|Secondary|Tertiary|Error|Crust|Mantle)$' "$config_home/xournalpp/palettes/tokyonight.gpl"
-awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) exit 1 }' "$config_home/xournalpp/palettes/tokyonight.gpl"
-grep -q 'tokyonight.gpl' "$config_home/xournalpp/settings.xml"
-! grep -q 'backgroundTypeConfig=f1=' "$config_home/xournalpp/settings.xml"
+[[ -s "$config_home/xournalpp/palettes/livara.gpl" ]]
+grep -q '^Name: Livara$' "$config_home/xournalpp/palettes/livara.gpl"
+! grep -Eiq '[[:space:]](Primary|Primary Container|Secondary|Tertiary|Error|Crust|Mantle)$' "$config_home/xournalpp/palettes/livara.gpl"
+awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) exit 1 }' "$config_home/xournalpp/palettes/livara.gpl"
+grep -q 'livara.gpl' "$config_home/xournalpp/settings.xml"
+grep -q 'backgroundTypeConfig=f1=#596575,af1=#0b0d12' "$config_home/xournalpp/settings.xml"
 grep -q 'backgroundColor=#000000' "$config_home/xournalpp/settings.xml"
 grep -q 'name="menubarVisible" value="false"' "$config_home/xournalpp/settings.xml"
 grep -q 'name="defaultViewModeAttributes" value="showToolbar,showSidebar"' "$config_home/xournalpp/settings.xml"
@@ -92,6 +105,7 @@ jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "t
 rm -f "$root/data/com.nuclearplayer/settings.json"
 bash "$sync_script" light >/dev/null
 jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "themes/Livara.json" and ."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
+grep -q 'gtk-application-prefer-dark-theme=false' "$config_home/gtk-3.0/settings.ini"
 printf '%s\n' 'light mode contract passed'
 jq -e '."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
 bash "$sync_script" dark >/dev/null
@@ -130,13 +144,13 @@ jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "t
 printf '%s\n' 'multi-root and removed adapter contracts passed'
 env -u XDG_DATA_HOME bash "$sync_script" dark >/dev/null
 printf '%s\n' 'xdg fallback contract passed'
-before_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-material.theme.css")"
+before_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-midnight.theme.css")"
 printf '%s\n' '{"base":"not-a-color","blue":"#123"}' > "$state_home/livara/theme/palette.dark.json"
 if bash "$sync_script" dark >/dev/null 2>&1; then
   echo 'invalid canonical palette was accepted' >&2
   exit 1
 fi
-after_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-material.theme.css")"
+after_invalid="$(sha256sum "$config_home/Hydra/themes/Livara-ABC123/theme.css" "$config_home/vesktop/themes/livara-midnight.theme.css")"
 [[ "$before_invalid" == "$after_invalid" ]]
 ! grep -q 'not-a-color' "$config_home/Hydra/themes/Livara-ABC123/theme.css"
 printf '%s\n' 'palette validation contract passed'

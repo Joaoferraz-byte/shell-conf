@@ -20,12 +20,13 @@ let
     text = builtins.readFile (source + "/scripts/sync-ambxst-palette.sh");
   };
 
-  syncAllThemes = pkgs.writeShellApplication {
-    name = "sync-all-livara-themes";
-    runtimeInputs = [ syncAmbxstPalette syncThemes ];
-    text = ''
-      sync-ambxst-palette
-      sync-livara-themes "''${1:-dark}"
+    syncAllThemes = pkgs.writeShellApplication {
+      name = "sync-all-livara-themes";
+      runtimeInputs = [ syncAmbxstPalette syncThemes ];
+      text = ''
+      variant="''${1:-dark}"
+      LIVARA_PALETTE_VARIANT="$variant" sync-ambxst-palette
+      sync-livara-themes "$variant"
     '';
   };
 
@@ -86,6 +87,16 @@ let
 
   bootstrapPalette = source + "/theme/bootstrap.json";
   fastfetchCatSource = source + "/assets/fastfetch-cat.png";
+  fastfetchCommand = pkgs.writeShellApplication {
+    name = "livara-fastfetch";
+    runtimeInputs = [ pkgs.fastfetch ];
+    text = ''
+      if [ -s "${themeRoot}/fastfetch.jsonc" ]; then
+        exec fastfetch --config "${themeRoot}/fastfetch.jsonc" "$@"
+      fi
+      exec fastfetch "$@"
+    '';
+  };
 in
 {
   home.packages = [
@@ -93,6 +104,7 @@ in
     syncAmbxstPalette
     syncAllThemes
     syncThemes
+    fastfetchCommand
     tabletStatus
     xournalNewNote
     dailyNote
@@ -115,6 +127,8 @@ in
         "XDG_STATE_HOME=${config.xdg.stateHome}"
         "LIVARA_THEME_ROOT=${themeRoot}"
         "LIVARA_DEFAULT_PALETTE=${themeRoot}/bootstrap.json"
+        "NVIM_THEME_PATH=${config.xdg.configHome}/nvim/lua/matugen_colors.lua"
+        "LIVARA_WEZTERM_COLOR_SCHEME=${weztermColorScheme}"
         "LIVARA_IDE_THEME_PLUGIN=${config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or ""}"
       ];
     };
@@ -132,51 +146,10 @@ in
     Install.WantedBy = [ "graphical-session.target" ];
   };
 
-  programs.fastfetch = {
-    enable = true;
-    settings = {
-      "$schema" = "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json";
-      # The theme adapter keeps this transparent PNG synchronized with the
-      # active shell primary color. kitty-direct requires both dimensions;
-      # the source content is 1296x1518 (0.854:1), while terminal cells are
-      # approximately twice as tall as wide. A 16x9 cell box maps to
-      # 16*0.5/9 ~= 0.889, close enough to preserve the source proportion.
-      # Fastfetch emits 17 text rows here. A 9-row logo has center 4.5, so
-      # top padding 4 places its center at 8.5, matching the text center.
-      logo = {
-        source = "${themeRoot}/fastfetch-cat.png";
-        type = "kitty-direct";
-        width = 16;
-        height = 9;
-        padding = { top = 4; right = 3; left = 3; };
-      };
-      display.separator = " ";
-      modules = [
-        { key = "╭───────────╮"; type = "custom"; }
-        { key = "│ {#36} user    {#keys}│"; type = "title"; format = "{user-name}"; }
-        { key = "│ {#36}󰇅 hname   {#keys}│"; type = "title"; format = "{host-name}"; }
-        { key = "│ {#36}󰅐 uptime  {#keys}│"; type = "uptime"; }
-        { key = "│ {#36}{icon} distro  {#keys}│"; type = "os"; }
-        { key = "│ {#36} kernel  {#keys}│"; type = "kernel"; }
-        { key = "│ {#36} wm      {#keys}│"; type = "wm"; }
-        { key = "│ {#36}󰇄 desktop {#keys}│"; type = "de"; }
-        { key = "│ {#36} term    {#keys}│"; type = "terminal"; }
-        { key = "│ {#36} shell   {#keys}│"; type = "shell"; }
-        { key = "│ {#36}󰍛 cpu     {#keys}│"; type = "cpu"; format = "{name}"; }
-        { key = "│ {#36}󰯦 gpu     {#keys}│"; type = "gpu"; format = "{name} "; detectionMethod = "auto"; }
-        { key = "│ {#36}󰉉 disk    {#keys}│"; type = "disk"; folders = "/"; format = "{size-used} / {size-total}"; }
-        { key = "│ {#36} memory  {#keys}│"; type = "memory"; }
-        { key = "├───────────┤"; type = "custom"; }
-        { key = "│ {#36} colors  {#keys}│"; type = "colors"; symbol = "circle"; }
-        { key = "╰───────────╯"; type = "custom"; }
-      ];
-    };
-  };
-
   programs.zsh.initContent = lib.mkAfter ''
     if [[ -o interactive && -t 1 && "''${TERM:-dumb}" != "dumb" && -z "''${LIVARA_FASTFETCH_SHOWN:-}" ]]; then
       export LIVARA_FASTFETCH_SHOWN=1
-      fastfetch --pipe false
+      livara-fastfetch --pipe false
     fi
   '';
 
@@ -216,19 +189,6 @@ in
     mimeType = [ "text/html" "x-scheme-handler/http" "x-scheme-handler/https" ];
     startupNotify = true;
   };
-  xdg.configFile."gtk-3.0/settings.ini".text = ''
-    [Settings]
-    gtk-icon-theme-name=Livara-Kora
-    gtk-application-prefer-dark-theme=true
-    gtk-enable-animations=true
-  '';
-  xdg.configFile."gtk-4.0/settings.ini".text = ''
-    [Settings]
-    gtk-icon-theme-name=Livara-Kora
-    gtk-application-prefer-dark-theme=true
-    gtk-enable-animations=true
-  '';
-
   home.file.".config/livara/manifest.json".text = builtins.toJSON {
     name = "Livara";
     role = "application-adapters";
@@ -238,8 +198,8 @@ in
     theme = "${shellName} palette-derived";
     iconTheme = "Livara-Kora";
     adapters = [
-      "${shellName} palette: Kitty/WezTerm/Starship and documented application adapters"
-      "GTK icon/dark preferences; native GTK/Qt toolkit themes remain toolkit-owned"
+      "${shellName} palette: Fastfetch/btop/WezTerm and documented application adapters"
+      "GTK3/GTK4 CSS and dark/light preferences; native libadwaita/Qt toolkit behavior remains toolkit-owned"
       "Firefox/Zen userChrome contracts"
       "Nixvim Markdown, Mermaid, LaTeX and Xournal++ workflows"
       "Freesm Launcher"

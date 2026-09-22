@@ -62,16 +62,18 @@ else
     else
       warn "XML parser unavailable; syntax was not independently validated: $settings"
     fi
-    contains 'name="colorPalette"' "$settings" && contains 'tokyonight.gpl' "$settings" \
-      && pass "Tokyo Night palette selected: $settings" || fail "Tokyo Night palette is not selected: $settings"
-    contains 'name="backgroundColor" value="4279900966"' "$settings" \
-      && pass "external canvas uses the expected Tokyo Night value: $settings" || fail "external canvas value is unexpected: $settings"
-    contains 'name="selectionBorderColor" value="4286227191"' "$settings" \
-      && pass "selection border uses the expected Tokyo Night value: $settings" || fail "selection border value is unexpected: $settings"
-    contains 'name="menubarVisible" value="true"' "$settings" \
-      && pass "file menu bar is enabled: $settings" || fail "file menu bar is not enabled: $settings"
-    contains 'name="defaultViewModeAttributes" value="showMenubar,showToolbar,showSidebar"' "$settings" \
-      && pass "default view mode includes the menu bar: $settings" || fail "default view mode does not include the menu bar: $settings"
+    contains 'name="colorPalette"' "$settings" && contains 'livara.gpl' "$settings" \
+      && pass "Livara palette selected: $settings" || fail "Livara palette is not selected: $settings"
+    grep -Eq 'name="themeVariant" value="useSystem"' "$settings" \
+      && pass "Xournal++ follows the system GTK appearance: $settings" || fail "Xournal++ is not using the system appearance: $settings"
+    grep -Eq 'name="backgroundColor" value="[0-9]+"' "$settings" \
+      && pass "external canvas has a valid ARGB color: $settings" || fail "external canvas value is invalid: $settings"
+    grep -Eq 'name="selectionBorderColor" value="[0-9]+"' "$settings" \
+      && pass "selection border has a valid ARGB color: $settings" || fail "selection border value is invalid: $settings"
+    contains 'name="menubarVisible" value="false"' "$settings" \
+      && pass "file menu bar is hidden: $settings" || fail "file menu bar is not hidden: $settings"
+    contains 'name="defaultViewModeAttributes" value="showToolbar,showSidebar"' "$settings" \
+      && pass "default view mode excludes the menu bar: $settings" || fail "default view mode still includes the menu bar: $settings"
     if grep -q 'backgroundTypeConfig=' "$settings" 2>/dev/null; then
       fail "pageTemplate contains backgroundTypeConfig: $settings"
     else
@@ -79,7 +81,7 @@ else
     fi
     contains 'backgroundColor=#000000' "$settings" \
       && pass "journal page background is preserved: $settings" || fail "journal page background is not preserved: $settings"
-    palette="$(dirname "$settings")/palettes/tokyonight.gpl"
+    palette="$(dirname "$settings")/palettes/livara.gpl"
     if [[ -s "$palette" ]] && awk 'NF >= 3 && $1 ~ /^[0-9]+$/ { key = $1 FS $2 FS $3; if (++seen[key] > 1) duplicate = 1 } END { exit duplicate }' "$palette"; then
       pass "Xournal++ palette has unique RGB entries: $palette"
     elif [[ -e "$palette" ]]; then
