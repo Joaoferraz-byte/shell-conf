@@ -33,7 +33,10 @@
           bash -n ${self}/tests/test-ambxst-palette-bridge.sh
           bash ${self}/tests/test-theme-contracts.sh
           bash ${self}/tests/test-ambxst-palette-bridge.sh
-          if grep -Eq 'config\\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
+          grep -Fq 'config reload' ${self}/modules/support.nix
+          ! grep -Fq 'json_color overPrimary' ${self}/src/livara/scripts/sync-livara-themes.sh
+          ! grep -Fq 'window, .background' ${self}/src/livara/scripts/sync-livara-themes.sh
+          if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
             exit 1
           fi
           touch "$out"
@@ -46,10 +49,11 @@
         pkgs,
         desktopProfile ? { },
         shellName ? "Livara",
+        ambxstPackage ? null,
         ...
       }:
         import ./modules/support.nix {
-          inherit config lib pkgs desktopProfile shellName;
+          inherit config lib pkgs desktopProfile shellName ambxstPackage;
         };
     };
 }

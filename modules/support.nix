@@ -1,4 +1,4 @@
-{ config, lib, pkgs, desktopProfile ? { }, shellName ? "Livara", ... }:
+{ config, lib, pkgs, desktopProfile ? { }, shellName ? "Livara", ambxstPackage ? null, ... }:
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
@@ -20,13 +20,18 @@ let
     text = builtins.readFile (source + "/scripts/sync-ambxst-palette.sh");
   };
 
-    syncAllThemes = pkgs.writeShellApplication {
-      name = "sync-all-livara-themes";
-      runtimeInputs = [ syncAmbxstPalette syncThemes ];
-      text = ''
+  axctlBin = if ambxstPackage != null then "${ambxstPackage}/bin/axctl" else "axctl";
+
+  syncAllThemes = pkgs.writeShellApplication {
+    name = "sync-all-livara-themes";
+    runtimeInputs = [ syncAmbxstPalette syncThemes ];
+    text = ''
       variant="''${1:-dark}"
       LIVARA_PALETTE_VARIANT="$variant" sync-ambxst-palette
       sync-livara-themes "$variant"
+      if ! "${axctlBin}" config reload >/dev/null 2>&1; then
+        printf '%s\n' 'axctl config reload unavailable; compositor border reload skipped' >&2
+      fi
     '';
   };
 

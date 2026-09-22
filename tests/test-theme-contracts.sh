@@ -50,7 +50,7 @@ export LIVARA_IDE_THEME_PLUGIN="$root/livara-theme"
 export LIVARA_SHELL_NAME="Livara"
 mkdir -p "$LIVARA_IDE_THEME_PLUGIN/META-INF" "$root/data/com.nuclearplayer"
 cat > "$state_home/livara/theme/palette.dark.json" <<'EOF'
-{"background":"#101318","surface":"#171d26","surfaceContainer":"#202936","surfaceContainerLowest":"#080a0e","surfaceDim":"#0b0d12","overBackground":"#eef2f7","outline":"#596575","outlineVariant":"#6d7a8b","primary":"#7bb7ff","primaryContainer":"#29405e","secondary":"#74d7c4","secondaryContainer":"#27493e","tertiary":"#e5bf89","tertiaryContainer":"#554218","error":"#f0878a","errorContainer":"#512d34","overPrimary":"#0c1420","overSecondary":"#0d1a13","overTertiary":"#2b1927","overError":"#2a1218","base":"#101318","mantle":"#0b0d12","crust":"#080a0e","text":"#eef2f7","subtext0":"#596575","subtext1":"#6d7a8b","surface0":"#171d26","surface1":"#202936","surface2":"#303946","overlay0":"#596575","overlay1":"#6d7a8b","overlay2":"#8b9aaa","blue":"#7bb7ff","sapphire":"#72d4e6","peach":"#e5bf89","green":"#83d6a3","red":"#f0878a","mauve":"#c2a4f5","pink":"#e7a9c3","maroon":"#d38b9b","yellow":"#e8cf85","teal":"#74d7c4"}
+{"background":"#101318","surface":"#171d26","surfaceContainer":"#202936","surfaceContainerLowest":"#080a0e","surfaceDim":"#0b0d12","overBackground":"#eef2f7","outline":"#596575","outlineVariant":"#6d7a8b","primary":"#7bb7ff","primaryContainer":"#29405e","secondary":"#74d7c4","secondaryContainer":"#27493e","tertiary":"#e5bf89","tertiaryContainer":"#554218","error":"#f0878a","errorContainer":"#512d34","overPrimary":"#0c1420","overSecondary":"#0d1a13","overTertiary":"#2b1927","overError":"#2a1218","base":"#101318","mantle":"#0b0d12","crust":"#080a0e","text":"#eef2f7","subtext0":"#596575","subtext1":"#6d7a8b","surface0":"#171d26","surface1":"#202936","surface2":"#303946","overlay0":"#596575","overlay1":"#6d7a8b","overlay2":"#8b9aaa","blue":"#7bb7ff","sapphire":"#72d4e6","peach":"#e5bf89","green":"#83d6a3","red":"#f0878a","mauve":"#c2a4f5","pink":"#e7a9c3","maroon":"#d38b9b","yellow":"#e8cf85","teal":"#74d7c4","on_primary":"#0c1420","on_error":"#2a1218"}
 EOF
 cat > "$LIVARA_IDE_THEME_PLUGIN/META-INF/plugin.xml" <<'EOF'
 <idea-plugin>
@@ -84,7 +84,11 @@ grep -q 'color_theme = "Livara"' "$config_home/btop/btop.conf"
 [[ -s "$config_home/nvim/lua/matugen_colors.lua" ]]
 grep -q 'primary = "#7bb7ff"' "$config_home/nvim/lua/matugen_colors.lua"
 [[ -s "$config_home/gtk-3.0/gtk.css" && -s "$config_home/gtk-4.0/gtk.css" ]]
-grep -q 'background-color: #101318' "$config_home/gtk-3.0/gtk.css"
+grep -q '@define-color theme_bg_color #101318;' "$config_home/gtk-3.0/gtk.css"
+grep -q '@define-color window_bg_color #101318;' "$config_home/gtk-4.0/gtk.css"
+grep -q '@define-color accent_color #7bb7ff;' "$config_home/gtk-4.0/gtk.css"
+! grep -Eq '(^|[, ])(window|\.background|\.view|headerbar|row)[, ]|background-color:' "$config_home/gtk-4.0/gtk.css"
+grep -q 'gtk-theme-name=Adwaita' "$config_home/gtk-3.0/settings.ini"
 grep -q 'gtk-application-prefer-dark-theme=true' "$config_home/gtk-4.0/settings.ini"
 printf '%s\n' 'browser, terminal, monitor and editor theme contracts passed'
 [[ -L "$config_home/JetBrains/IntelliJIdea2026.1/colors/Matugen-Dark.icls" ]]
