@@ -32,4 +32,10 @@ if bash "$bridge"; then
   exit 1
 fi
 cmp -s "$tmp/previous.json" "$LIVARA_THEME_ROOT/palette.dark.json"
+
+rm -f "$XDG_CACHE_HOME/ambxst/colors.json"
+if LIVARA_REQUIRE_AMBXST=1 bash "$bridge"; then
+  echo 'missing Ambxst palette unexpectedly accepted' >&2
+  exit 1
+fi
 printf '%s\n' 'ambxst palette bridge contract passed'

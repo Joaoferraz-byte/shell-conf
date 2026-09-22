@@ -13,7 +13,13 @@ case "$variant" in
   dark|light) ;;
   *) printf 'invalid Livara palette variant: %s\n' "$variant" >&2; exit 2 ;;
 esac
-[[ -s "$source_file" ]] || exit 0
+if [[ ! -s "$source_file" ]]; then
+  if [[ "${LIVARA_REQUIRE_AMBXST:-0}" == 1 ]]; then
+    printf 'Ambxst palette source is missing: %s\n' "$source_file" >&2
+    exit 1
+  fi
+  exit 0
+fi
 command -v jq >/dev/null 2>&1 || exit 1
 
 is_hex='^#[0-9A-Fa-f]{6}$'
