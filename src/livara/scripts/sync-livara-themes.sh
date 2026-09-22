@@ -164,30 +164,33 @@ set -Eeuo pipefail
   }
 
   #zen-tabs-wrapper,
-  #zen-essentials,
   #zen-sidebar-top-buttons,
   #zen-sidebar-foot-buttons,
   #sidebar-box,
   #sidebar-header,
   #zen-sidebar-splitter,
-  #zen-expand-sidebar-button,
-  #zen-workspaces-button,
-  #zen-create-new-button,
-  #zen-sidebar-foot-buttons toolbarbutton,
-  #zen-sidebar-top-buttons toolbarbutton,
   #appcontent,
   #statuspanel,
-  #findbar,
-  #downloadsPanel,
-  #downloadsListBox,
-  panel,
-  panelview,
-  menupopup,
-  menu,
-  menuitem {
-    background: var(--livara-surface) !important;
+  #findbar {
+    background: var(--livara-base) !important;
     color: var(--livara-text) !important;
     border-color: var(--livara-border) !important;
+  }
+
+  #zen-essentials {
+    background: var(--livara-surface) !important;
+    color: var(--livara-text) !important;
+    border: 1px solid var(--livara-border) !important;
+    border-bottom-color: var(--livara-primary) !important;
+  }
+
+  #zen-sidebar-top-buttons,
+  #zen-sidebar-foot-buttons,
+  #zen-expand-sidebar-button,
+  #zen-workspaces-button,
+  #zen-create-new-button {
+    background: transparent !important;
+    border-color: transparent !important;
   }
 
   #zen-tabs-wrapper,
