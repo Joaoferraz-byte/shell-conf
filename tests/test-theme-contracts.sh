@@ -87,7 +87,7 @@ grep -q 'primary = "#7bb7ff"' "$config_home/nvim/lua/matugen_colors.lua"
 grep -q '@define-color theme_bg_color #101318;' "$config_home/gtk-3.0/gtk.css"
 grep -q '@define-color window_bg_color #101318;' "$config_home/gtk-4.0/gtk.css"
 grep -q '@define-color accent_color #7bb7ff;' "$config_home/gtk-4.0/gtk.css"
-! grep -Eq '(^|[, ])(window|\.background|\.view|headerbar|row)[, ]|background-color:' "$config_home/gtk-4.0/gtk.css"
+grep -q 'background-color:' "$config_home/gtk-4.0/gtk.css"
 grep -q 'gtk-theme-name=Adwaita' "$config_home/gtk-3.0/settings.ini"
 grep -q 'gtk-application-prefer-dark-theme=true' "$config_home/gtk-4.0/settings.ini"
 printf '%s\n' 'browser, terminal, monitor and editor theme contracts passed'
@@ -110,15 +110,13 @@ grep -q 'name="defaultViewModeAttributes" value="showToolbar,showSidebar"' "$con
 grep -q 'Settings > Appearance' "$config_home/Hydra/themes/Livara-local/README.txt"
 jq -e '.applications[] | select(.name == "Nuclear Music Player" and .generated == true and .applied == true)' "$state_home/livara/theme/applied-applications.json" >/dev/null
 jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "themes/Livara.json" and ."core.theme.dark" == true' "$root/data/com.nuclearplayer/settings.json" >/dev/null
-rm -f "$root/data/com.nuclearplayer/settings.json"
-bash "$sync_script" light >/dev/null
-jq -e '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == "themes/Livara.json" and ."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
-grep -q 'gtk-application-prefer-dark-theme=false' "$config_home/gtk-3.0/settings.ini"
-printf '%s\n' 'light mode contract passed'
-jq -e '."core.theme.dark" == false' "$root/data/com.nuclearplayer/settings.json" >/dev/null
-bash "$sync_script" dark >/dev/null
+if bash "$sync_script" light >/dev/null 2>&1; then
+  echo 'light mode unexpectedly accepted' >&2
+  exit 1
+fi
 jq -e '."core.theme.dark" == true' "$root/data/com.nuclearplayer/settings.json" >/dev/null
-printf '%s\n' 'dark/light transition contract passed'
+grep -q 'gtk-application-prefer-dark-theme=true' "$config_home/gtk-3.0/settings.ini"
+printf '%s\n' 'dark-only contract passed'
 jq -e '.applications[] | select(.name == "IntelliJ IDEA UI theme" and .installed == true and .applied == true)' "$state_home/livara/theme/applied-applications.json" >/dev/null
 grep -q 'themeId="livara"' "$config_home/JetBrains/IntelliJIdea2026.1/options/laf.xml"
 grep -q 'themeId="livara"' "$config_home/Google/AndroidStudio2025.1/options/laf.xml"

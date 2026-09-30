@@ -6,13 +6,15 @@ XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
 source_file="${AMBXST_COLORS_FILE:-$XDG_CACHE_HOME/ambxst/colors.json}"
 theme_root="${LIVARA_THEME_ROOT:-$XDG_STATE_HOME/livara/theme}"
-variant="${LIVARA_PALETTE_VARIANT:-dark}"
+variant=dark
 NVIM_THEME_PATH="${NVIM_THEME_PATH:-$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua}"
 
-case "$variant" in
-  dark|light) ;;
-  *) printf 'invalid Livara palette variant: %s\n' "$variant" >&2; exit 2 ;;
-esac
+# Ambxst/Livara is dark-only. Do not allow stale environment values or manual
+# callers to activate palette.light.json.
+if [[ "${LIVARA_PALETTE_VARIANT:-dark}" != dark ]]; then
+  printf 'Livara supports only the dark palette variant\n' >&2
+  exit 2
+fi
 if [[ ! -s "$source_file" ]]; then
   if [[ "${LIVARA_REQUIRE_AMBXST:-0}" == 1 ]]; then
     printf 'Ambxst palette source is missing: %s\n' "$source_file" >&2

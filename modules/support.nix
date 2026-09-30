@@ -26,9 +26,11 @@ let
     name = "sync-all-livara-themes";
     runtimeInputs = [ syncAmbxstPalette syncThemes pkgs.niri ];
     text = ''
-      variant="''${1:-dark}"
-      LIVARA_PALETTE_VARIANT="$variant" sync-ambxst-palette
-      sync-livara-themes "$variant"
+      # Livara is intentionally dark-only. Ignore stale light-mode callers so
+      # a previous variant can never switch the desktop back to light mode.
+      variant=dark
+      LIVARA_PALETTE_VARIANT=dark sync-ambxst-palette
+      sync-livara-themes dark
       if ! "${axctlBin}" config reload >/dev/null 2>&1; then
         printf '%s\n' 'axctl config reload unavailable; compositor border reload skipped' >&2
       elif command -v niri >/dev/null 2>&1; then
