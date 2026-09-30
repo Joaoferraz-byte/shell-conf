@@ -86,7 +86,28 @@ jq -n --slurpfile c "$source_file" '
     on_primary: c("overPrimary"; "background"),
     on_secondary: c("overSecondary"; "background"),
     on_tertiary: c("overTertiary"; "background"),
-    on_error: c("overError"; "background")
+    on_error: c("overError"; "background"),
+    gtk_window_bg: c("background"; "surface"),
+    gtk_view_bg: c("surface"; "background"),
+    gtk_accent: c("primary"; "blue"),
+    gtk_border: c("outline"; "outlineVariant"),
+    qt_window: c("background"; "surface"),
+    qt_base: c("surface"; "background"),
+    qt_highlight: c("primary"; "blue"),
+    qt_highlight_text: c("overPrimary"; "background"),
+    browser_chrome_bg: c("background"; "surface"),
+    browser_surface: c("surface"; "background"),
+    browser_surface_raised: c("surfaceContainerHigh"; "surfaceContainer"),
+    browser_text: c("overBackground"; "white"),
+    browser_muted: c("outline"; "outlineVariant"),
+    browser_accent: c("primary"; "blue"),
+    browser_on_accent: c("overPrimary"; "background"),
+    browser_border: c("outline"; "outlineVariant"),
+    niri_active_border: c("primary"; "blue"),
+    niri_inactive_border: c("outline"; "outlineVariant"),
+    xournal_canvas: c("surfaceContainerLowest"; "surfaceContainer"),
+    xournal_grid: c("outline"; "outlineVariant"),
+    xournal_selection: c("primary"; "blue")
   }
 ' > "$tmpdir/palette.$variant.json"
 jq -e 'type == "object" and (to_entries | all(.value | type == "string" and test("^#[0-9A-Fa-f]{6}$")))' \

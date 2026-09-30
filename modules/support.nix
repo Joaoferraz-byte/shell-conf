@@ -24,13 +24,18 @@ let
 
   syncAllThemes = pkgs.writeShellApplication {
     name = "sync-all-livara-themes";
-    runtimeInputs = [ syncAmbxstPalette syncThemes ];
+    runtimeInputs = [ syncAmbxstPalette syncThemes pkgs.niri ];
     text = ''
       variant="''${1:-dark}"
       LIVARA_PALETTE_VARIANT="$variant" sync-ambxst-palette
       sync-livara-themes "$variant"
       if ! "${axctlBin}" config reload >/dev/null 2>&1; then
         printf '%s\n' 'axctl config reload unavailable; compositor border reload skipped' >&2
+      elif command -v niri >/dev/null 2>&1; then
+        # Ambxst owns the generated border colors; explicitly reload the
+        # declarative config so an atomic axctl file replacement is observed.
+        niri msg action load-config-file --path "''${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl" >/dev/null 2>&1 ||
+          printf '%s\n' 'Niri config reload failed after Ambxst palette update' >&2
       fi
     '';
   };
