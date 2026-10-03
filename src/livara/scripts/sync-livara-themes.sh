@@ -16,19 +16,6 @@ set -Eeuo pipefail
     FASTFETCH_CAT_SOURCE="${LIVARA_FASTFETCH_CAT_PNG:-$HOME/.local/share/livara/assets/fastfetch-cat.png}"
     FASTFETCH_CAT_OUTPUT="$THEME_DIR/fastfetch-cat.png"
     FASTFETCH_CAT_STATE="$THEME_DIR/fastfetch-cat.state"
-    INTELLIJ_SCHEME="$THEME_DIR/intellij/Matugen-Dark.icls"
-    INTELLIJ_CONFIG_ROOTS=(
-      "${IDEA_CONFIG_PATH:-}"
-      "$XDG_CONFIG_HOME/JetBrains"
-      "$XDG_CONFIG_HOME/Google"
-    )
-    INTELLIJ_DATA_ROOTS=(
-      "${IDEA_DATA_PATH:-}"
-      "${XDG_DATA_HOME:-$HOME/.local/share}/JetBrains"
-      "${XDG_DATA_HOME:-$HOME/.local/share}/Google"
-    )
-    ANDROID_STUDIO_DATA_PATH="${ANDROID_STUDIO_DATA_PATH:-$XDG_DATA_HOME/Google}"
-    INTELLIJ_THEME_PLUGIN="${LIVARA_IDE_THEME_PLUGIN:-}"
     HYDRA_THEME_NAME="${LIVARA_HYDRA_THEME_NAME:-Livara}"
     HYDRA_FRIEND_CODE="${LIVARA_HYDRA_FRIEND_CODE:-}"
     case "$HYDRA_THEME_NAME" in
@@ -41,27 +28,16 @@ set -Eeuo pipefail
     HYDRA_THEME_EXPORT_DIR="$THEME_DIR/hydra-export/themes/$HYDRA_THEME_ID"
     HYDRA_SCREENSHOT_SOURCE="${LIVARA_HYDRA_SCREENSHOT:-}"
     HYDRA_SCREENSHOT="$HYDRA_THEME_DIR/screenshot.png"
-    NUCLEAR_DATA_ROOTS=(
-      "${LIVARA_NUCLEAR_DATA_HOME:-$XDG_DATA_HOME/com.nuclearplayer}"
-      "$HOME/.local/share/com.nuclearplayer"
-      "$HOME/.var/app/com.nuclearplayer.Nuclear/data/com.nuclearplayer"
-    )
-    NUCLEAR_DATA_HOME="${NUCLEAR_DATA_ROOTS[0]}"
-    NUCLEAR_THEME_DIR="$NUCLEAR_DATA_HOME/themes"
-    NUCLEAR_THEME_PATH="$NUCLEAR_THEME_DIR/Livara.json"
-    NUCLEAR_THEME_ID="themes/Livara.json"
     if [[ "${1:-dark}" != dark ]]; then
       printf 'Livara supports only the dark palette variant\n' >&2
       exit 2
     fi
-    NUCLEAR_DARK_MODE=dark
     PALETTE_VARIANT=dark
     PALETTE_FILE="$THEME_DIR/palette.$PALETTE_VARIANT.json"
     BTOP_CONFIG="$XDG_CONFIG_HOME/btop/btop.conf"
     BTOP_THEME="$XDG_CONFIG_HOME/btop/themes/Livara.theme"
     WEZTERM_SCHEME="${LIVARA_WEZTERM_COLOR_SCHEME:-$SHELL_NAME}"
     WEZTERM_THEME="$XDG_CONFIG_HOME/wezterm/colors/$WEZTERM_SCHEME.toml"
-    MATUGEN_CONFIG="$XDG_CONFIG_HOME/matugen/config.toml"
     # NixVim/Home Manager exposes the generated Lua module under lua/.
     NVIM_THEME_PATH="$XDG_CONFIG_HOME/nvim/lua/matugen_colors.lua"
     FREESM_DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}/FreesmLauncher"
@@ -596,213 +572,6 @@ EOF
     sync_wezterm_scheme
     sync_btop_theme
 
-    sync_intellij_scheme() {
-      [[ -s "$MATUGEN_CONFIG" ]] || return 0
-      command -v matugen >/dev/null 2>&1 || {
-        log "IntelliJ scheme skipped: Matugen is unavailable"
-        return 0
-      }
-      local primary
-      primary="$(json_color primary blue)"
-      [[ "$primary" =~ ^#[[:xdigit:]]{6}$ ]] || primary="#7bb7ff"
-      mkdir -p "$(dirname "$INTELLIJ_SCHEME")"
-      if ! matugen color hex "$primary" -m dark >/dev/null 2>&1; then
-        log "IntelliJ scheme generation failed"
-        return 0
-      fi
-      if [[ ! -s "$INTELLIJ_SCHEME" ]] || ! grep -qE '^<scheme[[:space:]]+name=' "$INTELLIJ_SCHEME"; then
-        log "IntelliJ scheme rejected because the generated file is not a valid scheme"
-        return 0
-      fi
-      log "IntelliJ scheme generated: $INTELLIJ_SCHEME"
-    }
-
-    intellij_linked=false
-    android_studio_linked=false
-    intellij_ui_theme_installed=false
-    android_studio_ui_theme_installed=false
-    intellij_ui_theme_applied=false
-    android_studio_ui_theme_applied=false
-
-    link_intellij_scheme() {
-      [[ -s "$INTELLIJ_SCHEME" ]] || return 0
-      local config_root product_root product_name colors_dir target current
-      for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
-        [[ -n "$config_root" && -d "$config_root" ]] || continue
-        while IFS= read -r -d "" product_root; do
-          product_name="$(basename "$product_root")"
-          colors_dir="$product_root/colors"
-          mkdir -p "$colors_dir"
-          target="$colors_dir/Matugen-Dark.icls"
-          if [[ -L "$target" ]]; then
-            current="$(readlink -f "$target" 2>/dev/null || true)"
-            if [[ "$current" != "$INTELLIJ_SCHEME" ]]; then
-              rm -f "$target"
-            fi
-          elif [[ -e "$target" ]]; then
-            continue
-          fi
-          if [[ ! -e "$target" ]]; then
-            ln -s "$INTELLIJ_SCHEME" "$target"
-          fi
-          case "$product_name" in
-            IntelliJIdea*) intellij_linked=true ;;
-            AndroidStudio*) android_studio_linked=true ;;
-          esac
-        done < <(if [[ "$config_root" == */IntelliJIdea* || "$config_root" == */AndroidStudio* ]]; then printf '%s\0' "$config_root"; else find "$config_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null; fi)
-      done
-    }
-
-    install_intellij_ui_theme() {
-      [[ -d "$INTELLIJ_THEME_PLUGIN" && -s "$INTELLIJ_THEME_PLUGIN/META-INF/plugin.xml" ]] || {
-        log "IDE UI theme skipped: LIVARA_IDE_THEME_PLUGIN is unavailable"
-        return 0
-      }
-      local theme_plugin="$THEME_DIR/intellij/LivaraTheme"
-      mkdir -p "$theme_plugin/META-INF" "$theme_plugin/theme"
-      cp -f "$INTELLIJ_THEME_PLUGIN/META-INF/plugin.xml" "$theme_plugin/META-INF/plugin.xml"
-      write_atomic "$theme_plugin/theme/Livara.theme.json" <<EOF
-{
-  "name": "Livara Dark",
-  "dark": true,
-  "author": "Joaoferraz-byte",
-  "editorScheme": "/theme/Matugen-Dark.xml",
-  "ui": {
-    "*": {
-      "background": "$(json_color base)",
-      "foreground": "$(json_color text)"
-    },
-    "Panel.background": "$(json_color base)",
-    "ToolWindow.background": "$(json_color mantle)",
-    "EditorTabs.background": "$(json_color mantle)",
-    "EditorTabs.selectedBackground": "$(json_color surface0)",
-    "TabbedPane.background": "$(json_color mantle)",
-    "TabbedPane.selectedBackground": "$(json_color surface0)",
-    "Button.background": "$(json_color surface0)",
-    "Button.hoverBackground": "$(json_color surface1)",
-    "Button.foreground": "$(json_color text)",
-    "Label.foreground": "$(json_color text)",
-    "TextField.background": "$(json_color surface0)",
-    "TextField.foreground": "$(json_color text)",
-    "List.background": "$(json_color base)",
-    "List.foreground": "$(json_color text)",
-    "Tree.background": "$(json_color base)",
-    "Tree.foreground": "$(json_color text)",
-    "Link.activeForeground": "$(json_color blue)",
-    "ProgressBar.foreground": "$(json_color blue)",
-    "ProgressBar.background": "$(json_color surface1)",
-    "Component.focusColor": "$(json_color blue)",
-    "Borders.color": "$(json_color surface1)",
-    "ScrollBar.thumbColor": "$(json_color overlay0)"
-  }
-}
-EOF
-      [[ -s "$INTELLIJ_SCHEME" ]] && cp -f "$INTELLIJ_SCHEME" "$theme_plugin/theme/Matugen-Dark.xml"
-      if ! jq -e '.name == "Livara Dark" and .dark == true and (.ui | type == "object")' "$theme_plugin/theme/Livara.theme.json" >/dev/null 2>&1; then
-        log "IDE UI theme rejected because the generated JSON is invalid"
-        return 0
-      fi
-      local data_root product_root product_name target current theme_id
-      theme_id="$(sed -n 's/.*themeProvider[[:space:]]\+id="\([^"]*\)".*/\1/p' "$theme_plugin/META-INF/plugin.xml" | head -n1)"
-      [[ -n "$theme_id" ]] || {
-        log "IDE UI theme rejected because plugin.xml has no themeProvider id"
-        return 0
-      }
-      install_theme_plugin() {
-        local product_root product_name plugin_root target current
-        product_root="$1"
-        product_name="$(basename "$product_root")"
-        plugin_root="$product_root"
-        target="$plugin_root/LivaraTheme"
-        mkdir -p "$plugin_root"
-        if [[ -L "$target" ]]; then
-          current="$(readlink -f "$target" 2>/dev/null || true)"
-          [[ "$current" == "$theme_plugin" ]] || rm -f "$target"
-        elif [[ -e "$target" ]]; then
-          return 0
-        fi
-        [[ -e "$target" ]] || ln -s "$theme_plugin" "$target"
-        case "$product_name" in
-          IntelliJIdea*) intellij_ui_theme_installed=true ;;
-          AndroidStudio*) android_studio_ui_theme_installed=true ;;
-        esac
-      }
-      select_theme_in_config() {
-        local config_root="$1"
-        local laf="$config_root/options/laf.xml"
-        local laf_line="    <laf class-name=\"com.intellij.ide.ui.laf.darcula.DarculaLaf\" themeId=\"$theme_id\" />"
-        mkdir -p "$(dirname "$laf")"
-        if [[ ! -e "$laf" ]]; then
-          write_atomic "$laf" <<EOF
-<application>
-  <component name="LafManager" autodetect="false">
-$laf_line
-  </component>
-</application>
-EOF
-        elif [[ ! -L "$laf" ]]; then
-          local laf_tmp="$laf.tmp.$$"
-          awk -v replacement="$laf_line" '
-            BEGIN { inside = 0; component = 0; selected = 0 }
-            /<component[[:space:]]+name="LafManager"/ { inside = 1; component = 1; print; next }
-            inside && /<laf[[:space:]]/ { print replacement; selected = 1; next }
-            inside && /<\/component>/ && !selected { print replacement; selected = 1 }
-            inside && /<\/component>/ { inside = 0 }
-            { print }
-          ' "$laf" > "$laf_tmp"
-          if ! grep -q 'name="LafManager"' "$laf_tmp"; then
-            sed -i "/<\/application>/i\\  <component name=\"LafManager\" autodetect=\"false\">\\n$laf_line\\n  </component>" "$laf_tmp"
-          fi
-          chmod 0644 "$laf_tmp"
-          mv -f "$laf_tmp" "$laf"
-        fi
-        case "$(basename "$config_root")" in
-          IntelliJIdea*) intellij_ui_theme_applied=true ;;
-          AndroidStudio*) android_studio_ui_theme_applied=true ;;
-        esac
-      }
-
-      for data_root in "${INTELLIJ_DATA_ROOTS[@]}"; do
-        [[ -n "$data_root" && -d "$data_root" ]] || continue
-        while IFS= read -r -d "" product_root; do
-          install_theme_plugin "$product_root"
-        done < <(if [[ "$data_root" == */IntelliJIdea* || "$data_root" == */AndroidStudio* ]]; then
-          printf '%s\0' "$data_root"
-        else
-          find "$data_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null
-        fi)
-      done
-
-      for config_root in "${INTELLIJ_CONFIG_ROOTS[@]}"; do
-        [[ -d "$config_root" ]] || continue
-        while IFS= read -r -d "" product_root; do
-          local plugin_product_root
-          product_name="$(basename "$product_root")"
-          case "$product_name" in
-            IntelliJIdea*)
-              plugin_product_root="${IDEA_DATA_PATH:-$XDG_DATA_HOME/JetBrains}/$product_name"
-              ;;
-            AndroidStudio*)
-              plugin_product_root="$ANDROID_STUDIO_DATA_PATH/$product_name"
-              ;;
-          esac
-          if [[ -n "${plugin_product_root:-}" ]]; then
-            install_theme_plugin "$plugin_product_root"
-            [[ -e "$plugin_product_root/LivaraTheme" ]] && select_theme_in_config "$product_root"
-          fi
-        done < <(if [[ "$config_root" == */IntelliJIdea* || "$config_root" == */AndroidStudio* ]]; then
-          printf '%s\0' "$config_root"
-        else
-          find "$config_root" -mindepth 1 -maxdepth 1 -type d \( -name 'IntelliJIdea*' -o -name 'AndroidStudio*' \) -print0 2>/dev/null
-        fi)
-      done
-    }
-
-    sync_intellij_scheme
-    link_intellij_scheme
-    install_intellij_ui_theme
-
-
     sync_hydra_theme_root() {
       local root="$1"
       mkdir -p "$root"
@@ -871,104 +640,23 @@ EOF
 
     sync_hydra_theme
 
-    sync_nuclear_theme_root() {
-      local data_home="$1"
-      local theme_path="$data_home/themes/Livara.json"
-      local settings_path="$data_home/settings.json"
-      mkdir -p "$(dirname "$theme_path")"
-      write_atomic "$theme_path" <<EOF
-{
-  "version": 2,
-  "name": "Livara",
-  "dark": {
-    "background": "$(json_color base)",
-    "foreground": "$(json_color text)",
-    "muted": "$(json_color mantle)",
-    "muted-foreground": "$(json_color subtext0)",
-    "card": "$(json_color surface0)",
-    "card-foreground": "$(json_color text)",
-    "popover": "$(json_color surface0)",
-    "popover-foreground": "$(json_color text)",
-    "input": "$(json_color surface1)",
-    "input-foreground": "$(json_color text)",
-    "primary": "$(json_color blue)",
-    "primary-foreground": "$(json_color base)",
-    "topbar": "$(json_color mantle)",
-    "topbar-foreground": "$(json_color text)",
-    "bottombar": "$(json_color mantle)",
-    "bottombar-foreground": "$(json_color text)",
-    "border": "$(json_color overlay0)",
-    "ring": "$(json_color blue)",
-    "radius-md": "8px",
-    "radius-lg": "12px"
-  }
-}
-EOF
-      if ! jq -e '.version == 2 and .name == "Livara" and (.dark | type == "object")' "$theme_path" >/dev/null 2>&1; then
-        log "Nuclear theme validation failed; skipping activation: $theme_path"
-        return 0
-      fi
-      if pgrep -x nuclear >/dev/null 2>&1 || pgrep -x Nuclear >/dev/null 2>&1 || pgrep -x nuclear-music-player >/dev/null 2>&1 || pgrep -x com.nuclearplayer.Nuclear >/dev/null 2>&1; then
-        log "Nuclear is running; active theme state was not rewritten: $data_home"
-        return 0
-      fi
-      if [[ -s "$settings_path" ]] && ! jq -e 'type == "object"' "$settings_path" >/dev/null 2>&1; then
-        log "Nuclear settings are invalid; active theme state was not rewritten: $settings_path"
-        return 0
-      fi
-      local settings_tmp="$settings_path.tmp.$$"
-      if [[ -s "$settings_path" ]]; then
-        jq --arg theme_path "$NUCLEAR_THEME_ID" --arg dark_mode "$NUCLEAR_DARK_MODE" \
-          '."core.theme.active.type" = "advanced" | ."core.theme.active.id" = $theme_path | ."core.theme.dark" = ($dark_mode == "dark")' \
-          "$settings_path" > "$settings_tmp"
-      else
-        jq -n --arg theme_path "$NUCLEAR_THEME_ID" --arg dark_mode "$NUCLEAR_DARK_MODE" \
-          '{"core.theme.active.type":"advanced","core.theme.active.id":$theme_path,"core.theme.dark":($dark_mode == "dark")}' \
-          > "$settings_tmp"
-      fi
-      chmod 0644 "$settings_tmp"
-      mv -f "$settings_tmp" "$settings_path"
-      log "Nuclear Livara theme selected through its JSON settings store: $data_home"
-    }
-
-    sync_nuclear_theme() {
-      local data_home
-      local found=false
-      local seen="|"
-      for data_home in "${NUCLEAR_DATA_ROOTS[@]}"; do
-        [[ -n "$data_home" ]] || continue
-        [[ "$seen" == *"|$data_home|"* ]] && continue
-        seen+="$data_home|"
-        if [[ -d "$data_home" || "$data_home" == "${NUCLEAR_DATA_ROOTS[0]}" || -d "${data_home%/data/com.nuclearplayer}" ]]; then
-          sync_nuclear_theme_root "$data_home"
-          found=true
-        fi
-      done
-      if [[ "$found" != true ]]; then
-        sync_nuclear_theme_root "$NUCLEAR_DATA_HOME"
-      fi
-    }
-
-    sync_nuclear_theme
-
     sync_foliate_theme_root() {
       local root="$1"
       [[ -n "$root" ]] || return 0
-      local theme="$root/themes/livara.json"
+      local theme="$root/themes.json"
       mkdir -p "$(dirname "$theme")"
       write_atomic "$theme" <<EOF
 {
-  "label": "Livara",
-  "light": {
-    "fg": "$(json_color text)",
-    "bg": "$(json_color base)",
-    "link": "$(json_color blue)"
-  },
-  "dark": {
-    "fg": "$(json_color text)",
-    "bg": "$(json_color base)",
-    "link": "$(json_color blue)"
-  }
+  "themes": [
+    {
+      "theme-name": "Livara",
+      "fg-color": "$(json_color text)",
+      "bg-color": "$(json_color base)",
+      "link-color": "$(json_color blue)",
+      "invert": true,
+      "dark-mode": true
+    }
+  ]
 }
 EOF
     }
@@ -998,8 +686,8 @@ EOF
       # Native: write directly to the dconf database. dconf does not need
       # the GSettings schema to be installed on the host.
       if command -v dconf >/dev/null 2>&1; then
-        if dconf write "$foliate_dconf_path" "'livara.json'" >/dev/null 2>&1; then
-          log "Foliate native reader theme selected: livara.json"
+        if dconf write "$foliate_dconf_path" "'Livara'" >/dev/null 2>&1; then
+          log "Foliate native reader theme selected: Livara"
           selected=true
         else
           log "Foliate native reader theme generated; dconf write failed"
@@ -1021,20 +709,20 @@ EOF
         awk -v section="$foliate_keyfile_section" '
           BEGIN { in_section = 0; found = 0 }
           /^\[/ {
-            if (in_section && !found) { print "theme='\''livara.json'\''"; found = 1 }
+            if (in_section && !found) { print "theme='\''Livara'\''"; found = 1 }
             in_section = ($0 == "[" section "]")
           }
-          in_section && /^theme=/ { print "theme='\''livara.json'\''"; found = 1; next }
+          in_section && /^theme=/ { print "theme='\''Livara'\''"; found = 1; next }
           { print }
-          END { if (in_section && !found) { print "theme='\''livara.json'\''"; found = 1 } }
+          END { if (in_section && !found) { print "theme='\''Livara'\''"; found = 1 } }
         ' "$keyfile" > "$keyfile.tmp.$$"
         # Ensure the section exists even if it was not present originally.
         if ! grep -q "^\[$foliate_keyfile_section\]$" "$keyfile.tmp.$$"; then
-          printf '\n[%s]\ntheme='\''livara.json'\''\n' "$foliate_keyfile_section" >> "$keyfile.tmp.$$"
+          printf '\n[%s]\ntheme='\''Livara'\''\n' "$foliate_keyfile_section" >> "$keyfile.tmp.$$"
         fi
         mv -f "$keyfile.tmp.$$" "$keyfile"
         chmod 0644 "$keyfile"
-        log "Foliate Flatpak reader theme selected: livara.json"
+        log "Foliate Flatpak reader theme selected: Livara"
         selected=true
       fi
 
@@ -1396,25 +1084,12 @@ EOF
     nvim_applied=false
     [[ -s "$NVIM_THEME_PATH" ]] && nvim_applied=true
 
-    nuclear_selected=false
-    for nuclear_data_home in "${NUCLEAR_DATA_ROOTS[@]}"; do
-      nuclear_settings="$nuclear_data_home/settings.json"
-      nuclear_theme="$nuclear_data_home/themes/Livara.json"
-      if [[ -s "$nuclear_settings" && -s "$nuclear_theme" ]] && jq -e \
-        --arg theme_id "$NUCLEAR_THEME_ID" \
-        '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == $theme_id' \
-        "$nuclear_settings" >/dev/null 2>&1; then
-        nuclear_selected=true
-        break
-      fi
-    done
-
     foliate_applied=false
     # Verify via dconf (native) or keyfile (Flatpak). dconf read does not
     # need the GSettings schema to be installed on the host.
-    if [[ -s "$foliate_root/themes/livara.json" ]]; then
+    if [[ -s "$foliate_root/themes.json" ]]; then
       if command -v dconf >/dev/null 2>&1 &&
-         [[ "$(dconf read "$foliate_dconf_path" 2>/dev/null || true)" == "'livara.json'" ]]; then
+         [[ "$(dconf read "$foliate_dconf_path" 2>/dev/null || true)" == "'Livara'" ]]; then
         foliate_applied=true
       fi
       if [[ "$foliate_applied" != true ]] &&
@@ -1423,7 +1098,7 @@ EOF
         if awk -v section="$foliate_keyfile_section" '
           BEGIN { in_section = 0 }
           /^\[/ { in_section = ($0 == "[" section "]") }
-          in_section && /^theme='\''livara.json'\''$/ { found = 1; exit }
+          in_section && /^theme='\''Livara'\''$/ { found = 1; exit }
           END { exit !found }
         ' "$foliate_keyfile" 2>/dev/null; then
           foliate_applied=true
@@ -1482,8 +1157,7 @@ EOF
     {"name":"GTK/libadwaita/GParted","contract":"GTK3/GTK4 gtk.css plus settings.ini generated from the active variant","path":"$XDG_CONFIG_HOME/gtk-3.0/gtk.css","applied":true,"activation":"restart GTK applications; no logout required"},
     {"name":"Zen/Firefox","contract":"profile-consumable userChrome.css imported by the declarative profile module","path":"$THEME_DIR/browser/firefox.css","applied":true,"activation":"restart Zen/Firefox after enabling userChrome.css"},
     {"name":"Neovim/NixVim","contract":"matugen_colors.lua + NixVim transparent highlight policy","path":"$NVIM_THEME_PATH","applied":$nvim_applied,"activation":"palette file generated and watched by NixVim"},
-    {"name":"Nuclear Music Player","contract":"Nuclear v2 advanced theme JSON generated from the active $SHELL_NAME palette","path":"$NUCLEAR_THEME_PATH","applied":$nuclear_selected,"generated":true,"activation":"selection is owned by Nuclear settings; edits reload live after Livara is selected"},
-    {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes/livara.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
+    {"name":"Foliate","contract":"Foliate reader JSON theme + viewer.view.theme (GTK4/libadwaita host UI)","path":"$foliate_root/themes.json","applied":$foliate_applied,"activation":"native or sandbox GSettings selection verified"},
     {"name":"KDE/Okular","contract":"Generated .colors + kdeglobals ColorScheme","path":"${XDG_CONFIG_HOME}/kdeglobals","applied":$kde_applied,"activation":"KDE color scheme selection verified"},
     {"name":"Freesm Launcher","contract":"themes/livara/theme.json + themeStyle.css + ApplicationTheme","path":"$freesm_root/themes/livara","applied":$freesm_applied,"activation":"ApplicationTheme selection verified"},
     {"name":"Xournal++","contract":"palettes/$XOURNAL_PALETTE_NAME + settings.xml colorPalette","path":"$xournal_root/palettes/$XOURNAL_PALETTE_NAME","applied":$xournal_applied,"activation":"restart Xournal++ after a palette change"},
@@ -1491,10 +1165,6 @@ EOF
     {"name":"btop","contract":"generated $BTOP_THEME + color_theme selection","path":"$BTOP_THEME","applied":true,"activation":"SIGUSR2 sent when btop is running"},
     {"name":"WezTerm","contract":"generated color scheme watched by the WezTerm Lua config","path":"$WEZTERM_THEME","applied":true,"activation":"automatically_reload_config handles reload"},
     {"name":"Vesktop","contract":"Midnight Discord CSS + Vencord enabledThemes","path":"$VESKTOP_CONFIG_HOME/themes/livara-midnight.theme.css","applied":$vesktop_applied,"activation":"restart Vesktop after external settings change"},
-    {"name":"IntelliJ IDEA editor scheme","contract":"Matugen generated .icls + versioned JetBrains colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$intellij_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
-    {"name":"IntelliJ IDEA UI theme","contract":"Livara Theme plugin + JetBrains product plugin-root symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$intellij_ui_theme_applied,"installed":$intellij_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
-    {"name":"Android Studio editor scheme","contract":"Matugen generated .icls + versioned Google colors directory symlink","path":"$INTELLIJ_SCHEME","applied":false,"available":$android_studio_linked,"activation":"Editor color scheme is available; selection remains IDE-controlled"},
-    {"name":"Android Studio UI theme","contract":"Livara Theme plugin + Google product plugin-root symlink + LafManager selection","path":"$THEME_DIR/intellij/LivaraTheme","applied":$android_studio_ui_theme_applied,"installed":$android_studio_ui_theme_installed,"activation":"selected by options/laf.xml; restart the IDE to load the plugin"},
     {"name":"Hydra Launcher","contract":"theme.css export plus official hydra-themes publication layout","path":"$HYDRA_THEME_DIR/theme.css","exportPath":"$HYDRA_THEME_EXPORT_DIR/theme.css","applied":$hydra_applied,"generated":$hydra_generated,"registered":false,"activated":false,"submissionReady":$hydra_submission_ready,"activationRequired":true,"activation":"Hydra's Appearance list is LevelDB-owned; use Create/Edit and paste the generated CSS"}
   ]
 }

@@ -10,7 +10,7 @@ let
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
-    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps util-linux dconf ];
+    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq procps util-linux dconf ];
     text = builtins.readFile syncSource;
   };
 
@@ -142,7 +142,6 @@ in
         "LIVARA_REQUIRE_AMBXST=1"
         "AMBXST_COLORS_FILE=${config.xdg.cacheHome}/ambxst/colors.json"
         "LIVARA_WEZTERM_COLOR_SCHEME=${weztermColorScheme}"
-        "LIVARA_IDE_THEME_PLUGIN=${config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or ""}"
       ];
     };
     Install.WantedBy = [ "graphical-session.target" ];
@@ -218,9 +217,7 @@ in
       "Freesm Launcher"
       "Heroic/Prism: application-owned templates"
       "Xournal++"
-      "IntelliJ IDEA and Android Studio: generated Matugen ICLS"
       "Hydra Launcher: generated theme.css for the supported Create/Edit flow and upstream submission"
-      "Nuclear Music Player: generated v2 advanced theme JSON"
     ];
   };
 

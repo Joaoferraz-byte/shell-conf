@@ -95,61 +95,6 @@ else
   done
 fi
 
-section 'IntelliJ IDEA and Android Studio'
-jetbrains_plugins=()
-while IFS= read -r path; do jetbrains_plugins+=("$path"); done < <(
-  find_unique < <(
-    for root in "$XDG_DATA_HOME/JetBrains" "$XDG_DATA_HOME/Google" "$HOME/.local/share/JetBrains" "$HOME/.local/share/Google" "$HOME/.var/app"; do
-      [[ -d "$root" ]] || continue
-      find "$root" -type f -path '*/LivaraTheme/META-INF/plugin.xml' -print 2>/dev/null || true
-    done
-  )
-)
-if ((${#jetbrains_plugins[@]} == 0)); then
-  warn 'no LivaraTheme plugin was found in JetBrains or Google data roots'
-else
-  for plugin_xml in "${jetbrains_plugins[@]}"; do
-    plugin="${plugin_xml%/META-INF/plugin.xml}"
-    info "JetBrains theme plugin: $plugin"
-    pass "theme plugin found: $plugin"
-    [[ -f "$plugin/theme/Livara.theme.json" ]] \
-      && jq -e '.ui["*"] | has("background") and has("foreground")' "$plugin/theme/Livara.theme.json" >/dev/null 2>&1 \
-      && pass 'UI theme schema is valid' || fail "UI theme schema is invalid: $plugin"
-    [[ -s "$plugin/theme/Matugen-Dark.xml" ]] && pass 'editor scheme is bundled' || fail "editor scheme is missing: $plugin"
-    contains 'idea-version' "$plugin_xml" && pass 'plugin compatibility is declared' || fail "idea-version is missing: $plugin_xml"
-    product_root="$(dirname "$plugin")"
-    legacy_nested="$product_root/plugins/LivaraTheme"
-    [[ ! -e "$legacy_nested" ]] && pass 'legacy nested plugin installation is absent' || fail "legacy nested plugin installation found: $legacy_nested"
-  done
-fi
-
-section 'Nuclear'
-nuclear_candidates=()
-while IFS= read -r path; do nuclear_candidates+=("$path"); done < <(
-  find_unique \
-    "$XDG_DATA_HOME/com.nuclearplayer/themes/Livara.json" \
-    "$HOME/.local/share/com.nuclearplayer/themes/Livara.json" \
-    < <(find "$XDG_DATA_HOME" "$HOME/.local/share" "$HOME/.var/app" -type f -path '*/com.nuclearplayer/themes/Livara.json' -print 2>/dev/null || true)
-)
-if ((${#nuclear_candidates[@]} == 0)); then
-  fail 'Nuclear Livara theme was not found'
-else
-  for nuclear_theme in "${nuclear_candidates[@]}"; do
-    info "Nuclear theme: $nuclear_theme"
-    jq -e '.version == 2 and .name == "Livara" and (.dark | type == "object")' "$nuclear_theme" >/dev/null 2>&1 \
-      && pass "Nuclear v2 theme is valid: $nuclear_theme" || fail "Nuclear theme is invalid: $nuclear_theme"
-    nuclear_data="$(dirname "$(dirname "$nuclear_theme")")"
-    nuclear_settings="$nuclear_data/settings.json"
-    if [[ -s "$nuclear_settings" ]] && jq -e \
-      --arg theme_id 'themes/Livara.json' \
-      '."core.theme.active.type" == "advanced" and ."core.theme.active.id" == $theme_id' \
-      "$nuclear_settings" >/dev/null 2>&1; then
-      pass "Nuclear active theme points to Livara: $nuclear_settings"
-    else
-      warn "Nuclear theme is available but its active selection is not confirmed: $nuclear_settings"
-    fi
-  done
-fi
 if command -v spicetify >/dev/null 2>&1; then
   fail "spicetify remains in PATH: $(command -v spicetify)"
 else
