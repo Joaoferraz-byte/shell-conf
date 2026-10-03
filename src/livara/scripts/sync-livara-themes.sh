@@ -718,19 +718,19 @@ EOF
         # Rewrite the keyfile: replace any existing theme= line in the
         # target section, or add the section + key if absent. GVariant
         # strings are single-quoted.
-        awk -v section="$foliate_keyfile_section" '
+        awk -v section="$foliate_keyfile_section" -v theme_line="theme='Livara.json'" '
           BEGIN { in_section = 0; found = 0 }
           /^\[/ {
-            if (in_section && !found) { print "theme='\''Livara.json\''"; found = 1 }
+            if (in_section && !found) { print theme_line; found = 1 }
             in_section = ($0 == "[" section "]")
           }
-          in_section && /^theme=/ { print "theme='\''Livara.json\''"; found = 1; next }
+          in_section && /^theme=/ { print theme_line; found = 1; next }
           { print }
-          END { if (in_section && !found) { print "theme='\''Livara.json\''"; found = 1 } }
+          END { if (in_section && !found) { print theme_line; found = 1 } }
         ' "$keyfile" > "$keyfile.tmp.$$"
         # Ensure the section exists even if it was not present originally.
         if ! grep -q "^\[$foliate_keyfile_section\]$" "$keyfile.tmp.$$"; then
-          printf '\n[%s]\ntheme='\''Livara.json\''\n' "$foliate_keyfile_section" >> "$keyfile.tmp.$$"
+          printf "\n[%s]\ntheme='Livara.json'\n" "$foliate_keyfile_section" >> "$keyfile.tmp.$$"
         fi
         mv -f "$keyfile.tmp.$$" "$keyfile"
         chmod 0644 "$keyfile"
@@ -1090,10 +1090,10 @@ EOF
       if [[ "$foliate_applied" != true ]] &&
          [[ -f "$HOME/.var/app/com.github.johnfactotum.Foliate/config/glib-2.0/settings/keyfile" ]]; then
         foliate_keyfile="$HOME/.var/app/com.github.johnfactotum.Foliate/config/glib-2.0/settings/keyfile"
-        if awk -v section="$foliate_keyfile_section" '
+        if awk -v section="$foliate_keyfile_section" -v theme_line="theme='Livara.json'" '
           BEGIN { in_section = 0 }
           /^\[/ { in_section = ($0 == "[" section "]") }
-          in_section && /^theme='\''Livara.json\''$/ { found = 1; exit }
+          in_section && $0 == theme_line { found = 1; exit }
           END { exit !found }
         ' "$foliate_keyfile" 2>/dev/null; then
           foliate_applied=true
