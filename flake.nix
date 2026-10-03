@@ -31,9 +31,12 @@
           bash -n ${self}/src/livara/scripts/sync-ambxst-palette.sh
           bash -n ${self}/tests/test-theme-contracts.sh
           bash -n ${self}/tests/test-ambxst-palette-bridge.sh
+          bash -n ${self}/tests/test-theme-lock.sh
           bash ${self}/tests/test-theme-contracts.sh
           bash ${self}/tests/test-ambxst-palette-bridge.sh
-          grep -Fq 'config reload' ${self}/modules/support.nix
+          bash ${self}/tests/test-theme-lock.sh
+          grep -Fq 'LIVARA_LOCK_HELD=1' ${self}/modules/support.nix
+          ! grep -Eq '\b(axctl|niri)\b' ${self}/modules/support.nix
           ! grep -Fq 'json_color overPrimary' ${self}/src/livara/scripts/sync-livara-themes.sh
           ! grep -Fq 'window, .background' ${self}/src/livara/scripts/sync-livara-themes.sh
           if grep -Eq 'config\.dpi|LIVARA_WEZTERM_DPI|weztermDpi' ${self}/modules/support.nix; then
@@ -47,13 +50,11 @@
         config,
         lib,
         pkgs,
-        desktopProfile ? { },
         shellName ? "Livara",
-        ambxstPackage ? null,
         ...
       }:
         import ./modules/support.nix {
-          inherit config lib pkgs desktopProfile shellName ambxstPackage;
+          inherit config lib pkgs shellName;
         };
     };
 }

@@ -27,9 +27,8 @@ No full system build is required for this guide. Use `bash -n`, focused fixture 
 
 ## References
 
-[1]: https://docs.noctalia.dev/noctalia/theming/palette/ "Noctalia palette contract"
-[2]: https://docs.noctalia.dev/noctalia/theming/app-theming/ "Noctalia application theming"
-[3]: https://docs.zen-browser.app/guides/live-editing "Zen Browser live editing"
-[4]: https://wezterm.org/config/appearance.html "WezTerm appearance configuration"
-[5]: https://docs.gtk.org/gtk4/css-overview.html "GTK CSS overview"
-[6]: https://doc.qt.io/qt-6/stylesheet.html "Qt Style Sheets"
+[1]: https://github.com/Axenide/Ambxst "Ambxst source repository"
+[2]: https://docs.zen-browser.app/guides/live-editing "Zen Browser live editing"
+[3]: https://wezterm.org/config/appearance.html "WezTerm appearance configuration"
+[4]: https://docs.gtk.org/gtk4/css-overview.html "GTK CSS overview"
+[5]: https://doc.qt.io/qt-6/stylesheet.html "Qt Style Sheets"

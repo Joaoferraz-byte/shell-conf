@@ -64,6 +64,7 @@ cat > "$LIVARA_IDE_THEME_PLUGIN/META-INF/plugin.xml" <<'EOF'
 </idea-plugin>
 EOF
 bash "$sync_script" dark >/dev/null
+[[ ! -e "$state_home/livara/theme/palette.light.json" ]]
 [[ -s "$state_home/livara/theme/browser/firefox.css" ]]
 grep -q -- '--livara-primary: #7bb7ff' "$state_home/livara/theme/browser/firefox.css"
 grep -q -- '--livara-on-primary: #0c1420' "$state_home/livara/theme/browser/firefox.css"

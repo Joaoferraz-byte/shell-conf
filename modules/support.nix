@@ -1,4 +1,4 @@
-{ config, lib, pkgs, desktopProfile ? { }, shellName ? "Livara", ambxstPackage ? null, ... }:
+{ config, lib, pkgs, shellName ? "Livara", ... }:
 let
   source = ../src/livara;
   themeRoot = "${config.xdg.stateHome}/livara/theme";
@@ -10,35 +10,34 @@ let
   syncSource = source + "/scripts/sync-livara-themes.sh";
   syncThemes = pkgs.writeShellApplication {
     name = "sync-livara-themes";
-    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps util-linux wezterm flatpak dconf ];
+    runtimeInputs = with pkgs; [ bash coreutils findutils gawk gnugrep gnused imagemagick jq matugen procps util-linux dconf ];
     text = builtins.readFile syncSource;
   };
 
   syncAmbxstPalette = pkgs.writeShellApplication {
     name = "sync-ambxst-palette";
-    runtimeInputs = with pkgs; [ bash coreutils gnugrep jq ];
+    runtimeInputs = with pkgs; [ bash coreutils gnugrep jq util-linux ];
     text = builtins.readFile (source + "/scripts/sync-ambxst-palette.sh");
   };
 
-  axctlBin = if ambxstPackage != null then "${ambxstPackage}/bin/axctl" else "axctl";
-
   syncAllThemes = pkgs.writeShellApplication {
     name = "sync-all-livara-themes";
-    runtimeInputs = [ syncAmbxstPalette syncThemes pkgs.niri ];
+    runtimeInputs = [ syncAmbxstPalette syncThemes pkgs.util-linux ];
     text = ''
+      set -Eeuo pipefail
+
       # Livara is intentionally dark-only. Ignore stale light-mode callers so
       # a previous variant can never switch the desktop back to light mode.
-      variant=dark
-      LIVARA_PALETTE_VARIANT=dark sync-ambxst-palette
-      sync-livara-themes dark
-      if ! "${axctlBin}" config reload >/dev/null 2>&1; then
-        printf '%s\n' 'axctl config reload unavailable; compositor border reload skipped' >&2
-      elif command -v niri >/dev/null 2>&1; then
-        # Ambxst owns the generated border colors; explicitly reload the
-        # declarative config so an atomic axctl file replacement is observed.
-        niri msg action load-config-file --path "''${XDG_CONFIG_HOME:-$HOME/.config}/niri/config.kdl" >/dev/null 2>&1 ||
-          printf '%s\n' 'Niri config reload failed after Ambxst palette update' >&2
+      lock_file="''${LIVARA_LOCK_FILE:-''${XDG_STATE_HOME:-$HOME/.local/state}/livara/theme-sync.lock}"
+      mkdir -p "$(dirname "$lock_file")"
+      exec 9>"$lock_file"
+      if ! flock -n 9; then
+        printf '%s\n' 'theme synchronization already running; skipping orchestration' >&2
+        exit 0
       fi
+
+      LIVARA_LOCK_HELD=1 LIVARA_LOCK_FILE="$lock_file" LIVARA_PALETTE_VARIANT=dark sync-ambxst-palette
+      LIVARA_LOCK_HELD=1 LIVARA_LOCK_FILE="$lock_file" sync-livara-themes dark
     '';
   };
 
@@ -142,7 +141,6 @@ in
         "LIVARA_DEFAULT_PALETTE=${themeRoot}/bootstrap.json"
         "LIVARA_REQUIRE_AMBXST=1"
         "AMBXST_COLORS_FILE=${config.xdg.cacheHome}/ambxst/colors.json"
-        "NVIM_THEME_PATH=${config.xdg.configHome}/nvim/lua/matugen_colors.lua"
         "LIVARA_WEZTERM_COLOR_SCHEME=${weztermColorScheme}"
         "LIVARA_IDE_THEME_PLUGIN=${config.home.sessionVariables.LIVARA_IDE_THEME_PLUGIN or ""}"
       ];
@@ -232,7 +230,7 @@ in
     if [ ! -s "$theme_root/bootstrap.json" ]; then
       install -Dm0644 "${bootstrapPalette}" "$theme_root/bootstrap.json"
     fi
-    for palette in palette.json palette.dark.json palette.light.json; do
+    for palette in palette.json palette.dark.json; do
       if [ ! -s "$theme_root/$palette" ]; then
         cp -f "$theme_root/bootstrap.json" "$theme_root/$palette"
       fi

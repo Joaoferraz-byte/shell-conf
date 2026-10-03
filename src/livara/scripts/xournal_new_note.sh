@@ -18,7 +18,7 @@ if [[ -e "$note" ]]; then
 fi
 
 # A static Vault template is opt-in. By default, read the live settings so new
-# notes follow the current Noctalia palette and page template.
+# notes follow the current Livara palette and page template.
 if [[ "${XOURNAL_USE_STATIC_TEMPLATE:-0}" == "1" && -n "${XOURNAL_TEMPLATE_PATH:-}" && -r "${XOURNAL_TEMPLATE_PATH}" ]]; then
   cp "${XOURNAL_TEMPLATE_PATH}" "$note"
   exec xournalpp "$note"
