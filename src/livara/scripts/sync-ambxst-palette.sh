@@ -40,8 +40,9 @@ color() {
 }
 
 # Validate every source role before publishing the canonical output.
-for key in background surface surfaceContainer surfaceContainerHigh \
-  overBackground outline outlineVariant primary secondary tertiary error blue cyan green magenta red yellow \
+for key in background surface surfaceContainer surfaceContainerLow surfaceContainerLowest \
+  surfaceContainerHigh surfaceContainerHighest overBackground overError outline outlineVariant \
+  primary primaryContainer secondary secondaryContainer tertiary tertiaryContainer error blue cyan green magenta red yellow \
   overPrimary overSecondary overTertiary; do
   color "$key" >/dev/null
 done
@@ -70,19 +71,36 @@ atomic_install() {
 jq -n --slurpfile c "$source_file" '
   def c($key; $fallback): ($c[0][$key] // $c[0][$fallback]);
   {
-    base: c("background"; "surface"),
-    mantle: c("surfaceContainerLowest"; "surfaceContainer"),
-    crust: c("surfaceContainerLowest"; "background"),
-    surface0: c("surface"; "background"),
-    surface1: c("surfaceContainer"; "surface"),
-    surface2: c("surfaceContainerHigh"; "surfaceContainer"),
-    surface3: c("surfaceContainerHigh"; "surfaceContainer"),
-    text: c("overBackground"; "white"),
+    # Compatibility aliases preserve the exact Noctalia/M3 hierarchy:
+    # base=surface, surface0=surfaceContainer, surface1=surfaceContainerHigh.
+    background: c("background"; "surface"),
+    on_background: c("overBackground"; "white"),
+    surface: c("surface"; "background"),
     on_surface: c("overBackground"; "white"),
+    surface_variant: c("surfaceContainer"; "surface"),
+    on_surface_variant: c("outline"; "outlineVariant"),
+    surface_container_lowest: c("surfaceContainerLowest"; "surfaceContainer"),
+    surface_container_low: c("surfaceContainerLow"; "surfaceContainer"),
+    surface_container: c("surfaceContainer"; "surface"),
+    surface_container_high: c("surfaceContainerHigh"; "surfaceContainer"),
+    surface_container_highest: c("surfaceContainerHighest"; "surfaceContainerHigh"),
+    primary_container: c("primaryContainer"; "primary"),
+    secondary_container: c("secondaryContainer"; "secondary"),
+    tertiary_container: c("tertiaryContainer"; "tertiary"),
+    outline: c("outline"; "outlineVariant"),
+    outline_variant: c("outlineVariant"; "outline"),
+    base: c("surface"; "background"),
+    mantle: c("surfaceContainerLow"; "surfaceContainer"),
+    crust: c("surfaceContainerLowest"; "background"),
+    surface0: c("surfaceContainer"; "surface"),
+    surface1: c("surfaceContainerHigh"; "surfaceContainer"),
+    surface2: c("surfaceContainerHighest"; "surfaceContainerHigh"),
+    surface3: c("surfaceContainerHighest"; "surfaceContainerHigh"),
+    text: c("overBackground"; "white"),
     subtext0: c("outline"; "outlineVariant"),
     subtext1: c("outlineVariant"; "outline"),
-    overlay0: c("outline"; "outlineVariant"),
-    overlay1: c("outlineVariant"; "outline"),
+    overlay0: c("outlineVariant"; "outline"),
+    overlay1: c("outline"; "outlineVariant"),
     overlay2: c("overBackground"; "outlineVariant"),
     blue: c("primary"; "blue"),
     sapphire: c("blue"; "primary"),
@@ -103,22 +121,28 @@ jq -n --slurpfile c "$source_file" '
     on_secondary: c("overSecondary"; "background"),
     on_tertiary: c("overTertiary"; "background"),
     on_error: c("overError"; "background"),
-    gtk_window_bg: c("background"; "surface"),
-    gtk_view_bg: c("surface"; "background"),
+    # App-specific roles are projections, not new palette colors.
+    gtk_window_bg: c("surface"; "background"),
+    gtk_view_bg: c("surfaceContainer"; "surface"),
+    gtk_card_bg: c("surfaceContainerHigh"; "surfaceContainer"),
+    gtk_popover_bg: c("surfaceContainerHigh"; "surfaceContainer"),
     gtk_accent: c("primary"; "blue"),
+    gtk_accent_container: c("primaryContainer"; "primary"),
     gtk_border: c("outline"; "outlineVariant"),
-    qt_window: c("background"; "surface"),
-    qt_base: c("surface"; "background"),
-    qt_highlight: c("primary"; "blue"),
+    qt_window: c("surface"; "background"),
+    qt_base: c("surfaceContainerLowest"; "surfaceContainer"),
+    qt_button: c("surfaceContainer"; "surface"),
+    qt_highlight: c("primaryContainer"; "primary"),
     qt_highlight_text: c("overPrimary"; "background"),
-    browser_chrome_bg: c("background"; "surface"),
-    browser_surface: c("surface"; "background"),
+    browser_chrome_bg: c("surface"; "background"),
+    browser_surface: c("surfaceContainer"; "surface"),
     browser_surface_raised: c("surfaceContainerHigh"; "surfaceContainer"),
+    browser_surface_active: c("surfaceContainerHighest"; "surfaceContainerHigh"),
+    browser_accent: c("primary"; "blue"),
+    browser_accent_container: c("primaryContainer"; "primary"),
     browser_text: c("overBackground"; "white"),
     browser_muted: c("outline"; "outlineVariant"),
-    browser_accent: c("primary"; "blue"),
-    browser_on_accent: c("overPrimary"; "background"),
-    browser_border: c("outline"; "outlineVariant"),
+    browser_border: c("outlineVariant"; "outline"),
     niri_active_border: c("primary"; "blue"),
     niri_inactive_border: c("outline"; "outlineVariant"),
     xournal_canvas: c("surfaceContainerLowest"; "surfaceContainer"),
