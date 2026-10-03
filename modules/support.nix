@@ -110,6 +110,21 @@ let
   };
 in
 {
+  # Re-run adapters during every Home Manager activation. The user service
+  # handles later palette changes, but it is not a sufficient guarantee when
+  # an application config was deleted immediately before a rebuild.
+  home.activation.livaraThemeSync = lib.hm.dag.entryAfter [ "writeBoundary" "xournalppLocalConfig" ] ''
+    XDG_CONFIG_HOME="${config.xdg.configHome}" \
+    XDG_DATA_HOME="${config.xdg.dataHome}" \
+    XDG_CACHE_HOME="${config.xdg.cacheHome}" \
+    XDG_STATE_HOME="${config.xdg.stateHome}" \
+    LIVARA_THEME_ROOT="${themeRoot}" \
+    LIVARA_DEFAULT_PALETTE="${themeRoot}/bootstrap.json" \
+    LIVARA_REQUIRE_AMBXST=0 \
+    LIVARA_PALETTE_VARIANT=dark \
+    $DRY_RUN_CMD "${syncAllThemes}/bin/sync-all-livara-themes" || true
+  '';
+
   home.packages = [
     pkgs.jq
     syncAmbxstPalette
