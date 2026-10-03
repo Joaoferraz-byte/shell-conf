@@ -41,13 +41,16 @@ bash "$sync_script" dark >/dev/null
 [[ -s "$state_home/livara/theme/browser/firefox.css" ]]
 grep -q -- '--livara-accent: #7bb7ff' "$state_home/livara/theme/browser/firefox.css"
 grep -q -- '--livara-on-accent: #0c1420' "$state_home/livara/theme/browser/firefox.css"
-grep -q '#navigator-toolbox' "$state_home/livara/theme/browser/firefox.css"
+grep -q '#main-window' "$state_home/livara/theme/browser/firefox.css"
 grep -q '#zen-browser-background' "$state_home/livara/theme/browser/firefox.css"
-grep -q '#zen-sidebar-foot-buttons' "$state_home/livara/theme/browser/firefox.css"
+grep -q '#zen-toolbar-background' "$state_home/livara/theme/browser/firefox.css"
 grep -q '#urlbar-background' "$state_home/livara/theme/browser/firefox.css"
 grep -q 'border-inline-end: 1px solid var(--livara-border)' "$state_home/livara/theme/browser/firefox.css"
 grep -q 'border-bottom: 1px solid var(--livara-border)' "$state_home/livara/theme/browser/firefox.css"
 ! grep -q 'toolbarbutton-icon.*background' "$state_home/livara/theme/browser/firefox.css"
+grep -q -- '--zen-colors-primary:' "$state_home/livara/theme/browser/firefox.css"
+grep -q -- '--toolbar-bgcolor:' "$state_home/livara/theme/browser/firefox.css"
+! grep -Eq '^[[:space:]]+background: var\(--livara-surface\)' "$state_home/livara/theme/browser/firefox.css"
 [[ -s "$config_home/vesktop/themes/livara-midnight.theme.css" ]]
 grep -q 'refact0r.github.io/midnight-discord/build/midnight.css' "$config_home/vesktop/themes/livara-midnight.theme.css"
 jq -e '(.enabledThemes // []) | index("livara-midnight.theme.css") != null' "$config_home/vesktop/settings/settings.json" >/dev/null

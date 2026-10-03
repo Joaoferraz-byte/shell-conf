@@ -108,50 +108,50 @@ set -Eeuo pipefail
 }
 
 @-moz-document url-prefix("chrome://browser/content/browser.xhtml") {
-  /* Base chrome: use the window surface only for actual chrome bars. */
-  #navigator-toolbox,
-  #TabsToolbar,
-  #nav-bar,
-  #PersonalToolbar,
-  .browser-toolbar,
-  #zen-appcontent-navbar-wrapper,
-  #zen-appcontent-navbar-container {
-    background: var(--livara-bg) !important;
-    color: var(--livara-text) !important;
-    border-color: var(--livara-border) !important;
-  }
+  /* Native Firefox chrome variables. These are the ownership boundary used
+     by established userChrome themes; selectors below stay intentionally few. */
+  #main-window {
+    --toolbar-bgcolor: var(--livara-bg) !important;
+    --toolbar-color: var(--livara-text) !important;
+    --toolbar-field-background-color: var(--livara-surface) !important;
+    --toolbar-field-color: var(--livara-text) !important;
+    --toolbar-field-focus-background-color: var(--livara-surface) !important;
+    --toolbar-field-focus-color: var(--livara-text) !important;
+    --tab-selected-bgcolor: var(--livara-accent-container) !important;
+    --tab-selected-color: var(--livara-on-accent) !important;
+    --arrowpanel-background: var(--livara-surface) !important;
+    --arrowpanel-color: var(--livara-text) !important;
+    --arrowpanel-border-color: var(--livara-border) !important;
+    --lwt-accent-color: var(--livara-bg) !important;
+    --lwt-text-color: var(--livara-text) !important;
 
-  /* Content/background wrappers are layers, not widgets. Do not paint them
-     with a second opaque surface or the browser gets stacked rectangles. */
-  #main-window,
-  #browser,
-  #appcontent,
-  #tabbrowser-tabbox,
-  #tabbrowser-tabpanels,
-  #zen-main-app-wrapper,
-  #zen-appcontent-wrapper,
-  #zen-tabbox-wrapper {
-    background: transparent !important;
-    color: var(--livara-text) !important;
+    /* Native Zen variables. Zen derives its toolbar, tab and panel states
+       from these; do not replace them with per-widget backgrounds. */
+    --zen-primary-color: var(--livara-accent) !important;
+    --zen-colors-primary: var(--livara-accent) !important;
+    --zen-colors-secondary: var(--livara-surface) !important;
+    --zen-colors-tertiary: var(--livara-bg) !important;
+    --zen-colors-hover-bg: var(--livara-surface-hover) !important;
+    --zen-colors-primary-foreground: var(--livara-on-accent) !important;
+    --zen-colors-border: var(--livara-border) !important;
+    --zen-colors-border-contrast: var(--livara-border) !important;
+    --zen-colors-input-bg: var(--livara-surface) !important;
+    --zen-main-browser-background: var(--livara-bg) !important;
+    --zen-dialog-background: var(--livara-surface) !important;
+    --zen-urlbar-background: var(--livara-surface) !important;
+    --zen-branding-dark: var(--livara-bg) !important;
+    --zen-sidebar-themed-icon-fill: var(--livara-text) !important;
   }
 
   #zen-browser-background,
-  #zen-browser-background::before,
-  #zen-browser-background::after,
   #zen-toolbar-background {
-    background: var(--livara-bg) !important;
-    opacity: 1 !important;
+    --zen-main-browser-background: var(--livara-bg) !important;
+    --zen-main-browser-background-toolbar: var(--livara-bg) !important;
+    --zen-background-opacity: 1 !important;
   }
 
-  /* Sidebar owns a real separator; color alone is not a border. */
-  #sidebar-box,
-  #sidebar-header,
-  #zen-tabs-wrapper,
-  #zen-essentials,
-  .sidebar-placesTree {
-    background: var(--livara-surface) !important;
-    color: var(--livara-text) !important;
-  }
+  /* The only direct structural rule: Firefox's sidebar does not consistently
+     materialize a border from a color variable alone. */
   #sidebar-box {
     border-inline-end: 1px solid var(--livara-border) !important;
   }
@@ -164,108 +164,25 @@ set -Eeuo pipefail
     background: transparent !important;
     border-inline-end: 1px solid var(--livara-border) !important;
   }
-  #zen-essentials {
-    border: 1px solid var(--livara-border) !important;
-  }
 
-  /* Zen controls remain transparent until their state supplies a surface. */
-  #zen-sidebar-top-buttons,
-  #zen-sidebar-foot-buttons,
-  #zen-expand-sidebar-button,
-  #zen-workspaces-button,
-  #zen-create-new-button,
-  toolbarbutton {
-    background: transparent !important;
-    color: var(--livara-text) !important;
-    fill: var(--livara-text) !important;
-    border: 1px solid transparent !important;
-    -moz-context-properties: fill, fill-opacity, stroke, stroke-opacity !important;
-  }
-  #zen-workspaces-button {
-    background: var(--livara-surface) !important;
-    border-color: var(--livara-border) !important;
-  }
-  toolbarbutton:hover,
-  toolbarbutton[open="true"],
-  toolbarbutton[checked="true"],
-  toolbarbutton[aria-pressed="true"],
-  .subviewbutton:hover,
-  .subviewbutton[checked="true"] {
-    background: var(--livara-surface-hover) !important;
-    color: var(--livara-text) !important;
-    fill: var(--livara-text) !important;
-    border-color: var(--livara-border) !important;
-  }
-  /* Never add a background to .toolbarbutton-icon or badge-stack: those are
-     widget internals and inherit the button state above. */
-
-  #urlbar-background,
-  .urlbar-background,
-  #searchbar,
-  .urlbar-input-container,
-  .searchbar-textbox {
-    background: var(--livara-surface) !important;
-    color: var(--livara-text) !important;
-    border: 1px solid var(--livara-border) !important;
-  }
+  /* Keep text and icons legible without painting their internal widgets. */
   #urlbar-input,
   .urlbar-input,
-  .searchbar-textbox {
-    background: transparent !important;
+  .toolbarbutton-1,
+  toolbarbutton,
+  #identity-icon-label,
+  #tracking-protection-icon-container {
     color: var(--livara-text) !important;
     fill: var(--livara-text) !important;
-  }
-  #urlbar[focused="true"] > #urlbar-background,
-  #searchbar:focus-within {
-    border-color: var(--livara-accent) !important;
-    outline: 1px solid var(--livara-accent) !important;
-  }
-
-  .tabbrowser-tab .tab-background {
-    background: var(--livara-surface) !important;
-    border: 1px solid transparent !important;
-  }
-  .tabbrowser-tab[selected="true"] .tab-background,
-  .tabbrowser-tab[multiselected="true"] .tab-background {
-    background: var(--livara-accent-container) !important;
-    border-color: var(--livara-accent) !important;
-    box-shadow: inset 0 -2px var(--livara-accent) !important;
-  }
-  .tabbrowser-tab[selected="true"] .tab-label,
-  .tabbrowser-tab[selected="true"] .tab-icon-image,
-  .tabbrowser-tab[selected="true"] .tab-throbber {
-    color: var(--livara-on-accent) !important;
-    fill: var(--livara-on-accent) !important;
   }
   .tabbrowser-tab:not([selected="true"]) .tab-label,
   #statuspanel-label,
   #unified-extensions-button {
     color: var(--livara-muted) !important;
   }
-
-  /* Popups are raised surfaces; they must not reuse the window background. */
-  panel,
-  panelview,
-  menupopup,
-  #PanelUI-popup,
-  #appMenu-popup,
-  #downloadsPanel,
-  #downloadsListBox,
-  .panel-subview-body {
-    background: var(--livara-surface) !important;
-    color: var(--livara-text) !important;
-    border: 1px solid var(--livara-border) !important;
-  }
-  menu,
-  menuitem,
-  .subviewbutton {
-    background: transparent !important;
-    color: var(--livara-text) !important;
-  }
-  menu:hover,
-  menuitem:hover,
-  .subviewbutton:hover {
-    background: var(--livara-surface-hover) !important;
+  #urlbar[focused="true"] > #urlbar-background,
+  #searchbar:focus-within {
+    outline: 1px solid var(--livara-accent) !important;
   }
 }
 EOF
