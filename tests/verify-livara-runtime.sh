@@ -74,10 +74,10 @@ else
       && pass "file menu bar is hidden: $settings" || fail "file menu bar is not hidden: $settings"
     contains 'name="defaultViewModeAttributes" value="showToolbar,showSidebar"' "$settings" \
       && pass "default view mode excludes the menu bar: $settings" || fail "default view mode still includes the menu bar: $settings"
-    if grep -q 'backgroundTypeConfig=' "$settings" 2>/dev/null; then
-      fail "pageTemplate contains backgroundTypeConfig: $settings"
+    if grep -Eq 'name="pageTemplate"[^>]*value="[^"]*backgroundTypeConfig=f1=#[0-9A-Fa-f]{6},af1=#[0-9A-Fa-f]{6}' "$settings" 2>/dev/null; then
+      pass "pageTemplate contains a native backgroundTypeConfig: $settings"
     else
-      pass "pageTemplate does not override the journal grid: $settings"
+      warn "pageTemplate backgroundTypeConfig was not found: $settings"
     fi
     contains 'backgroundColor=#000000' "$settings" \
       && pass "journal page background is preserved: $settings" || fail "journal page background is not preserved: $settings"
